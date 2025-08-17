@@ -140,14 +140,38 @@ export const useWorkflowExecution = ({
 						const hasErrorMessage = prev.some(
 							(msg) =>
 								msg.type === "response" &&
-								msg.content === "Workflow execution failed"
+								msg.content?.includes(
+									"Workflow execution failed"
+								)
 						);
 
 						if (!hasErrorMessage) {
+							// Create a more detailed error message
+							const failedSubnets =
+								data.subnets?.filter(
+									(subnet: any) => subnet.status === "failed"
+								) || [];
+							let errorContent =
+								"❌ **Workflow execution failed**";
+
+							if (failedSubnets.length > 0) {
+								const failedSubnetNames = failedSubnets
+									.map(
+										(subnet: any) =>
+											subnet.toolName || "Unknown subnet"
+									)
+									.join(", ");
+								errorContent += `\n\nFailed subnets: ${failedSubnetNames}`;
+							}
+
+							if (data.error) {
+								errorContent += `\n\nError: ${data.error}`;
+							}
+
 							const errorMessage: ChatMsg = {
 								id: `error_${Date.now()}`,
 								type: "response",
-								content: "Workflow execution failed",
+								content: errorContent,
 								timestamp: new Date(),
 							};
 							return [...prev, errorMessage];

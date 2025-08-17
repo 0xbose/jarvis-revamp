@@ -1120,10 +1120,20 @@ export const useSubnetCache = () => {
 					break;
 
 				case "failed":
+					// Create more informative error message
+					const errorContent =
+						subnet.error ||
+						(subnet.data && subnet.data.includes("error")
+							? subnet.data
+							: null) ||
+						`${subnet.toolName || "Subnet"} processing failed`;
+
 					dataMessages.push({
 						id: `subnet_${index}_failed_${Date.now()}`,
 						type: "workflow_subnet",
-						content: "Failed to process",
+						content: `❌ **${
+							subnet.toolName || "Subnet"
+						} Failed**\n\n${errorContent}`,
 						timestamp: new Date(),
 						subnetStatus: "failed",
 						toolName: subnet.toolName,

@@ -654,6 +654,18 @@ export function ChatMessage({
 							<span className="relative size-3 inline-flex rounded-full bg-accent"></span>
 						</span>
 					);
+				case "failed":
+					return (
+						<div className="size-3 rounded-full border-2 border-red-600 bg-red-500 flex items-center justify-center">
+							<X className="size-2 text-white" />
+						</div>
+					);
+				case "done":
+					return (
+						<div className="size-3 rounded-full border-2 border-gray-700 bg-gray-500 flex items-center justify-center">
+							<Check className="size-2 text-white" />
+						</div>
+					);
 				default:
 					// All other statuses: gray, same size and style
 					return (
@@ -701,10 +713,22 @@ export function ChatMessage({
 					<div className="relative z-10 flex-shrink-0 ml-0.5 mr-4 pt-1">
 						{getStatusIcon()}
 					</div>
-					<div className="flex-1 min-w-0 p-4 border border-border rounded-lg">
+					<div
+						className={`flex-1 min-w-0 p-4 border rounded-lg ${
+							message.subnetStatus === "failed"
+								? "border-red-500/50 bg-red-950/20"
+								: "border-border"
+						}`}
+					>
 						{message.toolName && (
 							<div className="text-sm mb-1 flex items-center gap-2">
-								<span className="text-gray-400 italic">
+								<span
+									className={`italic ${
+										message.subnetStatus === "failed"
+											? "text-red-300"
+											: "text-gray-400"
+									}`}
+								>
 									{message.toolName} agent
 								</span>
 								{getStatusText() &&
@@ -713,7 +737,14 @@ export function ChatMessage({
 											<span className="text-gray-600">
 												•
 											</span>
-											<span className="text-xs text-gray-400">
+											<span
+												className={`text-xs ${
+													message.subnetStatus ===
+													"failed"
+														? "text-red-400"
+														: "text-gray-400"
+												}`}
+											>
 												{getStatusText()}
 											</span>
 										</>
@@ -722,7 +753,13 @@ export function ChatMessage({
 						)}
 						{/* Show content for all subnets, including pending ones with data */}
 						{message.content && (
-							<div className="text-gray-200 text-sm leading-relaxed">
+							<div
+								className={`text-sm leading-relaxed ${
+									message.subnetStatus === "failed"
+										? "text-red-200"
+										: "text-gray-200"
+								}`}
+							>
 								{isMarkdownContent(message.content) ? (
 									<MDXRenderer content={message.content} />
 								) : (
