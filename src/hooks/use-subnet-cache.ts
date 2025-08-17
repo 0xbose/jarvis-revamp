@@ -263,10 +263,39 @@ export const useSubnetCache = () => {
 					subnet.status === "waiting_response" ||
 					subnet.status === "pending";
 
-				// If feedback history exists and we're including history, skip regular message generation
-				// This prevents duplicate data from being shown (feedback history contains the same data)
-				const shouldSkipDueToFeedbackHistory =
-					hasFeedbackHistory && includeHistory;
+				// If feedback history exists and we're including history, check for content duplication
+				// Only skip if the content is actually duplicated to prevent losing unique messages like OpenAI responses
+				let shouldSkipDueToFeedbackHistory = false;
+				if (hasFeedbackHistory && includeHistory) {
+					// Check if subnet.data content would be duplicated by feedback history
+					const subnetDataContent = subnet.data
+						? String(subnet.data)
+						: "";
+					const feedbackContent =
+						subnet.feedbackHistory?.[0]?.response?.message || "";
+
+					// Only skip if the content is substantially similar
+					shouldSkipDueToFeedbackHistory =
+						subnetDataContent.length > 0 &&
+						feedbackContent.length > 0 &&
+						(subnetDataContent.includes(
+							feedbackContent.slice(0, 100)
+						) ||
+							feedbackContent.includes(
+								subnetDataContent.slice(0, 100)
+							));
+
+					console.log(
+						`🔍 Content duplication check for subnet ${index}:`,
+						{
+							hasSubnetData: subnetDataContent.length > 0,
+							hasFeedbackContent: feedbackContent.length > 0,
+							isDuplicated: shouldSkipDueToFeedbackHistory,
+							subnetPreview: subnetDataContent.slice(0, 50),
+							feedbackPreview: feedbackContent.slice(0, 50),
+						}
+					);
+				}
 
 				const shouldGenerateMessage =
 					!shouldSkipDueToFeedbackHistory && // Primary check: skip if feedback history exists AND we're including history
@@ -305,7 +334,7 @@ export const useSubnetCache = () => {
 
 				if (shouldSkipDueToFeedbackHistory) {
 					console.log(
-						`⏭️ Skipping regular message generation for subnet ${index} - feedback history exists and will be processed instead`
+						`⏭️ Skipping regular message generation for subnet ${index} - content duplicated in feedback history`
 					);
 				}
 
@@ -952,14 +981,51 @@ export const useSubnetCache = () => {
 					let questionData = null;
 
 					// Skip processing subnet.data if feedback history exists and we're including history
-					// This prevents duplicates when opening running workflows from sidebar
-					const shouldSkipSubnetData =
-						hasFeedbackHistory && includeHistory;
+					// BUT only if the subnet data content is actually duplicated in feedback history
+					// This ensures OpenAI messages and other unique content in subnet.data are not lost
+					let shouldSkipSubnetData = false;
+					if (hasFeedbackHistory && includeHistory) {
+						// Check if subnet.data content is already covered by feedback history
+						const subnetDataContent = subnet.data
+							? String(subnet.data)
+							: "";
+						const feedbackContent =
+							subnet.feedbackHistory?.[0]?.response?.message ||
+							"";
 
-					if (shouldSkipSubnetData) {
+						// Only skip if the content is substantially similar (simple check)
+						const isContentDuplicated =
+							subnetDataContent.length > 0 &&
+							feedbackContent.length > 0 &&
+							(subnetDataContent.includes(
+								feedbackContent.slice(0, 100)
+							) ||
+								feedbackContent.includes(
+									subnetDataContent.slice(0, 100)
+								));
+
+						shouldSkipSubnetData = isContentDuplicated;
+
 						console.log(
-							`⏭️ Skipping subnet.data processing for subnet ${index} - feedback history exists and includeHistory=true`
+							`🔍 Subnet data duplication check for subnet ${index}:`,
+							{
+								hasSubnetData: subnetDataContent.length > 0,
+								hasFeedbackContent: feedbackContent.length > 0,
+								isDuplicated: shouldSkipSubnetData,
+								subnetPreview: subnetDataContent.slice(0, 50),
+								feedbackPreview: feedbackContent.slice(0, 50),
+							}
 						);
+
+						if (shouldSkipSubnetData) {
+							console.log(
+								`⏭️ Skipping subnet.data processing for subnet ${index} - content duplicated in feedback history`
+							);
+						} else {
+							console.log(
+								`✅ Processing subnet.data for subnet ${index} - content not duplicated in feedback history`
+							);
+						}
 					}
 
 					// First, handle data content if it exists and we should process it
