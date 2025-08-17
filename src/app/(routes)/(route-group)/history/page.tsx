@@ -284,9 +284,16 @@ export default function WorkflowHistory() {
 			),
 			cell: ({ row }) => (
 				<div className="max-w-[300px]">
-					<span className="text-sm text-gray-300 truncate block">
+					<button
+						onClick={() => {
+							const workflowId = row.original.requestId;
+							const agentId = row.original.agentId;
+							router.push(`/chat/agent/${agentId}?workflowId=${workflowId}`);
+						}}
+						className="text-sm text-gray-300 truncate block hover:text-blue-400 transition-colors cursor-pointer text-left"
+					>
 						{row.original.userPrompt || "Untitled workflow"}
-					</span>
+					</button>
 				</div>
 			),
 		},
@@ -310,7 +317,13 @@ export default function WorkflowHistory() {
 			),
 			cell: ({ row }) => (
 				<span className="text-sm text-gray-400">
-					{formatLastUpdated(row.original.updatedAt)}
+					{new Date(row.original.updatedAt).toLocaleDateString('en-US', {
+						month: 'short',
+						day: 'numeric',
+						hour: 'numeric',
+						minute: '2-digit',
+						hour12: true
+					})}
 				</span>
 			),
 		},
