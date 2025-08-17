@@ -7,14 +7,12 @@ export const useChatScroll = () => {
 	const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const lastMessageCountRef = useRef(0);
 
-	// Auto-scroll to bottom when new messages arrive
 	const scrollToBottom = useCallback(() => {
 		if (messagesEndRef.current && !isUserScrolling) {
 			messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
 		}
 	}, [isUserScrolling]);
 
-	// Handle scroll events to detect user scrolling
 	const handleScroll = useCallback(() => {
 		if (!chatContainerRef.current) return;
 
@@ -22,19 +20,19 @@ export const useChatScroll = () => {
 			chatContainerRef.current;
 		const isAtBottom = scrollHeight - scrollTop - clientHeight < 50; // 50px threshold
 
-		// If user is not at the bottom, they are scrolling
+		
 		if (!isAtBottom) {
 			setIsUserScrolling(true);
 		} else {
 			setIsUserScrolling(false);
 		}
 
-		// Clear existing timeout
+		
 		if (scrollTimeoutRef.current) {
 			clearTimeout(scrollTimeoutRef.current);
 		}
 
-		// Set timeout to reset scrolling state after user stops scrolling
+		
 		scrollTimeoutRef.current = setTimeout(() => {
 			const { scrollTop, scrollHeight, clientHeight } =
 				chatContainerRef.current!;
@@ -43,10 +41,10 @@ export const useChatScroll = () => {
 			if (isAtBottom) {
 				setIsUserScrolling(false);
 			}
-		}, 1000); // 1 second after user stops scrolling
+		}, 1000); 
 	}, []);
 
-	// Effect to scroll to bottom when new messages arrive
+	
 	const useScrollOnNewMessages = (messageCount: number) => {
 		useEffect(() => {
 			if (messageCount > lastMessageCountRef.current) {
@@ -56,7 +54,7 @@ export const useChatScroll = () => {
 		}, [messageCount, scrollToBottom]);
 	};
 
-	// Cleanup scroll timeout on unmount
+		
 	useEffect(() => {
 		return () => {
 			if (scrollTimeoutRef.current) {

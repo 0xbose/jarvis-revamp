@@ -75,7 +75,6 @@ export const useChatMessages = () => {
 
 			currentWorkflowId.current = workflowId;
 
-			// Process subnets with options to control feedback history inclusion
 			const newMessages = processSubnetData(
 				workflowId,
 				data.subnets,
@@ -97,14 +96,12 @@ export const useChatMessages = () => {
 				existingMsgs: ChatMsg[]
 			) => {
 				return existingMsgs.some((existingMsg) => {
-					// Check for duplicates between workflow_subnet and response messages (from feedback history)
 					if (
 						(newMsg.type === "workflow_subnet" &&
 							existingMsg.type === "response") ||
 						(newMsg.type === "response" &&
 							existingMsg.type === "workflow_subnet")
 					) {
-						// If they have the same subnet index and similar content, consider them duplicates
 						if (
 							newMsg.subnetIndex === existingMsg.subnetIndex &&
 							newMsg.content &&
@@ -130,8 +127,7 @@ export const useChatMessages = () => {
 						return false;
 					}
 
-					// For workflow_subnet messages, only consider them duplicates if they have the same content AND status
-					// This allows status updates (like "Processing..." -> "Completed") to show properly
+				
 					if (
 						newMsg.subnetIndex === existingMsg.subnetIndex &&
 						newMsg.toolName === existingMsg.toolName &&
@@ -157,7 +153,6 @@ export const useChatMessages = () => {
 				console.log(`📋 Current message types:`, messageTypes);
 
 				const filteredMessages = prevMessages.filter((msg) => {
-					// Always keep user and response messages
 					if (msg.type === "user" || msg.type === "response") {
 						console.log(
 							`✅ Keeping ${
@@ -167,7 +162,6 @@ export const useChatMessages = () => {
 						return true;
 					}
 
-					// Always keep question and notification messages
 					if (
 						msg.type === "question" ||
 						msg.type === "notification"
@@ -180,11 +174,8 @@ export const useChatMessages = () => {
 						return true;
 					}
 
-					// For workflow_subnet messages, be more selective about what to remove
 					if (msg.type === "workflow_subnet") {
-						// Keep messages that are not just status placeholders
 						if (msg.subnetIndex !== undefined) {
-							// Keep messages with actual content (not just status updates)
 							if (
 								msg.content &&
 								!msg.content.includes("Processing") &&
@@ -199,7 +190,6 @@ export const useChatMessages = () => {
 								return true;
 							}
 
-							// Check if there's a new message for this subnet that should replace processing messages
 							const hasNewMessageForSubnet = newMessages.some(
 								(newMsg) =>
 									newMsg.type === "workflow_subnet" &&
@@ -209,7 +199,6 @@ export const useChatMessages = () => {
 											"waiting_response")
 							);
 
-							// Remove processing messages if there's a new completed/waiting message
 							if (
 								msg.subnetStatus === "in_progress" &&
 								msg.content.includes("Processing") &&
@@ -221,7 +210,6 @@ export const useChatMessages = () => {
 								return false;
 							}
 
-							// Keep processing messages if they're still relevant (no replacement)
 							if (
 								msg.subnetStatus === "in_progress" &&
 								msg.content.includes("Processing") &&
@@ -233,7 +221,6 @@ export const useChatMessages = () => {
 								return true;
 							}
 
-							// Keep waiting response messages if they're still relevant
 							if (
 								msg.subnetStatus === "waiting_response" &&
 								msg.content.includes("Waiting for")
@@ -244,7 +231,6 @@ export const useChatMessages = () => {
 								return true;
 							}
 
-							// Keep pending messages if they're still relevant
 							if (
 								msg.subnetStatus === "pending" &&
 								msg.content.includes("Queued for")
@@ -255,7 +241,6 @@ export const useChatMessages = () => {
 								return true;
 							}
 
-							// Keep pending messages with actual data content
 							if (
 								msg.subnetStatus === "pending" &&
 								msg.content &&
@@ -269,7 +254,6 @@ export const useChatMessages = () => {
 								return true;
 							}
 
-							// Debug: Log what's happening with pending messages
 							if (msg.subnetStatus === "pending") {
 								console.log(
 									`🔍 Pending message debug for subnet ${msg.subnetIndex}:`,
@@ -284,14 +268,12 @@ export const useChatMessages = () => {
 								);
 							}
 
-							// Remove old status update messages that are no longer relevant
 							console.log(
 								`🗑️ Removing old status update for subnet ${msg.subnetIndex}: "${msg.content}"`
 							);
 							return false;
 						}
 
-						// Keep global subnet messages
 						console.log(
 							`✅ Keeping global subnet message: "${msg.content?.slice(
 								0,
@@ -301,7 +283,6 @@ export const useChatMessages = () => {
 						return true;
 					}
 
-					// Keep all other message types
 					console.log(
 						`✅ Keeping ${msg.type} message: "${msg.content?.slice(
 							0,
@@ -327,7 +308,6 @@ export const useChatMessages = () => {
 					...filteredMessages,
 					...uniqueNewMessages,
 				].sort((a, b) => {
-					// Sort messages by timestamp to ensure proper ordering
 					const timeA = a.timestamp
 						? new Date(a.timestamp).getTime()
 						: 0;
@@ -394,7 +374,7 @@ export const useChatMessages = () => {
 
 	const resetFeedbackState = useCallback(() => {
 		console.log("🔄 Resetting feedback state");
-		// Clear any pending feedback-related state
+			
 		setPendingNotifications([]);
 	}, []);
 

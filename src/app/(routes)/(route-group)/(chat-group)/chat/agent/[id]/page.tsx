@@ -165,7 +165,6 @@ export default function AgentChatPage() {
 					);
 				}
 
-				// Debug: Log workflow status for troubleshooting
 				console.log(`🔍 Workflow status debug:`, {
 					workflowId,
 					workflowStatus: currentWorkflowData.workflowStatus,
@@ -177,13 +176,10 @@ export default function AgentChatPage() {
 					})),
 				});
 
-				// Check if this is the first update for an existing workflow
-				// If we're showing cached messages, don't include history to prevent duplicates
 				const shouldIncludeHistory =
 					isLoadingExistingWorkflow.current &&
 					!isShowingCachedMessages;
 
-				// Reset the flag after first update
 				if (isLoadingExistingWorkflow.current) {
 					console.log(
 						`📋 First update for existing workflow - including history: ${shouldIncludeHistory} (cached messages: ${isShowingCachedMessages})`
@@ -195,7 +191,7 @@ export default function AgentChatPage() {
 					currentWorkflowData,
 					lastQuestionRef,
 					{
-						includeHistory: shouldIncludeHistory, // Only include history if no cached messages are shown
+						includeHistory: shouldIncludeHistory,
 						isExistingWorkflow: shouldIncludeHistory,
 					}
 				);
@@ -207,10 +203,8 @@ export default function AgentChatPage() {
 		}
 	}, [currentWorkflowData, urlWorkflowId, isShowingCachedMessages]);
 
-	// Add a cleanup effect that runs when the component unmounts
 	useEffect(() => {
 		return () => {
-			// Ensure all polling is stopped when component unmounts
 			if (currentWorkflowId) {
 				console.log(
 					`🛑 Component unmounting, stopping polling for workflow: ${currentWorkflowId}`
@@ -218,7 +212,6 @@ export default function AgentChatPage() {
 				clearWorkflow();
 			}
 
-			// Clear execution status
 			updateExecutionStatus({
 				isRunning: false,
 				responseId: undefined,
@@ -234,9 +227,7 @@ export default function AgentChatPage() {
 		};
 	}, []);
 
-	// Add a more robust cleanup effect for workflow changes
 	useEffect(() => {
-		// Cleanup function to ensure proper workflow state management
 		const cleanupWorkflow = () => {
 			if (currentWorkflowId && currentWorkflowId !== urlWorkflowId) {
 				console.log(
@@ -246,13 +237,11 @@ export default function AgentChatPage() {
 			}
 		};
 
-		// Cleanup when component unmounts or workflow changes
 		return () => {
 			cleanupWorkflow();
 		};
 	}, [currentWorkflowId, urlWorkflowId, clearWorkflow]);
 
-	// Enhanced workflow switching logic with proper cleanup
 	useEffect(() => {
 		if (isLoading || !skyBrowser || !address) return;
 
@@ -262,28 +251,25 @@ export default function AgentChatPage() {
 					`🔄 Switching workflows: ${currentWorkflowId} -> ${urlWorkflowId}`
 				);
 
-				// Immediately stop any existing polling and clear state
 				if (currentWorkflowId) {
 					console.log(
 						`🛑 Stopping polling for previous workflow: ${currentWorkflowId}`
 					);
 					clearWorkflow();
-					// Force a small delay to ensure cleanup completes
+
 					setTimeout(() => {
-						// Only proceed if we're still on the same workflow
 						if (urlWorkflowId === searchParams.get("workflowId")) {
 							console.log(
 								`🔄 Switching to workflow: ${urlWorkflowId}`
 							);
 
-							// Load cached messages for the new workflow
 							const cachedMessages =
 								getCachedChatMessages(urlWorkflowId);
 							if (cachedMessages && cachedMessages.length > 0) {
 								console.log(
 									`📋 Loading cached messages for workflow: ${urlWorkflowId}`
 								);
-								// Only clear if we have cached messages to replace with
+
 								clearMessages();
 								resetFeedbackState();
 								setChatMessages([]);
@@ -298,12 +284,11 @@ export default function AgentChatPage() {
 								console.log(
 									`📋 No cached messages found for workflow: ${urlWorkflowId} - keeping current state`
 								);
-								// Don't clear messages if no cached messages
+
 								setIsShowingCachedMessages(false);
 								resetFeedbackState();
 							}
 
-							// Start polling for the new workflow
 							startPollingExistingWorkflow(
 								urlWorkflowId,
 								skyBrowser,
@@ -312,16 +297,14 @@ export default function AgentChatPage() {
 						}
 					}, 100);
 				} else {
-					// No previous workflow, proceed immediately
 					console.log(`🔄 Starting new workflow: ${urlWorkflowId}`);
 
-					// Check for cached messages first
 					const cachedMessages = getCachedChatMessages(urlWorkflowId);
 					if (cachedMessages && cachedMessages.length > 0) {
 						console.log(
 							`📋 Loading cached messages for workflow: ${urlWorkflowId}`
 						);
-						// Only clear if we have cached messages to replace with
+
 						clearMessages();
 						resetFeedbackState();
 						setChatMessages([]);
@@ -332,20 +315,19 @@ export default function AgentChatPage() {
 							cachedMessages,
 							urlWorkflowId
 						);
-						// Don't include history since cached messages already have it
+
 						isLoadingExistingWorkflow.current = false;
 					} else {
 						console.log(
 							`📋 No cached messages found for workflow: ${urlWorkflowId} - keeping current state`
 						);
-						// Don't clear messages if no cached messages - let the workflow execution handle it
+
 						setIsShowingCachedMessages(false);
 						resetFeedbackState();
-						// Include history on first load since no cached messages
+
 						isLoadingExistingWorkflow.current = true;
 					}
 
-					// Start polling for the new workflow immediately
 					startPollingExistingWorkflow(
 						urlWorkflowId,
 						skyBrowser,
@@ -354,7 +336,6 @@ export default function AgentChatPage() {
 				}
 			}
 		} else if (currentWorkflowId && !urlWorkflowId && !isExecuting) {
-			// Only clear when user navigates away from workflow (not during workflow startup)
 			console.log(
 				`🔄 No workflow ID in URL and not executing, clearing current workflow`
 			);
@@ -380,33 +361,12 @@ export default function AgentChatPage() {
 		searchParams,
 	]);
 
-	// Remove the duplicate workflow change effect that was causing conflicts
-	// useEffect(() => {
-	// 	if (
-	// 		urlWorkflowId &&
-	// 		currentWorkflowId &&
-	// 		urlWorkflowId !== currentWorkflowId
-	// 	) {
-	// 		console.log(
-	// 			`🔄 Workflow changed from ${currentWorkflowId} to ${urlWorkflowId}, clearing messages immediately`
-	// 		);
-	// 		clearMessages();
-	// 		resetFeedbackState();
-
-	// 		setChatMessages([]);
-	// 			setPendingNotifications([]);
-	// 			setIsShowingCachedMessages(false);
-	// 		}
-	// 	}, [urlWorkflowId, currentWorkflowId]);
-
-	// Simplified workflow change detection
 	useEffect(() => {
 		if (urlWorkflowId && urlWorkflowId !== previousWorkflowId.current) {
 			console.log(
 				`🔄 URL workflow changed from ${previousWorkflowId.current} to ${urlWorkflowId}`
 			);
 
-			// Only clear if we have a previous workflow to clear
 			if (previousWorkflowId.current) {
 				console.log(`🗑️ Clearing messages for workflow change`);
 				clearMessages();
@@ -437,7 +397,6 @@ export default function AgentChatPage() {
 		setIsExecuting,
 		setIsInFeedbackMode,
 		resumePolling: () => {
-			// Resume polling for the current workflow after feedback
 			if (urlWorkflowId && skyBrowser && address) {
 				console.log(
 					`🔄 Resuming polling for workflow: ${urlWorkflowId}`
@@ -463,7 +422,6 @@ export default function AgentChatPage() {
 
 					if (originalPayload?.originalRequestPayload?.prompt) {
 						setChatMessages((prevMessages) => {
-							// Check if user message already exists
 							const hasUserMessage = prevMessages.some(
 								(msg) => msg.type === "user"
 							);
@@ -472,17 +430,15 @@ export default function AgentChatPage() {
 								return prevMessages;
 							}
 
-							// Create user message with very early timestamp to ensure it appears first
 							const userMessage: ChatMsg = {
 								id: `user_${urlWorkflowId}`,
 								type: "user",
 								content:
 									originalPayload.originalRequestPayload
 										.prompt,
-								timestamp: new Date(0), // Set to epoch time (1970) to guarantee it's always first
+								timestamp: new Date(0),
 							};
 
-							// Add user message at the beginning and sort by timestamp
 							const allMessages = [
 								userMessage,
 								...prevMessages,
@@ -719,14 +675,11 @@ export default function AgentChatPage() {
 		);
 	}
 
-	// Check if we should show skeleton instead of messages
 	const shouldShowSkeleton = () => {
-		// Don't show skeleton if there are no messages at all
 		if (chatMessages.length === 0) {
 			return false;
 		}
 
-		// Don't show skeleton if we have any non-user messages (responses, workflow messages, etc.)
 		const hasNonUserMessages = chatMessages.some(
 			(message) => message.type !== "user"
 		);
@@ -734,23 +687,18 @@ export default function AgentChatPage() {
 			return false;
 		}
 
-		// Only show skeleton if we have just the user prompt message and no workflow activity yet
 		const hasOnlyUserMessage =
 			chatMessages.length === 1 && chatMessages[0].type === "user";
 
-		// Don't show skeleton if workflow has started processing (has any subnet with status other than pending)
 		const hasWorkflowActivity = currentWorkflowData?.subnets?.some(
 			(subnet: any) =>
 				subnet.status === "in_progress" ||
 				subnet.status === "done" ||
 				subnet.status === "completed" ||
 				subnet.status === "waiting_response" ||
-				subnet.data // If subnet has data, don't show skeleton
+				subnet.data
 		);
 
-		// Show skeleton only if:
-		// 1. We have only the user message
-		// 2. No workflow activity has started yet (all subnets are just pending without data)
 		return hasOnlyUserMessage && !hasWorkflowActivity;
 	};
 
@@ -767,7 +715,6 @@ export default function AgentChatPage() {
 					>
 						{chatMessages
 							.filter((message) => {
-								// Hide question messages for completed/final state workflows (history mode)
 								const isWorkflowCompleted =
 									currentWorkflowData?.workflowStatus ===
 										"completed" ||
@@ -783,10 +730,10 @@ export default function AgentChatPage() {
 									isWorkflowCompleted &&
 									message.type === "question"
 								) {
-									return false; // Hide all questions in history mode (feedback, authentication, notification)
+									return false;
 								}
 
-								return true; // Show all other messages
+								return true;
 							})
 							.map((message, index) => (
 								<ChatMessage
@@ -805,7 +752,6 @@ export default function AgentChatPage() {
 										message.type === "question" &&
 										message.questionData?.type ===
 											"feedback" &&
-										// Don't show feedback buttons for completed/final state workflows
 										currentWorkflowData?.workflowStatus !==
 											"completed" &&
 										currentWorkflowData?.workflowStatus !==
@@ -828,7 +774,6 @@ export default function AgentChatPage() {
 								/>
 							))}
 
-						{/* Show skeleton when waiting for responses */}
 						{shouldShowSkeleton() && (
 							<div className="space-y-2">
 								<div className="py-3 rounded-md space-y-2">

@@ -121,27 +121,27 @@ const DataPagination: React.FC<PaginationProps> = ({
 					? `Showing ${startItem} to ${endItem} of ${total}`
 					: "No items to display"}
 			</div>
-			<div className="flex items-center">
+			<div className="flex items-center space-x-1">
 				<Button
 					disabled={currentPageNumber === 1}
 					type="button"
 					onClick={handlePreviousPage}
-					variant="outline"
+					variant="ghost"
 					className={cn(
-						"h-8 min-w-8 rounded-l border-r-0",
+						"h-8 w-8 p-0",
 						currentPageNumber === 1
-							? "bg-gray-800 text-gray-400 border-gray-700"
-							: "bg-gray-900 text-gray-200 border-gray-700 hover:bg-primaryColor hover:text-white"
+							? "text-gray-500 cursor-not-allowed"
+							: "text-gray-300 hover:bg-gray-700 hover:text-white"
 					)}
 				>
-					<ChevronLeft className="size-3" />
+					<ChevronLeft className="size-4" />
 				</Button>
 
 				{pageButtons.map((page, index) =>
 					page === "ellipsis" ? (
 						<span
 							key={`ellipsis-${index}`}
-							className="py-1 px-2 min-w-8 text-sm text-center flex items-center justify-center text-gray-400"
+							className="h-8 w-8 flex items-center justify-center text-gray-400"
 						>
 							...
 						</span>
@@ -149,13 +149,13 @@ const DataPagination: React.FC<PaginationProps> = ({
 						<Button
 							key={`page-${page}`}
 							type="button"
-							variant={currentPageNumber === page ? "default" : "outline"}
+							variant="ghost"
 							onClick={() => handlePageClick(page)}
 							className={cn(
-								"h-8 min-w-8 px-2 py-1 border-x-0 rounded-none text-sm",
+								"h-8 w-8 p-0 text-sm",
 								currentPageNumber === page
-									? "bg-primaryColor text-white"
-									: "bg-gray-900 text-gray-200 hover:bg-primaryColor hover:text-white"
+									? "bg-muted text-white hover:bg-muted/80"
+									: "text-gray-300 hover:bg-gray-700 hover:text-white"
 							)}
 							aria-current={currentPageNumber === page ? "page" : undefined}
 						>
@@ -168,15 +168,15 @@ const DataPagination: React.FC<PaginationProps> = ({
 					disabled={currentPageNumber >= maxPages}
 					type="button"
 					onClick={handleNextPage}
-					variant="outline"
+					variant="ghost"
 					className={cn(
-						"h-8 min-w-8 rounded-r border-l-0",
+						"h-8 w-8 p-0",
 						currentPageNumber >= maxPages
-							? "bg-gray-800 text-gray-400 border-gray-700"
-							: "bg-gray-900 text-gray-200 border-gray-700 hover:bg-primaryColor hover:text-white"
+							? "text-gray-500 cursor-not-allowed"
+							: "text-gray-300 hover:bg-gray-700 hover:text-white"
 					)}
 				>
-					<ChevronRight className="size-3" />
+					<ChevronRight className="size-4" />
 				</Button>
 			</div>
 		</footer>

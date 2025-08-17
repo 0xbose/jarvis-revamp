@@ -12,7 +12,7 @@ export const useNft = () => {
 	const [minting, setMinting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	// Fetch NFTs when wallet connects
+	
 	useEffect(() => {
 		const loadNfts = async () => {
 			if (!skyBrowser || !address || !isConnected) {
@@ -28,7 +28,7 @@ export const useNft = () => {
 				const userNfts = await fetchUserNfts(address, skyBrowser);
 				setNfts(userNfts);
 
-				// Auto-select first NFT if available
+				
 				if (userNfts.length > 0 && !selectedNftId) {
 					setSelectedNftId(userNfts[0]);
 				}
@@ -61,11 +61,11 @@ export const useNft = () => {
 			const success = await mintNft(skyBrowser);
 
 			if (success) {
-				// Refresh NFT list
+				
 				const updatedNfts = await fetchUserNfts(address!, skyBrowser);
 				setNfts(updatedNfts);
 
-				// Select the newly minted NFT
+				
 				if (updatedNfts.length > 0) {
 					setSelectedNftId(updatedNfts[0]);
 				}
@@ -104,7 +104,7 @@ export const useNft = () => {
 	};
 
 	return {
-		// State
+		
 		nfts,
 		selectedNftId,
 		loading,
@@ -112,7 +112,7 @@ export const useNft = () => {
 		error,
 		hasNfts: nfts.length > 0,
 
-		// Actions
+			
 		mintNft: mintNewNft,
 		selectNft,
 		refreshNfts: () => {

@@ -11,15 +11,12 @@ export const useHistory = (limit: number = 5) => {
 	const [error, setError] = useState<string | null>(null);
 	const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-	// Cache to prevent unnecessary API calls
 	const lastFetchRef = useRef<number>(0);
 	const lastDataHashRef = useRef<string>("");
 	const isFetchingRef = useRef<boolean>(false);
 
-	// Debounce rapid calls
 	const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-	// Create a hash of the data to detect changes
 	const createDataHash = useCallback((data: HistoryItem[]): string => {
 		return JSON.stringify(
 			data.map((item) => ({
@@ -36,13 +33,11 @@ export const useHistory = (limit: number = 5) => {
 			const currentLimit = newLimit || limit;
 			const now = Date.now();
 
-			// Prevent rapid successive calls (within 2 seconds)
 			if (now - lastFetchRef.current < 2000) {
 				console.log("⏱️ Skipping fetch - too recent");
 				return;
 			}
 
-			// Prevent concurrent fetches
 			if (isFetchingRef.current) {
 				console.log("⏱️ Skipping fetch - already in progress");
 				return;
@@ -65,8 +60,6 @@ export const useHistory = (limit: number = 5) => {
 			try {
 				isFetchingRef.current = true;
 
-				// Only show loading if it's the initial load or if we have existing data
-				// This prevents showing loader on every auto-refresh when data hasn't changed
 				if (isInitialLoad || history.length === 0) {
 					setLoading(true);
 				}
@@ -89,10 +82,18 @@ export const useHistory = (limit: number = 5) => {
 
 				// Handle the new workflow response format
 				if (response.workflows && Array.isArray(response.workflows)) {
-					newHistory = response.workflows;
+					newHistory = response.workflows.map((workflow: any) => ({
+						...workflow,
+						id: workflow.id || workflow.requestId, // Ensure id field exists
+					}));
 				} else if (response.success && response.data?.requests) {
 					// Fallback to old format if needed
-					newHistory = response.data.requests;
+					newHistory = response.data.requests.map(
+						(workflow: any) => ({
+							...workflow,
+							id: workflow.id || workflow.requestId, // Ensure id field exists
+						})
+					);
 				}
 
 				// Check if data has actually changed
@@ -102,11 +103,10 @@ export const useHistory = (limit: number = 5) => {
 					history.length > 0
 				) {
 					console.log("🔄 Data unchanged, skipping update");
-					// Don't show loading since no change occurred
+
 					return;
 				}
 
-				// Update state and cache
 				setHistory(newHistory);
 				lastDataHashRef.current = newDataHash;
 				lastFetchRef.current = now;
@@ -121,7 +121,6 @@ export const useHistory = (limit: number = 5) => {
 						: "Failed to fetch history"
 				);
 				setIsInitialLoad(false);
-				// Don't clear history on error to maintain UI consistency
 			} finally {
 				setLoading(false);
 				isFetchingRef.current = false;
@@ -137,7 +136,6 @@ export const useHistory = (limit: number = 5) => {
 		]
 	);
 
-	// Debounced fetch for rapid calls
 	const debouncedFetchHistory = useCallback(
 		(newLimit?: number) => {
 			if (fetchTimeoutRef.current) {
@@ -152,10 +150,8 @@ export const useHistory = (limit: number = 5) => {
 	);
 
 	useEffect(() => {
-		// Initial fetch
 		fetchHistory();
 
-		// Cleanup timeout on unmount
 		return () => {
 			if (fetchTimeoutRef.current) {
 				clearTimeout(fetchTimeoutRef.current);
@@ -164,7 +160,6 @@ export const useHistory = (limit: number = 5) => {
 	}, [skyBrowser, address, limit]);
 
 	const refreshHistory = useCallback(() => {
-		// Force refresh by clearing cache
 		lastFetchRef.current = 0;
 		lastDataHashRef.current = "";
 		setIsInitialLoad(true);

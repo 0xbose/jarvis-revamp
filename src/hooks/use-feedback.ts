@@ -15,7 +15,7 @@ interface UseFeedbackProps {
 	setWorkflowStatus: (status: any) => void;
 	setIsExecuting: (executing: boolean) => void;
 	setIsInFeedbackMode: (inMode: boolean) => void;
-	resumePolling?: () => void; // Add function to resume polling
+	resumePolling?: () => void; 
 }
 
 export const useFeedback = ({
@@ -80,7 +80,7 @@ export const useFeedback = ({
 		try {
 			setIsSubmittingFeedback(true);
 
-			// Look for subnets with questions in either waiting_response or pending status
+		
 			const subnetWithQuestionIndex =
 				currentWorkflowData?.subnets?.findIndex(
 					(subnet: any) =>
@@ -94,7 +94,7 @@ export const useFeedback = ({
 				subnetWithQuestionIndex >= 0 &&
 				currentWorkflowId
 			) {
-				// Update subnet status to in_progress to indicate feedback processing
+			
 				updateSubnetStatus(
 					currentWorkflowId,
 					subnetWithQuestionIndex,
@@ -135,15 +135,14 @@ export const useFeedback = ({
 			setChatMessages((prev) => [...prev, successMessage]);
 
 			setPrompt("");
-			// Resume workflow execution regardless of previous status
+		
 			setWorkflowStatus("running");
 			setIsExecuting(true);
 			setIsInFeedbackMode(false);
 
-			// Resume polling to get updated workflow data
 			if (resumePolling) {
 				console.log("🔄 Resuming polling after feedback submission");
-				// Add a small delay to ensure the backend has processed the feedback
+			
 				setTimeout(() => {
 					resumePolling();
 				}, 1000);
@@ -171,7 +170,7 @@ export const useFeedback = ({
 		try {
 			setIsSubmittingFeedback(true);
 
-			// Look for subnets with questions in either waiting_response or pending status
+		
 			const subnetWithQuestionIndex =
 				currentWorkflowData?.subnets?.findIndex(
 					(subnet: any) =>
@@ -185,7 +184,7 @@ export const useFeedback = ({
 				subnetWithQuestionIndex >= 0 &&
 				currentWorkflowId
 			) {
-				// Update subnet status to in_progress to indicate feedback processing
+			
 				updateSubnetStatus(
 					currentWorkflowId,
 					subnetWithQuestionIndex,
@@ -226,15 +225,14 @@ export const useFeedback = ({
 			setChatMessages((prev) => [...prev, successMessage]);
 
 			setPrompt("");
-			// Resume workflow execution regardless of previous status
+		
 			setWorkflowStatus("running");
 			setIsExecuting(true);
 			setIsInFeedbackMode(false);
 
-			// Resume polling to get updated workflow data
 			if (resumePolling) {
 				console.log("🔄 Resuming polling after feedback submission");
-				// Add a small delay to ensure the backend has processed the feedback
+			
 				setTimeout(() => {
 					resumePolling();
 				}, 1000);
@@ -262,7 +260,7 @@ export const useFeedback = ({
 		try {
 			setIsSubmittingFeedback(true);
 
-			// Look for subnets with questions in either waiting_response or pending status
+		
 			const subnetWithQuestionIndex =
 				currentWorkflowData?.subnets?.findIndex(
 					(subnet: any) =>
@@ -276,7 +274,7 @@ export const useFeedback = ({
 				subnetWithQuestionIndex >= 0 &&
 				currentWorkflowId
 			) {
-				// Update subnet status to in_progress to indicate feedback processing
+			
 				updateSubnetStatus(
 					currentWorkflowId,
 					subnetWithQuestionIndex,
@@ -331,15 +329,14 @@ export const useFeedback = ({
 			setChatMessages((prev) => [...prev, successMessage]);
 
 			setPrompt("");
-			// Resume workflow execution regardless of previous status
+		
 			setWorkflowStatus("running");
 			setIsExecuting(true);
 			setIsInFeedbackMode(false);
-
-			// Resume polling to get updated workflow data
+					
 			if (resumePolling) {
 				console.log("🔄 Resuming polling after feedback submission");
-				// Add a small delay to ensure the backend has processed the feedback
+			
 				setTimeout(() => {
 					resumePolling();
 				}, 1000);

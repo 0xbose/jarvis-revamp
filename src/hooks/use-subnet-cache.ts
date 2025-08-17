@@ -231,23 +231,13 @@ export const useSubnetCache = () => {
 					);
 				}
 
-				// Update tracking maps
 				if (isRegenerating) {
 					processingMap.set(index, true);
 					feedbackSet.add(index);
 				}
 
-				// Update previous status
 				statusMap.set(index, currentStatus);
 
-				// Generate messages based on status and changes
-				// Only generate messages when:
-				// 1. Status has actually changed (not just new/unchanged)
-				// 2. Moving from pending to in_progress (start processing)
-				// 3. Moving from in_progress to done/waiting_response (has meaningful data)
-				// 4. Pending subnets with substantial data (not just status messages)
-				// 5. BUT NOT when resuming workflow (prevents duplication)
-				// 6. Skip regular message generation if feedback history exists (it contains the same data)
 				const hasSubstantialData =
 					subnet.data &&
 					subnet.data.length > 50 &&

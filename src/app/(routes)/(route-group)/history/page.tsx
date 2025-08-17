@@ -190,14 +190,20 @@ export default function WorkflowHistory() {
 					response.pagination?.total || response.workflows.length;
 			} else if (response.success && response.data?.requests) {
 				// Legacy format: nested in data.requests
-				newWorkflows = response.data.requests;
+				newWorkflows = response.data.requests.map((workflow: any) => ({
+					...workflow,
+					id: workflow.id || workflow.requestId, // Ensure id field exists
+				}));
 				newTotalCount =
 					response.data.pagination?.total ||
 					response.data.totalCount ||
 					response.data.requests.length;
 			} else if (response.data?.requests) {
 				// Another legacy format variation
-				newWorkflows = response.data.requests;
+				newWorkflows = response.data.requests.map((workflow: any) => ({
+					...workflow,
+					id: workflow.id || workflow.requestId, // Ensure id field exists
+				}));
 				newTotalCount =
 					response.data.pagination?.total ||
 					response.data.totalCount ||

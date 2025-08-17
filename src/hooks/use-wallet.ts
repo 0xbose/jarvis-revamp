@@ -13,7 +13,6 @@ export const useWallet = () => {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	// Initialize Skynet when wallet connects
 	useEffect(() => {
 		const initializeSkynetBrowser = async () => {
 			if (!provider || !isConnected) {
@@ -31,10 +30,8 @@ export const useWallet = () => {
 				const signer = await ethersProvider.getSigner();
 				const userAddress = await signer.getAddress();
 
-				// Initialize Skynet
 				const browser = await initializeSkynet(provider, signer);
 
-				// Get balance
 				const userBalance = await ethersProvider.getBalance(
 					userAddress
 				);
@@ -85,7 +82,6 @@ export const useWallet = () => {
 	};
 
 	return {
-		// State
 		skyBrowser,
 		address,
 		balance,
@@ -93,7 +89,6 @@ export const useWallet = () => {
 		loading,
 		error,
 
-		// Actions
 		connect: connectWallet,
 		disconnect: disconnectWallet,
 	};

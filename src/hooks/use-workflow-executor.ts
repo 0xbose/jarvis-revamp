@@ -18,23 +18,19 @@ export function useWorkflowExecutor() {
 			onStatusUpdate?: (data: any) => void
 		) => {
 			try {
-				// Set running state
 				updateExecutionStatus({ isRunning: true });
 				updateTestStatus({
 					isRunning: true,
 					status: STATUS.PROCESSING,
 				});
 
-				// Execute workflow with HTTP polling
 				const requestId = await workflowExecutor.executeWorkflow(
 					payload,
 					skyBrowser,
 					web3Context,
 					(statusData) => {
-						// Handle status updates from polling
 						console.log("📡 Workflow status update:", statusData);
 
-						// Update stores based on status
 						if (
 							statusData.workflowStatus === "completed" ||
 							statusData.workflowStatus === "failed"
@@ -49,21 +45,18 @@ export function useWorkflowExecutor() {
 							});
 						}
 
-						// Update current subnet for in-progress workflows
 						if (statusData.workflowStatus === "in_progress") {
 							updateExecutionStatus({
 								currentSubnet: statusData.currentSubnet,
 							});
 						}
 
-						// Call the custom status update callback
 						if (onStatusUpdate) {
 							onStatusUpdate(statusData);
 						}
 					}
 				);
 
-				// Store request ID
 				updateExecutionStatus({ responseId: requestId });
 				return requestId;
 			} catch (error: unknown) {
@@ -85,14 +78,12 @@ export function useWorkflowExecutor() {
 			onStatusUpdate?: (data: any) => void
 		) => {
 			try {
-				// Set running state
 				updateExecutionStatus({ isRunning: true });
 				updateTestStatus({
 					isRunning: true,
 					status: STATUS.PROCESSING,
 				});
 
-				// Execute agent workflow using the executor
 				const requestId = await workflowExecutor.executeAgentWorkflow(
 					agentDetail,
 					userPrompt,
@@ -100,13 +91,11 @@ export function useWorkflowExecutor() {
 					skyBrowser,
 					web3Context,
 					(statusData) => {
-						// Handle status updates from polling
 						console.log(
 							"📡 Agent workflow status update:",
 							statusData
 						);
 
-						// Update stores based on status
 						if (
 							statusData.workflowStatus === "completed" ||
 							statusData.workflowStatus === "failed"
@@ -121,21 +110,18 @@ export function useWorkflowExecutor() {
 							});
 						}
 
-						// Update current subnet for in-progress workflows
 						if (statusData.workflowStatus === "in_progress") {
 							updateExecutionStatus({
 								currentSubnet: statusData.currentSubnet,
 							});
 						}
 
-						// Call the custom status update callback
 						if (onStatusUpdate) {
 							onStatusUpdate(statusData);
 						}
 					}
 				);
 
-				// Store request ID
 				updateExecutionStatus({ responseId: requestId });
 				return requestId;
 			} catch (error: unknown) {

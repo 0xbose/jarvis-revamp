@@ -64,13 +64,11 @@ export const useWorkflowExecution = ({
 					setCurrentWorkflowId(workflowId);
 					workflowExecutor.setCurrentWorkflowId(workflowId);
 
-					// Notify chat messages hook about workflow change
 					if (setWorkflowId) {
 						setWorkflowId(workflowId);
 					}
 				}
 
-				// Add user prompt if it's a new workflow
 				if (
 					isNewWorkflow &&
 					data?.userPrompt &&
@@ -85,7 +83,7 @@ export const useWorkflowExecution = ({
 								id: `user_${Date.now()}`,
 								type: "user",
 								content: data.userPrompt,
-								timestamp: new Date(0), // Set to epoch time to guarantee it's always first
+								timestamp: new Date(0),
 							};
 							return [userMessage, ...prevMessages];
 						}
@@ -93,10 +91,6 @@ export const useWorkflowExecution = ({
 					});
 				}
 
-				// Note: updateMessagesWithSubnetData is now handled separately in the chat agent page
-				// to prevent mixing messages from different workflows
-
-				// Check if any subnet needs feedback
 				const hasNonAuthFeedback = data.subnets?.some(
 					(subnet: any) =>
 						subnet.status === "waiting_response" &&
@@ -110,7 +104,6 @@ export const useWorkflowExecution = ({
 						subnet.question?.type === "authentication"
 				);
 
-				// Handle workflow status changes
 				if (data.workflowStatus === "completed") {
 					setIsExecuting(false);
 					setPollingStatus(false);
@@ -118,7 +111,6 @@ export const useWorkflowExecution = ({
 					setIsInFeedbackMode(false);
 					resetFeedbackState();
 
-					// Add completion message
 					setChatMessages((prev) => {
 						const hasCompletionMessage = prev.some(
 							(msg) =>
@@ -144,7 +136,6 @@ export const useWorkflowExecution = ({
 					setIsInFeedbackMode(false);
 					resetFeedbackState();
 
-					// Add error message only if it doesn't already exist
 					setChatMessages((prev) => {
 						const hasErrorMessage = prev.some(
 							(msg) =>
@@ -175,7 +166,6 @@ export const useWorkflowExecution = ({
 						setCurrentWorkflowId(data.requestId);
 					}
 
-					// Force stop any polling in the executor
 					workflowExecutor.handleExternalStatusChange("stopped");
 					workflowExecutor.forceStopPollingForWorkflow(
 						data.requestId || currentWorkflowId || ""
@@ -187,28 +177,23 @@ export const useWorkflowExecution = ({
 					setWorkflowStatus("in_progress");
 					setIsInFeedbackMode(false);
 				} else if (data.workflowStatus === "waiting_response") {
-					// Handle waiting_response differently based on question type
 					if (hasNonAuthFeedback) {
-						// For non-auth feedback, stop polling and wait for user input
 						setIsExecuting(true);
-						setPollingStatus(false); // Stop polling for non-auth feedback
+						setPollingStatus(false);
 						setWorkflowStatus("waiting_response");
 						setIsInFeedbackMode(true);
 					} else if (hasAuthenticationPending) {
-						// For authentication, continue polling
 						setIsExecuting(true);
-						setPollingStatus(true); // Continue polling for auth
+						setPollingStatus(true);
 						setWorkflowStatus("waiting_response");
-						setIsInFeedbackMode(false); // Auth is handled differently
+						setIsInFeedbackMode(false);
 					} else {
-						// Default behavior for waiting_response
 						setIsExecuting(true);
 						setPollingStatus(true);
 						setWorkflowStatus("waiting_response");
 						setIsInFeedbackMode(true);
 					}
 				} else if (data.workflowStatus === "pending") {
-					// Handle pending status (initial state)
 					setIsExecuting(true);
 					setPollingStatus(true);
 					setWorkflowStatus("pending");
@@ -246,18 +231,17 @@ export const useWorkflowExecution = ({
 			try {
 				setIsExecuting(true);
 				setPollingStatus(true);
-				// Don't assume in_progress - let the first status update determine the actual state
+
 				setWorkflowStatus("pending");
 				setCurrentWorkflowId(workflowId);
 
 				workflowExecutor.setCurrentWorkflowId(workflowId);
 
-				// Notify chat messages hook about workflow change
 				if (setWorkflowId) {
 					setWorkflowId(workflowId);
 				}
 
-				const onStatusUpdate = createStatusUpdateHandler(false, true); // isExistingWorkflow = true
+				const onStatusUpdate = createStatusUpdateHandler(false, true);
 
 				const success =
 					await workflowExecutor.startPollingExistingWorkflow(
@@ -300,20 +284,18 @@ export const useWorkflowExecution = ({
 				setIsInFeedbackMode(false);
 				resetFeedbackState();
 
-				// Clear previous state and cache
 				setCurrentWorkflowData(null);
 				lastQuestionRef.current = null;
 
-				// Add user message immediately without clearing first (to prevent glitchy skeleton)
 				const userMessage: ChatMsg = {
 					id: `user_${Date.now()}`,
 					type: "user",
 					content: message,
-					timestamp: new Date(0), // Set to epoch time to guarantee it's always first
+					timestamp: new Date(0),
 				};
 				setChatMessages([userMessage]);
 
-				const onStatusUpdate = createStatusUpdateHandler(true, false); // isNewWorkflow = true
+				const onStatusUpdate = createStatusUpdateHandler(true, false);
 
 				const workflowId = await executeAgentWorkflow(
 					selectedAgent as any,
@@ -327,12 +309,10 @@ export const useWorkflowExecution = ({
 				setCurrentWorkflowId(workflowId);
 				workflowExecutor.setCurrentWorkflowId(workflowId);
 
-				// Notify chat messages hook about workflow change
 				if (setWorkflowId) {
 					setWorkflowId(workflowId);
 				}
 
-				// Update URL with workflow ID
 				const currentUrl = new URL(window.location.href);
 				currentUrl.searchParams.set("workflowId", workflowId);
 				window.history.replaceState({}, "", currentUrl.toString());
@@ -437,12 +417,10 @@ export const useWorkflowExecution = ({
 	);
 
 	const clearWorkflow = useCallback(() => {
-		// Clear workflow cache when clearing workflow
 		if (currentWorkflowId) {
 			clearWorkflowCache(currentWorkflowId);
 		}
 
-		// Force stop any active polling for the current workflow
 		if (currentWorkflowId) {
 			workflowExecutor.forceStopPollingForWorkflow(currentWorkflowId);
 		}
