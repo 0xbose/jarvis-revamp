@@ -530,6 +530,7 @@ export const useSubnetCache = () => {
 									toolName: subnet.toolName,
 									subnetIndex: index,
 									sourceId: `subnet_${index}_feedback_response_${feedbackIndex}`,
+									prompt: subnet.prompt,
 								};
 								dataMessages.push(responseMessage);
 								messageIds.add(responseKey);
@@ -880,6 +881,7 @@ export const useSubnetCache = () => {
 								contentType: result.contentType,
 								sourceId: `${sourceId}_data`,
 								contentHash: createContentHash(result),
+								prompt: subnet.prompt,
 							};
 							dataMessages.push(dataMessage);
 
@@ -999,6 +1001,7 @@ export const useSubnetCache = () => {
 								sourceId: `${sourceId}_data`,
 								isRegenerated: isRegenerating,
 								contentHash,
+								prompt: subnet.prompt,
 							};
 							dataMessages.push(dataMessage);
 
@@ -1198,6 +1201,7 @@ export const useSubnetCache = () => {
 								contentType: result.contentType,
 								sourceId: `${sourceId}_data`,
 								contentHash: createContentHash(result),
+								prompt: subnet.prompt,
 							};
 							dataMessages.push(dataMessage);
 						}

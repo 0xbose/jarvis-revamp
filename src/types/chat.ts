@@ -32,6 +32,7 @@ export type ChatMsg = {
 	contentHash?: string;
 	question?: string;
 	answer?: string;
+	prompt?: string;
 };
 
 export type FeedbackHistoryItem = {

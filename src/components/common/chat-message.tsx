@@ -996,7 +996,7 @@ export function ChatMessage({
 				case "done":
 					return (
 						<div className="size-3 rounded-full border-2 border-gray-700 bg-gray-500 flex items-center justify-center">
-							<Check className="size-2 text-white" />
+							{/* <Check className="size-2 text-white" /> */}
 						</div>
 					);
 				default:
@@ -1084,6 +1084,18 @@ export function ChatMessage({
 											</span>
 										</>
 									)}
+							</div>
+						)}
+						{/* Show prompt if available */}
+						{message.prompt && (
+							<div className="mb-3 py-6">
+								<div className="text-xs text-gray-400 mb-1 flex items-center gap-2">
+									<MessageSquare className="w-3 h-3" />
+									<span>Prompt</span>
+								</div>
+								<div className="text-sm text-gray-300 italic">
+									{convertUrlsToLinks(message.prompt)}
+								</div>
 							</div>
 						)}
 						{/* Show content for all subnets, including pending ones with data */}
@@ -1226,6 +1238,17 @@ export function ChatMessage({
 									message.toolName.slice(1)}{" "}
 								Agent
 							</span>
+						</div>
+					)}
+					{message.prompt && (
+						<div className="mb-3 py-6">
+							<div className="text-xs text-gray-400 mb-1 flex items-center gap-2">
+								<MessageSquare className="w-3 h-3" />
+								<span>Prompt</span>
+							</div>
+							<div className="text-sm text-gray-300 italic">
+								{convertUrlsToLinks(message.prompt)}
+							</div>
 						</div>
 					)}
 					<div className="text-gray-200 text-sm leading-relaxed">
