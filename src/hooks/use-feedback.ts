@@ -15,7 +15,7 @@ interface UseFeedbackProps {
 	setWorkflowStatus: (status: any) => void;
 	setIsExecuting: (executing: boolean) => void;
 	setIsInFeedbackMode: (inMode: boolean) => void;
-	resumePolling?: () => void; 
+	resumePolling?: () => void;
 }
 
 export const useFeedback = ({
@@ -80,7 +80,7 @@ export const useFeedback = ({
 		try {
 			setIsSubmittingFeedback(true);
 
-		
+			// Find the subnet that has the question
 			const subnetWithQuestionIndex =
 				currentWorkflowData?.subnets?.findIndex(
 					(subnet: any) =>
@@ -94,7 +94,7 @@ export const useFeedback = ({
 				subnetWithQuestionIndex >= 0 &&
 				currentWorkflowId
 			) {
-			
+				// Update subnet status to in_progress
 				updateSubnetStatus(
 					currentWorkflowId,
 					subnetWithQuestionIndex,
@@ -102,25 +102,81 @@ export const useFeedback = ({
 				);
 			}
 
+			// Create feedback message with subnet context
 			const feedbackMessage: ChatMsg = {
 				id: `feedback_${Date.now()}`,
 				type: "answer",
 				content: feedback,
 				timestamp: new Date(),
+				subnetIndex: subnetWithQuestionIndex,
+				toolName:
+					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+						?.toolName,
 			};
 
-			setChatMessages((prev) => [...prev, feedbackMessage]);
+			// Insert feedback message after the subnet question instead of appending to end
+			setChatMessages((prev) => {
+				const newMessages = [...prev];
+				// Find the question message for this subnet and insert the feedback message after it
+				const questionIndex = newMessages.findIndex(
+					(msg) =>
+						msg.subnetIndex === subnetWithQuestionIndex &&
+						msg.type === "question"
+				);
+
+				if (questionIndex !== -1) {
+					// Insert after the question
+					newMessages.splice(questionIndex + 1, 0, feedbackMessage);
+				} else {
+					// Fallback: append to end if question not found
+					newMessages.push(feedbackMessage);
+				}
+				return newMessages;
+			});
+
+			const subnetWithQuestion = currentWorkflowData?.subnets?.find(
+				(subnet: any) =>
+					(subnet.status === "waiting_response" ||
+						(subnet.status === "pending" && subnet.question)) &&
+					subnet.question
+			);
+
+			if (!subnetWithQuestion?.question?.text) {
+				throw new Error("No question found to answer");
+			}
 
 			const submittingMessage: ChatMsg = {
 				id: `submitting_${Date.now()}`,
 				type: "response",
 				content: "Submitting feedback...",
 				timestamp: new Date(),
+				subnetIndex: subnetWithQuestionIndex,
+				toolName:
+					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+						?.toolName,
 			};
-			setChatMessages((prev) => [...prev, submittingMessage]);
 
-			await submitFeedbackToAPI(question, feedback);
+			// Insert submitting message after the feedback message
+			setChatMessages((prev) => {
+				const newMessages = [...prev];
+				const feedbackIndex = newMessages.findIndex(
+					(msg) => msg.id === feedbackMessage.id
+				);
 
+				if (feedbackIndex !== -1) {
+					newMessages.splice(feedbackIndex + 1, 0, submittingMessage);
+				} else {
+					newMessages.push(submittingMessage);
+				}
+				return newMessages;
+			});
+
+			await submitFeedbackToAPI(
+				subnetWithQuestion.question.text,
+				feedback
+			);
+
+			// Remove the submitting message
 			setChatMessages((prev) =>
 				prev.filter((msg) => msg.id !== submittingMessage.id)
 			);
@@ -131,18 +187,36 @@ export const useFeedback = ({
 				content:
 					"Feedback submitted successfully. Resuming workflow...",
 				timestamp: new Date(),
+				subnetIndex: subnetWithQuestionIndex,
+				toolName:
+					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+						?.toolName,
 			};
-			setChatMessages((prev) => [...prev, successMessage]);
+
+			// Insert success message after the feedback message
+			setChatMessages((prev) => {
+				const newMessages = [...prev];
+				const feedbackIndex = newMessages.findIndex(
+					(msg) => msg.id === feedbackMessage.id
+				);
+
+				if (feedbackIndex !== -1) {
+					newMessages.splice(feedbackIndex + 1, 0, successMessage);
+				} else {
+					newMessages.push(successMessage);
+				}
+				return newMessages;
+			});
 
 			setPrompt("");
-		
+
 			setWorkflowStatus("running");
 			setIsExecuting(true);
 			setIsInFeedbackMode(false);
 
 			if (resumePolling) {
 				console.log("🔄 Resuming polling after feedback submission");
-			
+
 				setTimeout(() => {
 					resumePolling();
 				}, 1000);
@@ -170,7 +244,7 @@ export const useFeedback = ({
 		try {
 			setIsSubmittingFeedback(true);
 
-		
+			// Find the subnet that has the question
 			const subnetWithQuestionIndex =
 				currentWorkflowData?.subnets?.findIndex(
 					(subnet: any) =>
@@ -184,7 +258,7 @@ export const useFeedback = ({
 				subnetWithQuestionIndex >= 0 &&
 				currentWorkflowId
 			) {
-			
+				// Update subnet status to in_progress
 				updateSubnetStatus(
 					currentWorkflowId,
 					subnetWithQuestionIndex,
@@ -192,25 +266,67 @@ export const useFeedback = ({
 				);
 			}
 
+			// Create proceed message with subnet context
 			const proceedMessage: ChatMsg = {
 				id: `proceed_${Date.now()}`,
 				type: "answer",
 				content: "Proceeding with current result",
 				timestamp: new Date(),
+				subnetIndex: subnetWithQuestionIndex, // Link to specific subnet
+				toolName:
+					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+						?.toolName,
 			};
 
-			setChatMessages((prev) => [...prev, proceedMessage]);
+			// Insert proceed message after the subnet question instead of appending to end
+			setChatMessages((prev) => {
+				const newMessages = [...prev];
+				// Find the question message for this subnet and insert the proceed message after it
+				const questionIndex = newMessages.findIndex(
+					(msg) =>
+						msg.subnetIndex === subnetWithQuestionIndex &&
+						msg.type === "question"
+				);
+
+				if (questionIndex !== -1) {
+					// Insert after the question
+					newMessages.splice(questionIndex + 1, 0, proceedMessage);
+				} else {
+					// Fallback: append to end if question not found
+					newMessages.push(proceedMessage);
+				}
+				return newMessages;
+			});
 
 			const submittingMessage: ChatMsg = {
 				id: `submitting_${Date.now()}`,
 				type: "response",
 				content: "Processing feedback...",
 				timestamp: new Date(),
+				subnetIndex: subnetWithQuestionIndex,
+				toolName:
+					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+						?.toolName,
 			};
-			setChatMessages((prev) => [...prev, submittingMessage]);
+
+			// Insert submitting message after the proceed message
+			setChatMessages((prev) => {
+				const newMessages = [...prev];
+				const proceedIndex = newMessages.findIndex(
+					(msg) => msg.id === proceedMessage.id
+				);
+
+				if (proceedIndex !== -1) {
+					newMessages.splice(proceedIndex + 1, 0, submittingMessage);
+				} else {
+					newMessages.push(submittingMessage);
+				}
+				return newMessages;
+			});
 
 			await submitFeedbackToAPI(question, "Yes, proceed");
 
+			// Remove the submitting message
 			setChatMessages((prev) =>
 				prev.filter((msg) => msg.id !== submittingMessage.id)
 			);
@@ -221,18 +337,36 @@ export const useFeedback = ({
 				content:
 					"Feedback processed successfully. Resuming workflow...",
 				timestamp: new Date(),
+				subnetIndex: subnetWithQuestionIndex,
+				toolName:
+					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+						?.toolName,
 			};
-			setChatMessages((prev) => [...prev, successMessage]);
+
+			// Insert success message after the proceed message
+			setChatMessages((prev) => {
+				const newMessages = [...prev];
+				const proceedIndex = newMessages.findIndex(
+					(msg) => msg.id === proceedMessage.id
+				);
+
+				if (proceedIndex !== -1) {
+					newMessages.splice(proceedIndex + 1, 0, successMessage);
+				} else {
+					newMessages.push(successMessage);
+				}
+				return newMessages;
+			});
 
 			setPrompt("");
-		
+
 			setWorkflowStatus("running");
 			setIsExecuting(true);
 			setIsInFeedbackMode(false);
 
 			if (resumePolling) {
 				console.log("🔄 Resuming polling after feedback submission");
-			
+
 				setTimeout(() => {
 					resumePolling();
 				}, 1000);
@@ -260,7 +394,7 @@ export const useFeedback = ({
 		try {
 			setIsSubmittingFeedback(true);
 
-		
+			// Find the subnet that has the question
 			const subnetWithQuestionIndex =
 				currentWorkflowData?.subnets?.findIndex(
 					(subnet: any) =>
@@ -274,7 +408,7 @@ export const useFeedback = ({
 				subnetWithQuestionIndex >= 0 &&
 				currentWorkflowId
 			) {
-			
+				// Update subnet status to in_progress
 				updateSubnetStatus(
 					currentWorkflowId,
 					subnetWithQuestionIndex,
@@ -282,14 +416,37 @@ export const useFeedback = ({
 				);
 			}
 
+			// Create feedback message with subnet context
 			const feedbackMessage: ChatMsg = {
 				id: `feedback_${Date.now()}`,
 				type: "answer",
 				content: feedback,
 				timestamp: new Date(),
+				subnetIndex: subnetWithQuestionIndex,
+				toolName:
+					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+						?.toolName,
 			};
 
-			setChatMessages((prev) => [...prev, feedbackMessage]);
+			// Insert feedback message after the subnet question instead of appending to end
+			setChatMessages((prev) => {
+				const newMessages = [...prev];
+				// Find the question message for this subnet and insert the feedback message after it
+				const questionIndex = newMessages.findIndex(
+					(msg) =>
+						msg.subnetIndex === subnetWithQuestionIndex &&
+						msg.type === "question"
+				);
+
+				if (questionIndex !== -1) {
+					// Insert after the question
+					newMessages.splice(questionIndex + 1, 0, feedbackMessage);
+				} else {
+					// Fallback: append to end if question not found
+					newMessages.push(feedbackMessage);
+				}
+				return newMessages;
+			});
 
 			const subnetWithQuestion = currentWorkflowData?.subnets?.find(
 				(subnet: any) =>
@@ -307,14 +464,33 @@ export const useFeedback = ({
 				type: "response",
 				content: "Submitting feedback...",
 				timestamp: new Date(),
+				subnetIndex: subnetWithQuestionIndex,
+				toolName:
+					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+						?.toolName,
 			};
-			setChatMessages((prev) => [...prev, submittingMessage]);
+
+			// Insert submitting message after the feedback message
+			setChatMessages((prev) => {
+				const newMessages = [...prev];
+				const feedbackIndex = newMessages.findIndex(
+					(msg) => msg.id === feedbackMessage.id
+				);
+
+				if (feedbackIndex !== -1) {
+					newMessages.splice(feedbackIndex + 1, 0, submittingMessage);
+				} else {
+					newMessages.push(submittingMessage);
+				}
+				return newMessages;
+			});
 
 			await submitFeedbackToAPI(
 				subnetWithQuestion.question.text,
 				feedback
 			);
 
+			// Remove the submitting message
 			setChatMessages((prev) =>
 				prev.filter((msg) => msg.id !== submittingMessage.id)
 			);
@@ -325,18 +501,36 @@ export const useFeedback = ({
 				content:
 					"Feedback submitted successfully. Resuming workflow...",
 				timestamp: new Date(),
+				subnetIndex: subnetWithQuestionIndex,
+				toolName:
+					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+						?.toolName,
 			};
-			setChatMessages((prev) => [...prev, successMessage]);
+
+			// Insert success message after the feedback message
+			setChatMessages((prev) => {
+				const newMessages = [...prev];
+				const feedbackIndex = newMessages.findIndex(
+					(msg) => msg.id === feedbackMessage.id
+				);
+
+				if (feedbackIndex !== -1) {
+					newMessages.splice(feedbackIndex + 1, 0, successMessage);
+				} else {
+					newMessages.push(successMessage);
+				}
+				return newMessages;
+			});
 
 			setPrompt("");
-		
+
 			setWorkflowStatus("running");
 			setIsExecuting(true);
 			setIsInFeedbackMode(false);
-					
+
 			if (resumePolling) {
 				console.log("🔄 Resuming polling after feedback submission");
-			
+
 				setTimeout(() => {
 					resumePolling();
 				}, 1000);

@@ -267,31 +267,43 @@ export const useSubnetCache = () => {
 				// Only skip if the content is actually duplicated to prevent losing unique messages like OpenAI responses
 				let shouldSkipDueToFeedbackHistory = false;
 				if (hasFeedbackHistory && includeHistory) {
-					// Check if subnet.data content would be duplicated by feedback history
-					const subnetDataContent = subnet.data
-						? String(subnet.data)
-						: "";
+					// Extract the actual message content from subnet.data for comparison
+					let subnetMessageContent = "";
+					try {
+						const parsedSubnetData = JSON.parse(
+							subnet.data || "{}"
+						);
+						// Handle nested data structure: data.data.message or data.message
+						subnetMessageContent =
+							parsedSubnetData?.data?.message ||
+							parsedSubnetData?.message ||
+							String(subnet.data || "");
+					} catch {
+						subnetMessageContent = String(subnet.data || "");
+					}
+
 					const feedbackContent =
 						subnet.feedbackHistory?.[0]?.response?.message || "";
 
-					// Only skip if the content is substantially similar
+					// Only skip if the message content is substantially similar
 					shouldSkipDueToFeedbackHistory =
-						subnetDataContent.length > 0 &&
+						subnetMessageContent.length > 0 &&
 						feedbackContent.length > 0 &&
-						(subnetDataContent.includes(
+						(subnetMessageContent.includes(
 							feedbackContent.slice(0, 100)
 						) ||
 							feedbackContent.includes(
-								subnetDataContent.slice(0, 100)
-							));
+								subnetMessageContent.slice(0, 100)
+							) ||
+							subnetMessageContent === feedbackContent); // Exact match check
 
 					console.log(
 						`🔍 Content duplication check for subnet ${index}:`,
 						{
-							hasSubnetData: subnetDataContent.length > 0,
+							hasSubnetData: subnetMessageContent.length > 0,
 							hasFeedbackContent: feedbackContent.length > 0,
 							isDuplicated: shouldSkipDueToFeedbackHistory,
-							subnetPreview: subnetDataContent.slice(0, 50),
+							subnetPreview: subnetMessageContent.slice(0, 50),
 							feedbackPreview: feedbackContent.slice(0, 50),
 						}
 					);
@@ -649,9 +661,69 @@ export const useSubnetCache = () => {
 				}
 			});
 
-			// Combine all messages and sort by timestamp for proper chronological order
+			// Custom sorting logic to group messages by subnet, with questions after each subnet's data
 			const allMessages = [...dataMessages, ...questionMessages].sort(
 				(a, b) => {
+					// Workflow status messages (like "Workflow executed successfully") should appear at the very bottom
+					const isAWorkflowStatus =
+						a.type === "response" &&
+						(a.content?.includes(
+							"Workflow executed successfully"
+						) ||
+							a.content?.includes("Workflow completed") ||
+							a.content?.includes("Workflow failed"));
+					const isBWorkflowStatus =
+						b.type === "response" &&
+						(b.content?.includes(
+							"Workflow executed successfully"
+						) ||
+							b.content?.includes("Workflow completed") ||
+							b.content?.includes("Workflow failed"));
+
+					// If one is a workflow status message, it should come last
+					if (isAWorkflowStatus && !isBWorkflowStatus) {
+						return 1; // Workflow status comes last
+					}
+					if (isBWorkflowStatus && !isAWorkflowStatus) {
+						return -1; // Workflow status comes last
+					}
+
+					// If both are workflow status messages, sort by timestamp
+					if (isAWorkflowStatus && isBWorkflowStatus) {
+						const timeA = a.timestamp
+							? new Date(a.timestamp).getTime()
+							: 0;
+						const timeB = b.timestamp
+							? new Date(b.timestamp).getTime()
+							: 0;
+						return timeA - timeB;
+					}
+
+					// First sort by subnet index to group messages by subnet
+					const subnetA = a.subnetIndex ?? -1;
+					const subnetB = b.subnetIndex ?? -1;
+
+					if (subnetA !== subnetB) {
+						return subnetA - subnetB;
+					}
+
+					// Within the same subnet, prioritize data messages before questions
+					const isAQuestion = a.type === "question";
+					const isBQuestion = b.type === "question";
+					const isAData =
+						a.type === "workflow_subnet" || a.type === "response";
+					const isBData =
+						b.type === "workflow_subnet" || b.type === "response";
+
+					// Data messages come before questions within the same subnet
+					if (isAData && isBQuestion) {
+						return -1; // Data comes first
+					}
+					if (isBData && isAQuestion) {
+						return 1; // Data comes first
+					}
+
+					// For messages of the same type within the same subnet, sort by timestamp
 					const timeA = a.timestamp
 						? new Date(a.timestamp).getTime()
 						: 0;
@@ -985,34 +1057,49 @@ export const useSubnetCache = () => {
 					// This ensures OpenAI messages and other unique content in subnet.data are not lost
 					let shouldSkipSubnetData = false;
 					if (hasFeedbackHistory && includeHistory) {
-						// Check if subnet.data content is already covered by feedback history
-						const subnetDataContent = subnet.data
-							? String(subnet.data)
-							: "";
+						// Extract the actual message content from subnet.data for comparison
+						let subnetMessageContent = "";
+						try {
+							const parsedSubnetData = JSON.parse(
+								subnet.data || "{}"
+							);
+							// Handle nested data structure: data.data.message or data.message
+							subnetMessageContent =
+								parsedSubnetData?.data?.message ||
+								parsedSubnetData?.message ||
+								String(subnet.data || "");
+						} catch {
+							subnetMessageContent = String(subnet.data || "");
+						}
+
 						const feedbackContent =
 							subnet.feedbackHistory?.[0]?.response?.message ||
 							"";
 
-						// Only skip if the content is substantially similar (simple check)
+						// Only skip if the message content is substantially similar
 						const isContentDuplicated =
-							subnetDataContent.length > 0 &&
+							subnetMessageContent.length > 0 &&
 							feedbackContent.length > 0 &&
-							(subnetDataContent.includes(
+							(subnetMessageContent.includes(
 								feedbackContent.slice(0, 100)
 							) ||
 								feedbackContent.includes(
-									subnetDataContent.slice(0, 100)
-								));
+									subnetMessageContent.slice(0, 100)
+								) ||
+								subnetMessageContent === feedbackContent); // Exact match check
 
 						shouldSkipSubnetData = isContentDuplicated;
 
 						console.log(
 							`🔍 Subnet data duplication check for subnet ${index}:`,
 							{
-								hasSubnetData: subnetDataContent.length > 0,
+								hasSubnetData: subnetMessageContent.length > 0,
 								hasFeedbackContent: feedbackContent.length > 0,
 								isDuplicated: shouldSkipSubnetData,
-								subnetPreview: subnetDataContent.slice(0, 50),
+								subnetPreview: subnetMessageContent.slice(
+									0,
+									50
+								),
 								feedbackPreview: feedbackContent.slice(0, 50),
 							}
 						);

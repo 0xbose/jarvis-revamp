@@ -296,7 +296,7 @@ export class WorkflowExecutor {
 	public startContinuousPolling(
 		workflowId: string,
 		apiKey: string,
-		pollInterval: number = 2000
+		pollInterval: number = 8000
 	): void {
 		if (this.currentWorkflowId !== workflowId) {
 			console.warn(
@@ -739,7 +739,7 @@ export class WorkflowExecutor {
 					if (hasAuthenticationPending) {
 						startContinuousPolling(10000);
 					} else {
-						startContinuousPolling(2000);
+						startContinuousPolling(8000);
 					}
 				} else if (statusData.workflowStatus === "stopped") {
 					console.log(
@@ -775,7 +775,7 @@ export class WorkflowExecutor {
 			}
 		};
 
-		const startContinuousPolling = (pollInterval: number = 2000) => {
+		const startContinuousPolling = (pollInterval: number = 8000) => {
 			// Ensure no duplicate intervals
 			if (this.currentPollingInterval) {
 				console.warn(
