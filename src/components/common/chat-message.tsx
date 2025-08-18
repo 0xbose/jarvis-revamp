@@ -78,6 +78,7 @@ export function ChatMessage({
 	const [hideFeedbackButtons, setHideFeedbackButtons] = useState(false);
 	const [hideNotificationButtons, setHideNotificationButtons] =
 		useState(false);
+	const [showAuthConfirmation, setShowAuthConfirmation] = useState(false);
 
 	const shouldHideInteractiveElements = () => {
 		const shouldHide =
@@ -261,6 +262,18 @@ export function ChatMessage({
 						<div className="text-sm font-medium mb-2 flex items-center gap-2 text-gray-400">
 							<Bell className="w-4 h-4" />
 							<span>Notification</span>
+							{message.toolName && (
+								<>
+									<span className="text-gray-600">•</span>
+									<span className="italic">
+										{message.toolName
+											.charAt(0)
+											.toUpperCase() +
+											message.toolName.slice(1)}{" "}
+										Agent
+									</span>
+								</>
+							)}
 						</div>
 						<div>
 							<div className="text-foreground text-sm leading-relaxed">
@@ -309,11 +322,7 @@ export function ChatMessage({
 									</div>
 								)}
 						</div>
-						{message.toolName && (
-							<div className="text-xs text-gray-400 mt-2 italic">
-								From {message.toolName} agent
-							</div>
-						)}
+
 						{/* <div className="text-xs text-gray-500 mt-2">
 							{message.timestamp.toLocaleTimeString([], {
 								hour: "2-digit",
@@ -366,6 +375,18 @@ export function ChatMessage({
 									  message.questionData.type.slice(1)
 									: "Question"}
 							</span>
+							{message.toolName && (
+								<>
+									<span className="text-gray-600">•</span>
+									<span className="italic">
+										{message.toolName
+											.charAt(0)
+											.toUpperCase() +
+											message.toolName.slice(1)}{" "}
+										Agent
+									</span>
+								</>
+							)}
 						</div>
 						<div>
 							<div className="text-foreground text-sm leading-relaxed overflow-hidden">
@@ -397,9 +418,6 @@ export function ChatMessage({
 									)}
 									<Button
 										onClick={() => {
-											// Hide the button immediately when clicked
-											setHideAuthButton(true);
-
 											const questionText =
 												message.questionData?.text ||
 												message.content;
@@ -461,6 +479,10 @@ export function ChatMessage({
 													);
 												}
 											}
+
+											// Show authentication confirmation UI after opening the link
+											setShowAuthConfirmation(true);
+											setHideAuthButton(true);
 										}}
 										variant="outline"
 										size="sm"
@@ -580,12 +602,68 @@ export function ChatMessage({
 									)}
 								</div>
 							) : null}
+
+							{/* Authentication Confirmation UI */}
+							{showAuthConfirmation &&
+								message.questionData?.type ===
+									"authentication" && (
+									<div className="mt-4 space-y-3">
+										<div className="flex items-center gap-2 text-blue-400 mb-2">
+											<AlertCircle className="w-4 h-4" />
+											<span className="text-sm font-medium">
+												Authentication Required
+											</span>
+										</div>
+										<p className="text-gray-300 text-sm mb-3">
+											Have you completed the
+											authentication process in the new
+											tab?
+										</p>
+										<div className="flex gap-3">
+											<Button
+												onClick={async () => {
+													setShowAuthConfirmation(
+														false
+													);
+
+													if (
+														onFeedbackProceed &&
+														message.questionData
+															?.text
+													) {
+														await onFeedbackProceed(
+															message.questionData
+																.text,
+															"Yes, I have authenticated successfully"
+														);
+													}
+												}}
+												variant="outline"
+												size="sm"
+												className="flex items-center gap-2 text-green-500 hover:text-green-400 bg-green-950/60 hover:bg-green-950/70 border border-green-800/50 hover:border-green-800/70"
+											>
+												<Check className="w-4 h-4" />
+												Yes, Authenticated
+											</Button>
+											<Button
+												onClick={() => {
+													setShowAuthConfirmation(
+														false
+													);
+													setHideAuthButton(false);
+												}}
+												variant="outline"
+												size="sm"
+												className="text-gray-400 hover:text-gray-300 bg-gray-950/60 hover:bg-gray-950/70 border border-gray-800/50 hover:border-gray-800/70"
+											>
+												<X className="w-4 h-4" />
+												Cancel
+											</Button>
+										</div>
+									</div>
+								)}
 						</div>
-						{message.toolName && (
-							<div className="text-xs mt-2 italic text-gray-400">
-								From {message.toolName} agent
-							</div>
-						)}
+
 						{/* <div className="text-xs text-gray-500 mt-2">
 							{message.timestamp.toLocaleTimeString([], {
 								hour: "2-digit",
@@ -623,6 +701,11 @@ export function ChatMessage({
 						<div className="size-3 rounded-full border-2 border-gray-700 bg-gray-500"></div>
 					</div>
 					<div className="flex-1 min-w-0 p-4 border border-border/50 rounded-lg">
+						<div className="text-sm mb-1 flex items-center gap-2">
+							<span className="italic text-gray-400">
+								Your answer
+							</span>
+						</div>
 						{isMarkdownContent(message.content) ? (
 							<div className="w-fit px-5 py-2 rounded-lg border border-border bg-sidebar/20 text-foreground text-sm leading-relaxed">
 								<MDXRenderer content={message.content} />
@@ -729,7 +812,9 @@ export function ChatMessage({
 											: "text-gray-400"
 									}`}
 								>
-									{message.toolName} agent
+									{message.toolName.charAt(0).toUpperCase() +
+										message.toolName.slice(1)}{" "}
+									Agent
 								</span>
 								{getStatusText() &&
 									message.subnetStatus !== "done" && (
@@ -884,6 +969,15 @@ export function ChatMessage({
 					<div className="size-3 rounded-full border-2 border-gray-700 bg-gray-500"></div>
 				</div>
 				<div className="flex-1 min-w-0 p-4 border border-border/50 rounded-lg">
+					{message.toolName && (
+						<div className="text-sm mb-1 flex items-center gap-2">
+							<span className="italic text-gray-400">
+								{message.toolName.charAt(0).toUpperCase() +
+									message.toolName.slice(1)}{" "}
+								Agent
+							</span>
+						</div>
+					)}
 					<div className="text-gray-200 text-sm leading-relaxed">
 						{isMarkdownContent(message.content) ? (
 							<MDXRenderer content={message.content} />
