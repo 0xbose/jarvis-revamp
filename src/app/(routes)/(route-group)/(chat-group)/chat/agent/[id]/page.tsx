@@ -647,7 +647,7 @@ export default function AgentChatPage() {
 
 	if (isLoading) {
 		return (
-			<div className="relative w-full max-w-7xl mx-auto h-full flex flex-col">
+			<div className="relative w-10/12 max-w-7xl mx-auto h-full flex flex-col p-4">
 				<ChatSkeleton />
 				<div className="absolute bottom-4 left-0 right-0 px-4 space-y-2">
 					<Skeleton className="h-6 w-24" />
@@ -705,157 +705,176 @@ export default function AgentChatPage() {
 	return (
 		<div className="relative w-full h-full flex flex-col">
 			{chatMessages.length === 0 ? (
-				<ChatSkeleton />
+				<div className="w-10/12 max-w-7xl mx-auto p-4">
+					<ChatSkeleton />
+				</div>
 			) : (
-				<div className="flex-1 p-4 pb-24 min-h-0">
-					<div
-						ref={chatContainerRef}
-						className="overflow-y-auto scrollbar-hide h-[calc(100vh-10rem)] flex flex-col gap-4"
-						onScroll={handleScroll}
-					>
-						{chatMessages
-							.filter((message) => {
-								const isWorkflowCompleted =
-									currentWorkflowData?.workflowStatus ===
-										"completed" ||
-									currentWorkflowData?.workflowStatus ===
-										"failed" ||
-									currentWorkflowData?.workflowStatus ===
-										"stopped" ||
-									workflowStatus === "completed" ||
-									workflowStatus === "failed" ||
-									workflowStatus === "stopped";
+				<div>
+					<div className="flex-1 p-4 pb-20 min-h-0 w-full overflow-y-auto scrollbar-hide h-[calc(100vh-10rem)]">
+						<div
+							ref={chatContainerRef}
+							className=" flex flex-col gap-4 w-10/12  mx-auto"
+							onScroll={handleScroll}
+						>
+							{chatMessages
+								.filter((message) => {
+									const isWorkflowCompleted =
+										currentWorkflowData?.workflowStatus ===
+											"completed" ||
+										currentWorkflowData?.workflowStatus ===
+											"failed" ||
+										currentWorkflowData?.workflowStatus ===
+											"stopped" ||
+										workflowStatus === "completed" ||
+										workflowStatus === "failed" ||
+										workflowStatus === "stopped";
 
-								if (
-									isWorkflowCompleted &&
-									message.type === "question"
-								) {
-									return false;
-								}
-
-								return true;
-							})
-							.sort((a, b) => {
-								// Workflow status messages should appear at the very bottom
-								const isAWorkflowStatus =
-									a.type === "response" &&
-									(a.content?.includes(
-										"Workflow executed successfully"
-									) ||
-										a.content?.includes(
-											"Workflow completed"
-										) ||
-										a.content?.includes(
-											"Workflow failed"
-										) ||
-										a.content?.includes(
-											"Workflow execution failed"
-										));
-								const isBWorkflowStatus =
-									b.type === "response" &&
-									(b.content?.includes(
-										"Workflow executed successfully"
-									) ||
-										b.content?.includes(
-											"Workflow completed"
-										) ||
-										b.content?.includes(
-											"Workflow failed"
-										) ||
-										b.content?.includes(
-											"Workflow execution failed"
-										));
-
-								// If one is a workflow status message, it should come last
-								if (isAWorkflowStatus && !isBWorkflowStatus) {
-									return 1; // Workflow status comes last
-								}
-								if (isBWorkflowStatus && !isAWorkflowStatus) {
-									return -1; // Workflow status comes last
-								}
-
-								// If both are workflow status messages, sort by timestamp
-								if (isAWorkflowStatus && isBWorkflowStatus) {
-									const timeA = a.timestamp
-										? new Date(a.timestamp).getTime()
-										: 0;
-									const timeB = b.timestamp
-										? new Date(b.timestamp).getTime()
-										: 0;
-									return timeA - timeB;
-								}
-
-								// For non-workflow status messages, maintain original order
-								return 0;
-							})
-							.map((message, index) => (
-								<ChatMessage
-									key={`${urlWorkflowId}-${message.id}`}
-									message={message}
-									isLast={index === chatMessages.length - 1}
-									onNotificationYes={handleNotificationYes}
-									onNotificationNo={handleNotificationNo}
-									isPendingNotification={pendingNotifications.some(
-										(n) => n.id === message.id
-									)}
-									onFeedbackSubmit={handleFeedbackSubmit}
-									onFeedbackProceed={handleFeedbackProceed}
-									showFeedbackButtons={
-										!isShowingCachedMessages &&
-										message.type === "question" &&
-										message.questionData?.type ===
-											"feedback" &&
-										currentWorkflowData?.workflowStatus !==
-											"completed" &&
-										currentWorkflowData?.workflowStatus !==
-											"failed" &&
-										currentWorkflowData?.workflowStatus !==
-											"stopped" &&
-										workflowStatus !== "completed" &&
-										workflowStatus !== "failed" &&
-										workflowStatus !== "stopped" &&
-										(message.subnetStatus ===
-											"waiting_response" ||
-											message.subnetStatus ===
-												"pending" ||
-											currentWorkflowData?.workflowStatus ===
-												"waiting_response" ||
-											workflowStatus ===
-												"waiting_response")
+									if (
+										isWorkflowCompleted &&
+										message.type === "question"
+									) {
+										return false;
 									}
-									workflowStatus={workflowStatus}
-								/>
-							))}
 
-						{shouldShowSkeleton() && (
-							<div className="space-y-2">
-								<div className="py-3 rounded-md space-y-2">
-									<Skeleton className="h-4 w-36" />
-									<Skeleton className="h-4 w-32" />
-									<Skeleton className="h-20 w-full" />
-									<div className="flex items-center space-x-2 mt-2">
-										<Skeleton className="h-4 w-20 rounded" />
-										<Skeleton className="h-4 w-12" />
+									return true;
+								})
+								.sort((a, b) => {
+									// Workflow status messages should appear at the very bottom
+									const isAWorkflowStatus =
+										a.type === "response" &&
+										(a.content?.includes(
+											"Workflow executed successfully"
+										) ||
+											a.content?.includes(
+												"Workflow completed"
+											) ||
+											a.content?.includes(
+												"Workflow failed"
+											) ||
+											a.content?.includes(
+												"Workflow execution failed"
+											));
+									const isBWorkflowStatus =
+										b.type === "response" &&
+										(b.content?.includes(
+											"Workflow executed successfully"
+										) ||
+											b.content?.includes(
+												"Workflow completed"
+											) ||
+											b.content?.includes(
+												"Workflow failed"
+											) ||
+											b.content?.includes(
+												"Workflow execution failed"
+											));
+
+									// If one is a workflow status message, it should come last
+									if (
+										isAWorkflowStatus &&
+										!isBWorkflowStatus
+									) {
+										return 1; // Workflow status comes last
+									}
+									if (
+										isBWorkflowStatus &&
+										!isAWorkflowStatus
+									) {
+										return -1; // Workflow status comes last
+									}
+
+									// If both are workflow status messages, sort by timestamp
+									if (
+										isAWorkflowStatus &&
+										isBWorkflowStatus
+									) {
+										const timeA = a.timestamp
+											? new Date(a.timestamp).getTime()
+											: 0;
+										const timeB = b.timestamp
+											? new Date(b.timestamp).getTime()
+											: 0;
+										return timeA - timeB;
+									}
+
+									// For non-workflow status messages, maintain original order
+									return 0;
+								})
+								.map((message, index) => (
+									<ChatMessage
+										key={`${urlWorkflowId}-${message.id}`}
+										message={message}
+										isLast={
+											index === chatMessages.length - 1
+										}
+										onNotificationYes={
+											handleNotificationYes
+										}
+										onNotificationNo={handleNotificationNo}
+										isPendingNotification={pendingNotifications.some(
+											(n) => n.id === message.id
+										)}
+										onFeedbackSubmit={handleFeedbackSubmit}
+										onFeedbackProceed={
+											handleFeedbackProceed
+										}
+										showFeedbackButtons={
+											!isShowingCachedMessages &&
+											message.type === "question" &&
+											message.questionData?.type ===
+												"feedback" &&
+											currentWorkflowData?.workflowStatus !==
+												"completed" &&
+											currentWorkflowData?.workflowStatus !==
+												"failed" &&
+											currentWorkflowData?.workflowStatus !==
+												"stopped" &&
+											workflowStatus !== "completed" &&
+											workflowStatus !== "failed" &&
+											workflowStatus !== "stopped" &&
+											(message.subnetStatus ===
+												"waiting_response" ||
+												message.subnetStatus ===
+													"pending" ||
+												currentWorkflowData?.workflowStatus ===
+													"waiting_response" ||
+												workflowStatus ===
+													"waiting_response")
+										}
+										workflowStatus={workflowStatus}
+									/>
+								))}
+
+							{shouldShowSkeleton() && (
+								<div className="space-y-2">
+									<div className="py-3 rounded-md space-y-2">
+										<Skeleton className="h-4 w-36" />
+										<Skeleton className="h-4 w-32" />
+										<Skeleton className="h-20 w-full" />
+										<div className="flex items-center space-x-2 mt-2">
+											<Skeleton className="h-4 w-20 rounded" />
+											<Skeleton className="h-4 w-12" />
+										</div>
+									</div>
+									<div className="py-3 rounded-md space-y-2">
+										<Skeleton className="h-4 w-36" />
+										<Skeleton className="h-4 w-32" />
+										<Skeleton className="h-20 w-full" />
+										<div className="flex items-center space-x-2 mt-2">
+											<Skeleton className="h-4 w-20 rounded" />
+											<Skeleton className="h-4 w-12" />
+										</div>
 									</div>
 								</div>
-								<div className="py-3 rounded-md space-y-2">
-									<Skeleton className="h-4 w-36" />
-									<Skeleton className="h-4 w-32" />
-									<Skeleton className="h-20 w-full" />
-									<div className="flex items-center space-x-2 mt-2">
-										<Skeleton className="h-4 w-20 rounded" />
-										<Skeleton className="h-4 w-12" />
-									</div>
-								</div>
-							</div>
-						)}
+							)}
 
-						<div ref={messagesEndRef} />
+							<div ref={messagesEndRef} />
+						</div>
 					</div>
 				</div>
 			)}
 
-			<div className="absolute bottom-4 left-0 right-0 px-4">
+			<div className="absolute bottom-4 left-0 right-0 px-4 w-10/12 max-w-7xl mx-auto">
 				<ChatInput
 					onSend={handlePromptSubmit}
 					onStop={handleStopExecution}

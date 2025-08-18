@@ -2,7 +2,7 @@
 
 import { base64ToDataUrl } from "@/lib/utils";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
 	CircleIcon as CircleQuestionMark,
 	CircleAlert,
@@ -80,6 +80,43 @@ export function ChatMessage({
 		useState(false);
 	const [showAuthConfirmation, setShowAuthConfirmation] = useState(false);
 
+	// New state for button interaction tracking during workflow execution
+	const [clickedButtonType, setClickedButtonType] = useState<string | null>(
+		null
+	);
+	const [isButtonPending, setIsButtonPending] = useState(false);
+
+	// Helper function to determine if workflow is actively executing (not just viewing history)
+	const isWorkflowActivelyExecuting = () => {
+		return (
+			workflowStatus === "running" ||
+			workflowStatus === "in_progress" ||
+			workflowStatus === "waiting_response" ||
+			workflowStatus === "pending"
+		);
+	};
+
+	// Helper function to determine if buttons should be disabled during execution
+	const shouldDisableButtons = () => {
+		return isWorkflowActivelyExecuting() && isButtonPending;
+	};
+
+	// Helper function to get button styling based on state
+	const getButtonClassName = (baseClassName: string, buttonType: string) => {
+		const isThisButtonClicked = clickedButtonType === buttonType;
+		const isDisabled = shouldDisableButtons();
+
+		if (isDisabled && isThisButtonClicked) {
+			// Highlight the clicked button during execution
+			return `${baseClassName} opacity-100 ring-2 ring-blue-400/50 bg-blue-950/80 border-blue-600`;
+		} else if (isDisabled && !isThisButtonClicked) {
+			// Disable other buttons
+			return `${baseClassName} opacity-50 cursor-not-allowed`;
+		}
+
+		return baseClassName;
+	};
+
 	const shouldHideInteractiveElements = () => {
 		const shouldHide =
 			message.subnetStatus !== "waiting_response" &&
@@ -119,6 +156,26 @@ export function ChatMessage({
 		shouldHideInteractiveElements() || hideFeedbackButtons;
 	const shouldHideNotificationButtons = () =>
 		shouldHideInteractiveElements() || hideNotificationButtons;
+
+	// Reset button states when workflow completes or is no longer actively executing
+	useEffect(() => {
+		if (!isWorkflowActivelyExecuting()) {
+			setClickedButtonType(null);
+			setIsButtonPending(false);
+			// When workflow completes, hide the buttons that were interacted with
+			if (clickedButtonType) {
+				if (clickedButtonType.includes("notification")) {
+					setHideNotificationButtons(true);
+				}
+				if (clickedButtonType.includes("feedback")) {
+					setHideFeedbackButtons(true);
+				}
+				if (clickedButtonType.includes("auth")) {
+					setHideAuthButton(true);
+				}
+			}
+		}
+	}, [workflowStatus, clickedButtonType]);
 
 	if (message.type === "user") {
 		return (
@@ -291,30 +348,74 @@ export function ChatMessage({
 									<div className="flex gap-3 mt-4">
 										<Button
 											onClick={() => {
-												// Hide the notification buttons immediately when clicked
-												setHideNotificationButtons(
-													true
-												);
+												if (shouldDisableButtons())
+													return;
+
+												// Set button state for workflow execution
+												if (
+													isWorkflowActivelyExecuting()
+												) {
+													setClickedButtonType(
+														"notification-yes"
+													);
+													setIsButtonPending(true);
+												} else {
+													// Hide the notification buttons immediately when clicked (only for history/non-executing workflows)
+													setHideNotificationButtons(
+														true
+													);
+												}
+
 												onNotificationYes(message);
 											}}
 											variant="outline"
 											size="sm"
-											className="flex items-center gap-2 text-green-500 hover:text-green-400 bg-green-950/60 hover:bg-green-950/70 border border-green-800/50 hover:border-green-800/70"
+											disabled={
+												shouldDisableButtons() &&
+												clickedButtonType !==
+													"notification-yes"
+											}
+											className={getButtonClassName(
+												"flex items-center gap-2 text-green-500 hover:text-green-400 bg-green-950/60 hover:bg-green-950/70 border border-green-800/50 hover:border-green-800/70",
+												"notification-yes"
+											)}
 										>
 											<Check className="w-4 h-4" />
 											Yes
 										</Button>
 										<Button
 											onClick={() => {
-												// Hide the notification buttons immediately when clicked
-												setHideNotificationButtons(
-													true
-												);
+												if (shouldDisableButtons())
+													return;
+
+												// Set button state for workflow execution
+												if (
+													isWorkflowActivelyExecuting()
+												) {
+													setClickedButtonType(
+														"notification-no"
+													);
+													setIsButtonPending(true);
+												} else {
+													// Hide the notification buttons immediately when clicked (only for history/non-executing workflows)
+													setHideNotificationButtons(
+														true
+													);
+												}
+
 												onNotificationNo(message);
 											}}
 											variant="outline"
 											size="sm"
-											className="flex items-center gap-2 text-red-500 hover:text-red-400 bg-red-950/60 hover:bg-red-950/70 border border-red-800/50 hover:border-red-800/70"
+											disabled={
+												shouldDisableButtons() &&
+												clickedButtonType !==
+													"notification-no"
+											}
+											className={getButtonClassName(
+												"flex items-center gap-2 text-red-500 hover:text-red-400 bg-red-950/60 hover:bg-red-950/70 border border-red-800/50 hover:border-red-800/70",
+												"notification-no"
+											)}
 										>
 											<X className="w-4 h-4" />
 											No
@@ -418,6 +519,16 @@ export function ChatMessage({
 									)}
 									<Button
 										onClick={() => {
+											if (shouldDisableButtons()) return;
+
+											// Set button state for workflow execution
+											if (isWorkflowActivelyExecuting()) {
+												setClickedButtonType(
+													"authenticate"
+												);
+												setIsButtonPending(true);
+											}
+
 											const questionText =
 												message.questionData?.text ||
 												message.content;
@@ -482,11 +593,22 @@ export function ChatMessage({
 
 											// Show authentication confirmation UI after opening the link
 											setShowAuthConfirmation(true);
-											setHideAuthButton(true);
+											if (
+												!isWorkflowActivelyExecuting()
+											) {
+												setHideAuthButton(true);
+											}
 										}}
 										variant="outline"
 										size="sm"
-										className="flex items-center gap-2 text-gray-300 hover:text-gray-400 bg-sidebar/30 hover:bg-sidebar/20 border border-border hover:border-border/70"
+										disabled={
+											shouldDisableButtons() &&
+											clickedButtonType !== "authenticate"
+										}
+										className={getButtonClassName(
+											"flex items-center gap-2 text-gray-300 hover:text-gray-400 bg-sidebar/30 hover:bg-sidebar/20 border border-border hover:border-border/70",
+											"authenticate"
+										)}
 									>
 										<ExternalLinkIcon className="w-4 h-4" />
 										Authenticate
@@ -501,10 +623,29 @@ export function ChatMessage({
 										<div className="flex gap-3">
 											<Button
 												onClick={async () => {
-													// Hide the feedback buttons immediately when clicked
-													setHideFeedbackButtons(
-														true
-													);
+													if (shouldDisableButtons())
+														return;
+
+													// Set button state for workflow execution
+													if (
+														isWorkflowActivelyExecuting()
+													) {
+														setClickedButtonType(
+															"feedback-proceed"
+														);
+														setIsButtonPending(
+															true
+														);
+													}
+
+													// Hide the feedback buttons immediately when clicked (only for history/non-executing workflows)
+													if (
+														!isWorkflowActivelyExecuting()
+													) {
+														setHideFeedbackButtons(
+															true
+														);
+													}
 
 													if (
 														onFeedbackProceed &&
@@ -520,19 +661,50 @@ export function ChatMessage({
 												}}
 												variant="outline"
 												size="sm"
-												className="flex items-center gap-2 text-green-500 hover:text-green-400 bg-green-950/60 hover:bg-green-950/70 border border-green-800/50 hover:border-green-800/70"
+												disabled={
+													shouldDisableButtons() &&
+													clickedButtonType !==
+														"feedback-proceed"
+												}
+												className={getButtonClassName(
+													"flex items-center gap-2 text-green-500 hover:text-green-400 bg-green-950/60 hover:bg-green-950/70 border border-green-800/50 hover:border-green-800/70",
+													"feedback-proceed"
+												)}
 											>
 												<Check className="w-4 h-4" />
 												Yes, proceed
 											</Button>
 											<Button
 												onClick={() => {
+													if (shouldDisableButtons())
+														return;
+
+													// Set button state for workflow execution
+													if (
+														isWorkflowActivelyExecuting()
+													) {
+														setClickedButtonType(
+															"feedback-input"
+														);
+														setIsButtonPending(
+															true
+														);
+													}
+
 													// Don't hide feedback buttons, just show input
 													setShowFeedbackInput(true);
 												}}
 												variant="outline"
 												size="sm"
-												className="flex items-center gap-2 text-blue-500 hover:text-blue-400 bg-blue-950/60 hover:bg-blue-950/70 border border-blue-800/50 hover:border-blue-800/70"
+												disabled={
+													shouldDisableButtons() &&
+													clickedButtonType !==
+														"feedback-input"
+												}
+												className={getButtonClassName(
+													"flex items-center gap-2 text-blue-500 hover:text-blue-400 bg-blue-950/60 hover:bg-blue-950/70 border border-blue-800/50 hover:border-blue-800/70",
+													"feedback-input"
+												)}
 											>
 												<MessageSquare className="w-4 h-4" />
 												Provide feedback
@@ -554,6 +726,23 @@ export function ChatMessage({
 												<Button
 													onClick={async () => {
 														if (
+															shouldDisableButtons()
+														)
+															return;
+
+														// Set button state for workflow execution
+														if (
+															isWorkflowActivelyExecuting()
+														) {
+															setClickedButtonType(
+																"feedback-submit"
+															);
+															setIsButtonPending(
+																true
+															);
+														}
+
+														if (
 															onFeedbackSubmit &&
 															message.questionData
 																?.text &&
@@ -570,18 +759,28 @@ export function ChatMessage({
 															setShowFeedbackInput(
 																false
 															);
-															// Hide the feedback buttons after successful submission
-															setHideFeedbackButtons(
-																true
-															);
+															// Hide the feedback buttons after successful submission (only for history/non-executing workflows)
+															if (
+																!isWorkflowActivelyExecuting()
+															) {
+																setHideFeedbackButtons(
+																	true
+																);
+															}
 														}
 													}}
 													variant="outline"
 													size="sm"
-													className="flex items-center gap-2 text-blue-500 hover:text-blue-400 bg-blue-950/60 hover:bg-blue-950/70 border border-blue-800/50 hover:border-blue-800/70"
 													disabled={
-														!feedbackText.trim()
+														!feedbackText.trim() ||
+														(shouldDisableButtons() &&
+															clickedButtonType !==
+																"feedback-submit")
 													}
+													className={getButtonClassName(
+														"flex items-center gap-2 text-blue-500 hover:text-blue-400 bg-blue-950/60 hover:bg-blue-950/70 border border-blue-800/50 hover:border-blue-800/70",
+														"feedback-submit"
+													)}
 												>
 													<MessageSquare className="w-4 h-4" />
 													Submit
@@ -589,12 +788,26 @@ export function ChatMessage({
 											</div>
 											<Button
 												onClick={() => {
+													if (shouldDisableButtons())
+														return;
+
 													setShowFeedbackInput(false);
 													setFeedbackText("");
+													// Reset button states when canceling
+													setClickedButtonType(null);
+													setIsButtonPending(false);
 												}}
 												variant="outline"
 												size="sm"
-												className="text-gray-400 hover:text-gray-300 bg-gray-950/60 hover:bg-gray-950/70 border border-gray-800/50 hover:border-gray-800/70"
+												disabled={
+													shouldDisableButtons() &&
+													clickedButtonType !==
+														"feedback-cancel"
+												}
+												className={getButtonClassName(
+													"text-gray-400 hover:text-gray-300 bg-gray-950/60 hover:bg-gray-950/70 border border-gray-800/50 hover:border-gray-800/70",
+													"feedback-cancel"
+												)}
 											>
 												Cancel
 											</Button>
@@ -622,6 +835,21 @@ export function ChatMessage({
 										<div className="flex gap-3">
 											<Button
 												onClick={async () => {
+													if (shouldDisableButtons())
+														return;
+
+													// Set button state for workflow execution
+													if (
+														isWorkflowActivelyExecuting()
+													) {
+														setClickedButtonType(
+															"auth-confirm"
+														);
+														setIsButtonPending(
+															true
+														);
+													}
+
 													setShowAuthConfirmation(
 														false
 													);
@@ -640,21 +868,43 @@ export function ChatMessage({
 												}}
 												variant="outline"
 												size="sm"
-												className="flex items-center gap-2 text-green-500 hover:text-green-400 bg-green-950/60 hover:bg-green-950/70 border border-green-800/50 hover:border-green-800/70"
+												disabled={
+													shouldDisableButtons() &&
+													clickedButtonType !==
+														"auth-confirm"
+												}
+												className={getButtonClassName(
+													"flex items-center gap-2 text-green-500 hover:text-green-400 bg-green-950/60 hover:bg-green-950/70 border border-green-800/50 hover:border-green-800/70",
+													"auth-confirm"
+												)}
 											>
 												<Check className="w-4 h-4" />
 												Yes, Authenticated
 											</Button>
 											<Button
 												onClick={() => {
+													if (shouldDisableButtons())
+														return;
+
 													setShowAuthConfirmation(
 														false
 													);
 													setHideAuthButton(false);
+													// Reset button states when canceling
+													setClickedButtonType(null);
+													setIsButtonPending(false);
 												}}
 												variant="outline"
 												size="sm"
-												className="text-gray-400 hover:text-gray-300 bg-gray-950/60 hover:bg-gray-950/70 border border-gray-800/50 hover:border-gray-800/70"
+												disabled={
+													shouldDisableButtons() &&
+													clickedButtonType !==
+														"auth-cancel"
+												}
+												className={getButtonClassName(
+													"text-gray-400 hover:text-gray-300 bg-gray-950/60 hover:bg-gray-950/70 border border-gray-800/50 hover:border-gray-800/70",
+													"auth-cancel"
+												)}
 											>
 												<X className="w-4 h-4" />
 												Cancel
