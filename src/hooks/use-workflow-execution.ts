@@ -119,11 +119,25 @@ export const useWorkflowExecution = ({
 						);
 
 						if (!hasCompletionMessage) {
+							// Use a timestamp that's definitely after all other messages
+							const latestTimestamp =
+								prev.length > 0
+									? Math.max(
+											...prev.map((msg) =>
+												msg.timestamp
+													? new Date(
+															msg.timestamp
+													  ).getTime()
+													: 0
+											)
+									  )
+									: Date.now();
+
 							const completionMessage: ChatMsg = {
 								id: `completion_${Date.now()}`,
 								type: "response",
 								content: "Workflow executed successfully",
-								timestamp: new Date(),
+								timestamp: new Date(latestTimestamp + 1000), // 1 second after the latest message
 							};
 							return [...prev, completionMessage];
 						}

@@ -48,6 +48,8 @@ export default function AgentChatPage() {
 	const [isPolling, setIsPolling] = useState(false);
 	const [isShowingCachedMessages, setIsShowingCachedMessages] =
 		useState(false);
+	const [hasCachedMessagesLoaded, setHasCachedMessagesLoaded] =
+		useState(false);
 	const { skyBrowser, address } = useWallet();
 	const queryClient = useQueryClient();
 
@@ -75,15 +77,20 @@ export default function AgentChatPage() {
 					`📋 Loading cached messages for workflow: ${urlWorkflowId}`
 				);
 				setIsShowingCachedMessages(true);
+				setHasCachedMessagesLoaded(true);
 				setChatMessagesWithWorkflowCheck(cachedMessages, urlWorkflowId);
+
+				// Set the workflow ID to ensure proper tracking
+				setWorkflowId(urlWorkflowId);
 			} else {
 				console.log(
 					`📋 No cached messages found for workflow: ${urlWorkflowId}`
 				);
 				setIsShowingCachedMessages(false);
+				setHasCachedMessagesLoaded(false);
 			}
 		}
-	}, [urlWorkflowId]);
+	}, [urlWorkflowId, setWorkflowId]);
 
 	const {
 		messagesEndRef,
@@ -179,6 +186,38 @@ export default function AgentChatPage() {
 				const shouldIncludeHistory =
 					isLoadingExistingWorkflow.current &&
 					!isShowingCachedMessages;
+
+				// Skip processing if we're showing cached messages and this is the first update
+				// This prevents duplication of already cached messages
+				if (
+					isShowingCachedMessages &&
+					isLoadingExistingWorkflow.current
+				) {
+					console.log(
+						`📋 Skipping subnet data processing - using cached messages for workflow: ${workflowId}`
+					);
+
+					// CRITICAL FIX: Initialize subnet cache with current data to prevent reprocessing
+					// This ensures that when subsequent API calls come in, subnets aren't treated as "new"
+					if (currentWorkflowData?.subnets) {
+						console.log(
+							`🔧 Initializing subnet cache with ${currentWorkflowData.subnets.length} subnets to prevent reprocessing`
+						);
+						// Process the subnet data once to initialize the cache, but don't generate messages
+						updateMessagesWithSubnetData(
+							currentWorkflowData,
+							lastQuestionRef,
+							{
+								includeHistory: false, // Don't include history to avoid message generation
+								isExistingWorkflow: true, // Mark as existing to avoid new message creation
+								initializeCacheOnly: true, // Add a flag to indicate we only want to initialize cache
+							}
+						);
+					}
+
+					isLoadingExistingWorkflow.current = false;
+					return;
+				}
 
 				if (isLoadingExistingWorkflow.current) {
 					console.log(
@@ -305,12 +344,20 @@ export default function AgentChatPage() {
 							`📋 Loading cached messages for workflow: ${urlWorkflowId}`
 						);
 
-						clearMessages();
-						resetFeedbackState();
+						// CRITICAL FIX: Don't clear the workflow cache when loading cached messages
+						// This prevents the subnet cache from being cleared, which was causing reprocessing
+						console.log(
+							`🔧 Clearing messages but preserving subnet cache for workflow: ${urlWorkflowId}`
+						);
 						setChatMessages([]);
 						setPendingNotifications([]);
+						resetFeedbackState();
+
+						// Set the workflow ID first to ensure proper tracking
+						setWorkflowId(urlWorkflowId);
 
 						setIsShowingCachedMessages(true);
+						setHasCachedMessagesLoaded(true);
 						setChatMessagesWithWorkflowCheck(
 							cachedMessages,
 							urlWorkflowId
@@ -323,6 +370,7 @@ export default function AgentChatPage() {
 						);
 
 						setIsShowingCachedMessages(false);
+						setHasCachedMessagesLoaded(false);
 						resetFeedbackState();
 
 						isLoadingExistingWorkflow.current = true;
@@ -346,6 +394,7 @@ export default function AgentChatPage() {
 			setChatMessages([]);
 			setPendingNotifications([]);
 			setIsShowingCachedMessages(false);
+			setHasCachedMessagesLoaded(false);
 		}
 	}, [
 		isLoading,
@@ -787,7 +836,8 @@ export default function AgentChatPage() {
 													currentWorkflowData.subnets.find(
 														(s: any) =>
 															s.itemID ===
-																message.subnetIndex +
+																(message.subnetIndex ??
+																	-1) +
 																	1 ||
 															s.toolName ===
 																message.toolName
@@ -807,7 +857,7 @@ export default function AgentChatPage() {
 															feedback.feedback_question ===
 																message
 																	.questionData
-																	.text &&
+																	?.text &&
 															feedback.user_answer !==
 																null &&
 															feedback.user_answer !==

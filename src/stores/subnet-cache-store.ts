@@ -156,6 +156,10 @@ export const useSubnetCacheStore = create<SubnetCacheStoreState>()(
 				console.log(
 					`🆕 Subnet ${subnetIndex} in workflow ${workflowId} is new (no cache)`
 				);
+				console.log(
+					`🔍 Debug: Available cached subnets for workflow:`,
+					Array.from(state.subnetCache.get(workflowId)?.keys() || [])
+				);
 				return true; // New subnet, consider it changed
 			}
 

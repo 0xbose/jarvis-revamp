@@ -51,6 +51,7 @@ export const useChatMessages = () => {
 			options: {
 				includeHistory?: boolean;
 				isExistingWorkflow?: boolean;
+				initializeCacheOnly?: boolean;
 			} = {}
 		) => {
 			const workflowId =
@@ -82,13 +83,38 @@ export const useChatMessages = () => {
 				options
 			);
 
+			// If we're only initializing cache, don't process messages further
+			if (options.initializeCacheOnly) {
+				console.log(
+					`🔧 Cache initialization complete for workflow ${workflowId} - skipping message processing`
+				);
+				return;
+			}
+
 			console.log(`🔍 Subnet data processing results:`, {
 				subnetCount: data.subnets?.length || 0,
 				newMessageCount: newMessages.length,
 				newMessageTypes: newMessages.map((msg) => ({
 					type: msg.type,
 					content: msg.content?.slice(0, 50),
+					subnetIndex: msg.subnetIndex,
+					toolName: msg.toolName,
+					sourceId: msg.sourceId,
 				})),
+			});
+
+			// DEBUG: Log detailed information about new messages
+			newMessages.forEach((msg, idx) => {
+				console.log(
+					`🔍 NEW MESSAGE ${idx} for subnet ${msg.subnetIndex}:`,
+					{
+						type: msg.type,
+						toolName: msg.toolName,
+						sourceId: msg.sourceId,
+						contentPreview: msg.content?.slice(0, 100),
+						timestamp: msg.timestamp,
+					}
+				);
 			});
 
 			const isDuplicateMessage = (
@@ -336,6 +362,17 @@ export const useChatMessages = () => {
 				console.log(
 					`📝 Adding ${uniqueNewMessages.length} unique new messages`
 				);
+
+				// DEBUG: Log which messages are being added
+				uniqueNewMessages.forEach((msg, idx) => {
+					console.log(`🔍 ADDING MESSAGE ${idx}:`, {
+						type: msg.type,
+						toolName: msg.toolName,
+						subnetIndex: msg.subnetIndex,
+						sourceId: msg.sourceId,
+						contentPreview: msg.content?.slice(0, 50),
+					});
+				});
 
 				// Simple append: always add new messages to the end for natural chat flow
 				const finalMessages = [
