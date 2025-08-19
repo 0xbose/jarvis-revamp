@@ -823,7 +823,7 @@ export const useSubnetCache = () => {
 							dataMessages.push({
 								id: `subnet_${index}_processing_${Date.now()}`,
 								type: "workflow_subnet",
-								content: `Contacting ${subnet.toolName}...`,
+								content: `Contacting ${subnet.toolName} agent...`,
 								timestamp: new Date(),
 								subnetStatus: "in_progress",
 								toolName: subnet.toolName,

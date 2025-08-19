@@ -245,6 +245,12 @@ export const useChatMessages = () => {
 				}));
 				console.log(`📋 Current message types:`, messageTypes);
 
+				// Check if workflow is completed - if so, filter out all processing messages
+				const isWorkflowCompleted =
+					data.workflowStatus === "completed" ||
+					data.workflowStatus === "failed" ||
+					data.workflowStatus === "stopped";
+
 				const filteredMessages = prevMessages.filter((msg) => {
 					if (msg.type === "user" || msg.type === "response") {
 						console.log(
@@ -269,11 +275,26 @@ export const useChatMessages = () => {
 
 					if (msg.type === "workflow_subnet") {
 						if (msg.subnetIndex !== undefined) {
+							// If workflow is completed, remove all processing/contacting messages
+							if (
+								isWorkflowCompleted &&
+								msg.subnetStatus === "in_progress" &&
+								(msg.content.includes("Processing") ||
+									msg.content.includes("Contacting") ||
+									msg.content.includes("agent..."))
+							) {
+								console.log(
+									`🏁 Removing processing message for subnet ${msg.subnetIndex} - workflow completed`
+								);
+								return false;
+							}
+
 							if (
 								msg.content &&
 								!msg.content.includes("Processing") &&
 								!msg.content.includes("Waiting for") &&
-								!msg.content.includes("Queued for")
+								!msg.content.includes("Queued for") &&
+								!msg.content.includes("Contacting")
 							) {
 								console.log(
 									`✅ Keeping subnet response ${
@@ -294,7 +315,8 @@ export const useChatMessages = () => {
 
 							if (
 								msg.subnetStatus === "in_progress" &&
-								msg.content.includes("Processing") &&
+								(msg.content.includes("Processing") ||
+									msg.content.includes("Contacting")) &&
 								hasNewMessageForSubnet
 							) {
 								console.log(
@@ -305,7 +327,8 @@ export const useChatMessages = () => {
 
 							if (
 								msg.subnetStatus === "in_progress" &&
-								msg.content.includes("Processing") &&
+								(msg.content.includes("Processing") ||
+									msg.content.includes("Contacting")) &&
 								!hasNewMessageForSubnet
 							) {
 								console.log(

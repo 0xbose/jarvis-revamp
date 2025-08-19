@@ -41,6 +41,7 @@ export const useWorkflowExecution = ({
 	const [currentWorkflowId, setCurrentWorkflowId] = useState<string | null>(
 		null
 	);
+	const [pollingStoppedAt, setPollingStoppedAt] = useState<Date | null>(null);
 
 	const { setPollingStatus, stopCurrentExecution } =
 		useWorkflowExecutionStore();
@@ -212,28 +213,33 @@ export const useWorkflowExecution = ({
 				} else if (data.workflowStatus === "in_progress") {
 					setIsExecuting(true);
 					setPollingStatus(true);
+					setPollingStoppedAt(null); // Clear stopped time when polling resumes
 					setWorkflowStatus("in_progress");
 					setIsInFeedbackMode(false);
 				} else if (data.workflowStatus === "waiting_response") {
 					if (hasNonAuthFeedback) {
 						setIsExecuting(true);
 						setPollingStatus(false);
+						setPollingStoppedAt(new Date()); // Record when polling stopped
 						setWorkflowStatus("waiting_response");
 						setIsInFeedbackMode(true);
 					} else if (hasAuthenticationPending) {
 						setIsExecuting(true);
 						setPollingStatus(true);
+						setPollingStoppedAt(null); // Clear stopped time when polling resumes
 						setWorkflowStatus("waiting_response");
 						setIsInFeedbackMode(false);
 					} else {
 						setIsExecuting(true);
 						setPollingStatus(true);
+						setPollingStoppedAt(null); // Clear stopped time when polling resumes
 						setWorkflowStatus("waiting_response");
 						setIsInFeedbackMode(true);
 					}
 				} else if (data.workflowStatus === "pending") {
 					setIsExecuting(true);
 					setPollingStatus(true);
+					setPollingStoppedAt(null); // Clear stopped time when polling resumes
 					setWorkflowStatus("pending");
 					setIsInFeedbackMode(false);
 				}
@@ -479,6 +485,39 @@ export const useWorkflowExecution = ({
 		clearWorkflowCache,
 	]);
 
+	const refreshPolling = useCallback(() => {
+		if (!currentWorkflowId) {
+			console.warn("⚠️ Cannot refresh polling - no current workflow ID");
+			return;
+		}
+
+		console.log(`🔄 Refreshing polling for workflow: ${currentWorkflowId}`);
+
+		// Clear the polling stopped timestamp
+		setPollingStoppedAt(null);
+
+		// Resume polling with the current status handler
+		const statusHandler = createStatusUpdateHandler(false, true);
+
+		// Get the API key from localStorage or environment
+		const apiKey =
+			localStorage.getItem("api_key") || process.env.NEXT_PUBLIC_API_KEY;
+
+		if (!apiKey) {
+			console.error("❌ Cannot refresh polling - no API key available");
+			return;
+		}
+
+		workflowExecutor.resumePolling(
+			currentWorkflowId,
+			apiKey,
+			statusHandler
+		);
+
+		// Update polling status
+		setPollingStatus(true);
+	}, [currentWorkflowId, createStatusUpdateHandler, setPollingStatus]);
+
 	return {
 		isExecuting,
 		setIsExecuting,
@@ -488,10 +527,12 @@ export const useWorkflowExecution = ({
 		setWorkflowStatus,
 		currentWorkflowId,
 		setCurrentWorkflowId,
+		pollingStoppedAt,
 		startPollingExistingWorkflow,
 		executeNewWorkflow,
 		stopExecution,
 		resumeExecution,
 		clearWorkflow,
+		refreshPolling,
 	};
 };

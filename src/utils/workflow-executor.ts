@@ -130,6 +130,27 @@ export class WorkflowExecutor {
 	}
 
 	/**
+	 * Resume polling for an existing workflow
+	 */
+	public resumePolling(
+		workflowId: string,
+		apiKey: string,
+		onStatusUpdate?: (data: WorkflowExecutionResponse) => void
+	): void {
+		console.log(`🔄 Resuming polling for workflow: ${workflowId}`);
+
+		// Stop any existing polling first
+		this.stopPolling();
+
+		// Set the workflow context
+		this.currentWorkflowId = workflowId;
+		this.currentStatusCallback = onStatusUpdate || null;
+
+		// Start polling
+		this.startPolling(workflowId, apiKey, onStatusUpdate);
+	}
+
+	/**
 	 * Check if polling is currently active
 	 */
 	public isPolling(): boolean {

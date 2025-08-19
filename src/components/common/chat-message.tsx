@@ -15,6 +15,7 @@ import {
 	DownloadIcon,
 	AlertCircle,
 	MessageSquare,
+	RefreshCw,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -59,6 +60,8 @@ interface ChatMessageProps {
 	) => Promise<void>;
 	showFeedbackButtons?: boolean;
 	workflowStatus?: string;
+	pollingStoppedAt?: Date | null;
+	onRefreshPolling?: () => void;
 }
 
 export function ChatMessage({
@@ -71,6 +74,8 @@ export function ChatMessage({
 	onFeedbackSubmit,
 	showFeedbackButtons = false,
 	workflowStatus,
+	pollingStoppedAt,
+	onRefreshPolling,
 }: ChatMessageProps) {
 	const [showFeedbackInput, setShowFeedbackInput] = useState(false);
 	const [feedbackText, setFeedbackText] = useState("");
@@ -79,12 +84,28 @@ export function ChatMessage({
 	const [hideNotificationButtons, setHideNotificationButtons] =
 		useState(false);
 	const [showAuthConfirmation, setShowAuthConfirmation] = useState(false);
+	const [feedbackProcessed, setFeedbackProcessed] = useState(false);
 
 	// New state for button interaction tracking during workflow execution
 	const [clickedButtonType, setClickedButtonType] = useState<string | null>(
 		null
 	);
 	const [isButtonPending, setIsButtonPending] = useState(false);
+
+	// Helper function to check if refresh UI should be shown
+	const shouldShowRefreshUI = () => {
+		if (!pollingStoppedAt || !onRefreshPolling) return false;
+
+		const timeSinceStoppedMs = Date.now() - pollingStoppedAt.getTime();
+		const oneMinuteMs = 60 * 1000;
+
+		return (
+			workflowStatus === "waiting_response" &&
+			timeSinceStoppedMs > oneMinuteMs &&
+			message.subnetStatus === "waiting_response" &&
+			isLast
+		);
+	};
 
 	const isWorkflowActivelyExecuting = () => {
 		return (
@@ -144,6 +165,11 @@ export function ChatMessage({
 	const shouldHideAuthButton = () =>
 		shouldHideInteractiveElements() || hideAuthButton;
 	const shouldHideFeedbackButtons = () => {
+		// If feedback was already processed for this specific message, hide the buttons
+		if (feedbackProcessed) {
+			return true;
+		}
+
 		const hideInteractive = shouldHideInteractiveElements();
 		const shouldHide = hideInteractive || hideFeedbackButtons;
 
@@ -155,6 +181,7 @@ export function ChatMessage({
 				messageId: message.id,
 				hideInteractive,
 				hideFeedbackButtons,
+				feedbackProcessed,
 				shouldHide,
 				questionText: message.questionData?.text?.slice(0, 30),
 			});
@@ -176,7 +203,7 @@ export function ChatMessage({
 					setHideNotificationButtons(true);
 				}
 				if (clickedButtonType.includes("feedback")) {
-					setHideFeedbackButtons(true);
+					setFeedbackProcessed(true);
 				}
 				if (clickedButtonType.includes("auth")) {
 					setHideAuthButton(true);
@@ -654,29 +681,37 @@ export function ChatMessage({
 														);
 													}
 
-													// Hide the feedback buttons immediately when clicked (only for history/non-executing workflows)
-													if (
-														!isWorkflowActivelyExecuting()
-													) {
-														setHideFeedbackButtons(
-															true
-														);
-													}
+													// Mark feedback as processed for this specific message
+													setFeedbackProcessed(true);
 
-													if (
-														onFeedbackProceed &&
-														message.questionData
-															?.text
-													) {
-														await onFeedbackProceed(
+													try {
+														if (
+															onFeedbackProceed &&
 															message.questionData
-																.text,
-															"Yes, proceed"
+																?.text
+														) {
+															await onFeedbackProceed(
+																message
+																	.questionData
+																	.text,
+																"Yes, proceed"
+															);
+														}
+													} catch (error) {
+														console.error(
+															"Error proceeding with feedback:",
+															error
 														);
-
-														// Hide feedback buttons after proceeding
-														setHideFeedbackButtons(
-															true
+														// Show feedback buttons again if failed
+														setFeedbackProcessed(
+															false
+														);
+														// Reset button state
+														setClickedButtonType(
+															null
+														);
+														setIsButtonPending(
+															false
 														);
 													}
 												}}
@@ -764,6 +799,11 @@ export function ChatMessage({
 																);
 															}
 
+															// Mark feedback as processed for this specific message
+															setFeedbackProcessed(
+																true
+															);
+
 															if (
 																onFeedbackSubmit &&
 																message
@@ -784,15 +824,15 @@ export function ChatMessage({
 																setShowFeedbackInput(
 																	false
 																);
-																// Hide the feedback buttons after successful submission
-																setHideFeedbackButtons(
-																	true
-																);
 															}
 														} catch (error) {
 															console.error(
 																"Error submitting feedback:",
 																error
+															);
+															// Show feedback buttons again if failed
+															setFeedbackProcessed(
+																false
 															);
 														} finally {
 															// Always reset button state
@@ -897,8 +937,8 @@ export function ChatMessage({
 															"Yes, I have authenticated successfully"
 														);
 
-														// Hide feedback buttons after proceeding
-														setHideFeedbackButtons(
+														// Mark feedback as processed for this specific message
+														setFeedbackProcessed(
 															true
 														);
 													}
@@ -1228,6 +1268,36 @@ export function ChatMessage({
 										</div>
 									</div>
 								)}
+							</div>
+						)}
+
+						{/* Show refresh UI when polling has stopped for more than 1 minute */}
+						{shouldShowRefreshUI() && (
+							<div className="mt-4 p-3 border border-yellow-500/30 rounded-lg bg-yellow-950/20">
+								<div className="flex items-center justify-between">
+									<div className="flex items-center gap-2 text-yellow-400">
+										<AlertCircle className="w-4 h-4" />
+										<span className="text-sm font-medium">
+											Checking for updates...
+										</span>
+									</div>
+									<Button
+										onClick={() => {
+											if (onRefreshPolling) {
+												onRefreshPolling();
+											}
+										}}
+										variant="outline"
+										size="sm"
+										className="flex items-center gap-2 text-yellow-400 hover:text-yellow-300 bg-yellow-950/60 hover:bg-yellow-950/70 border border-yellow-800/50 hover:border-yellow-800/70"
+									>
+										<RefreshCw className="w-4 h-4" />
+										Refresh
+									</Button>
+								</div>
+								<p className="text-xs text-yellow-300/70 mt-2">
+									Click refresh to check for the latest updates.
+								</p>
 							</div>
 						)}
 					</div>

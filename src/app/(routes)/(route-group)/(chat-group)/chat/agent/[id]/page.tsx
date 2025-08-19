@@ -141,11 +141,13 @@ export default function AgentChatPage() {
 		setWorkflowStatus,
 		currentWorkflowId,
 		setCurrentWorkflowId,
+		pollingStoppedAt,
 		startPollingExistingWorkflow,
 		executeNewWorkflow,
 		stopExecution,
 		resumeExecution,
 		clearWorkflow,
+		refreshPolling,
 	} = useWorkflowExecution({
 		updateMessagesWithSubnetData,
 		setChatMessages,
@@ -564,6 +566,7 @@ export default function AgentChatPage() {
 		message: string,
 		selectedAgentId?: string
 	) => {
+		setPrompt("");
 		if (!message.trim() || !selectedAgent || !skyBrowser || !address)
 			return;
 
@@ -1118,6 +1121,8 @@ export default function AgentChatPage() {
 											return shouldShow;
 										})()}
 										workflowStatus={workflowStatus}
+										pollingStoppedAt={pollingStoppedAt}
+										onRefreshPolling={refreshPolling}
 									/>
 								))}
 
