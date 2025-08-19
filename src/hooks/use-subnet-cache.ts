@@ -851,7 +851,7 @@ export const useSubnetCache = () => {
 				case "in_progress":
 					// Show processing messages when:
 					// 1. Processing after feedback, OR
-					// 2. Regular processing transition BUT only if subnet has no data
+					// 2. Regular processing transition BUT only if subnet has no data AND no feedback history
 					if (isProcessingAfterFeedback) {
 						dataMessages.push({
 							id: `subnet_${index}_processing_after_feedback_${Date.now()}`,
@@ -865,7 +865,7 @@ export const useSubnetCache = () => {
 							isRegenerated: true,
 						});
 					} else {
-						// Show regular processing message only if subnet has no data or empty data
+						// Show regular processing message only if subnet has no data or empty data AND no feedback history
 						const hasNoData =
 							!subnet.data ||
 							subnet.data.length === 0 ||
@@ -873,7 +873,8 @@ export const useSubnetCache = () => {
 							subnet.data === "null" ||
 							subnet.data === "undefined";
 
-						if (hasNoData) {
+						// Don't show processing message if there's feedback history
+						if (hasNoData && !hasFeedbackHistory) {
 							dataMessages.push({
 								id: `subnet_${index}_processing_${Date.now()}`,
 								type: "workflow_subnet",

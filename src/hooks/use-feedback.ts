@@ -125,6 +125,7 @@ export const useFeedback = ({
 				toolName:
 					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
 						?.toolName,
+				sourceId: `realtime_feedback_${subnetWithQuestionIndex}`,
 			};
 
 			// Always append feedback message to the end for natural chat flow
@@ -274,6 +275,7 @@ export const useFeedback = ({
 				toolName:
 					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
 						?.toolName,
+				sourceId: `realtime_proceed_${subnetWithQuestionIndex}`,
 			};
 
 			// Always append proceed message to the end for natural chat flow
@@ -396,6 +398,7 @@ export const useFeedback = ({
 				toolName:
 					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
 						?.toolName,
+				sourceId: `realtime_feedback_${subnetWithQuestionIndex}`,
 			};
 
 			// Always append feedback message to the end for natural chat flow

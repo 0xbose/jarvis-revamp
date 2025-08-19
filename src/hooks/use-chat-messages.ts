@@ -145,11 +145,7 @@ export const useChatMessages = () => {
 					) {
 						if (
 							newMsg.subnetIndex === existingMsg.subnetIndex &&
-							newMsg.content === existingMsg.content &&
-							Math.abs(
-								new Date(newMsg.timestamp).getTime() -
-									new Date(existingMsg.timestamp).getTime()
-							) < 5000 // Within 5 seconds
+							newMsg.content === existingMsg.content
 						) {
 							console.log(
 								`🔍 Detected duplicate answer for subnet ${newMsg.subnetIndex}: "${newMsg.content}"`
