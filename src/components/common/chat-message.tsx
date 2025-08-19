@@ -306,7 +306,7 @@ export function ChatMessage({
 					</div>
 				)}
 				<div className="relative flex items-start">
-					<div className="relative z-10 flex-shrink-0 ml-0.5 mr-4 pt-1">
+					<div className="relative Z-0 flex-shrink-0 ml-0.5 mr-4 pt-1">
 						<div className="size-3 rounded-full border-2 border-gray-700 bg-gray-500"></div>
 					</div>
 					<div className="flex-1 min-w-0 p-4 border border-border/50 rounded-lg">
@@ -452,7 +452,7 @@ export function ChatMessage({
 					</div>
 				)}
 				<div className="relative flex items-start">
-					<div className="relative z-10 flex-shrink-0 ml-0.5 mr-4 pt-1">
+					<div className="relative Z-0 flex-shrink-0 ml-0.5 mr-4 pt-1">
 						<div className="size-3 rounded-full border-2 border-gray-700 bg-gray-500"></div>
 					</div>
 					<div className="flex-1 min-w-0 p-4 border border-border/50 rounded-lg">
@@ -956,7 +956,7 @@ export function ChatMessage({
 					</div>
 				)}
 				<div className="relative flex items-start">
-					<div className="relative z-10 flex-shrink-0 ml-0.5 mr-4 pt-1">
+					<div className="relative Z-0 flex-shrink-0 ml-0.5 mr-4 pt-1">
 						<div className="size-3 rounded-full border-2 border-gray-700 bg-gray-500"></div>
 					</div>
 					<div className="flex-1 min-w-0 p-4 border border-border/50 rounded-lg">
@@ -1059,7 +1059,7 @@ export function ChatMessage({
 					</div>
 				)}
 				<div className="relative flex items-start">
-					<div className="relative z-10 flex-shrink-0 ml-0.5 mr-4 pt-1">
+					<div className="relative Z-0 flex-shrink-0 ml-0.5 mr-4 pt-1">
 						{getStatusIcon()}
 					</div>
 					<div
@@ -1102,7 +1102,6 @@ export function ChatMessage({
 									)}
 							</div>
 						)}
-						{/* Show prompt if available */}
 						{message.prompt && (
 							<div className="mb-3 py-6">
 								<div className="text-xs text-gray-400 mb-1 flex items-center gap-2">
@@ -1114,7 +1113,6 @@ export function ChatMessage({
 								</div>
 							</div>
 						)}
-						{/* Show content for all subnets, including pending ones with data */}
 						{message.content && (
 							<div
 								className={`text-sm leading-relaxed ${
@@ -1211,39 +1209,34 @@ export function ChatMessage({
 								)}
 							</div>
 						)}
-						{/* <div className="text-xs text-gray-500 mt-2">
-							{message.timestamp.toLocaleTimeString([], {
-								hour: "2-digit",
-								minute: "2-digit",
-							})}
-						</div> */}
+						
 					</div>
 				</div>
 			</div>
 		);
 	}
 
-	// Response message - general system responses
 	return (
 		<div className="relative mb-0">
-			{!isLast && (
-				<div
-					className="absolute left-2 top-0 w-px h-full z-0 overflow-hidden"
-					style={{ height: "calc(100% + 1.5rem)" }}
-				>
-					<div className="absolute inset-0 bg-gray-600"></div>
+			{!isLast &&
+				message.content !== "Workflow executed successfully" && (
 					<div
-						className="absolute w-full bg-gradient-to-b from-transparent via-blue-400 to-transparent opacity-60"
-						style={{
-							height: "60px",
-							animation: "flowDown 2s ease-in-out infinite",
-							animationDelay: "2.5s",
-						}}
-					></div>
-				</div>
-			)}
+						className="absolute left-2 top-0 w-px h-full z-0 overflow-hidden"
+						style={{ height: "calc(100% + 1.5rem)" }}
+					>
+						<div className="absolute inset-0 bg-gray-600"></div>
+						<div
+							className="absolute w-full bg-gradient-to-b from-transparent via-blue-400 to-transparent opacity-60"
+							style={{
+								height: "60px",
+								animation: "flowDown 2s ease-in-out infinite",
+								animationDelay: "2.5s",
+							}}
+						></div>
+					</div>
+				)}
 			<div className="relative flex items-start">
-				<div className="relative z-10 flex-shrink-0 ml-0.5 mr-4 pt-1">
+				<div className="relative Z-0 flex-shrink-0 ml-0.5 mr-4 pt-1">
 					{message.content === "Workflow executed successfully" ? (
 						<div className="size-3 rounded-full border-2 border-green-600 bg-green-500 flex items-center justify-center"></div>
 					) : (
@@ -1280,7 +1273,6 @@ export function ChatMessage({
 							</div>
 						)}
 					</div>
-					{/* Display image if present in feedback response */}
 					{message.imageData && message.isImage && (
 						<div className="mt-3">
 							<Image
@@ -1315,12 +1307,7 @@ export function ChatMessage({
 							</Button>
 						</div>
 					)}
-					{/* <div className="text-xs text-gray-500 mt-2">
-						{message.timestamp.toLocaleTimeString([], {
-							hour: "2-digit",
-							minute: "2-digit",
-						})}
-					</div> */}
+					
 				</div>
 			</div>
 		</div>
