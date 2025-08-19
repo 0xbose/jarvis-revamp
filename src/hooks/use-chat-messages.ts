@@ -180,6 +180,40 @@ export const useChatMessages = () => {
 						}
 					}
 
+					// CRITICAL FIX: Handle response message duplicates (especially from feedback history)
+					if (
+						newMsg.type === "response" &&
+						existingMsg.type === "response"
+					) {
+						// Check for exact content match with same subnet and toolName
+						if (
+							newMsg.subnetIndex === existingMsg.subnetIndex &&
+							newMsg.toolName === existingMsg.toolName &&
+							newMsg.content === existingMsg.content
+						) {
+							console.log(
+								`🔍 Detected duplicate response for subnet ${
+									newMsg.subnetIndex
+								} (${
+									newMsg.toolName
+								}): "${newMsg.content?.slice(0, 50)}..."`
+							);
+							return true;
+						}
+
+						// Also check by sourceId for feedback history messages
+						if (
+							newMsg.sourceId &&
+							existingMsg.sourceId &&
+							newMsg.sourceId === existingMsg.sourceId
+						) {
+							console.log(
+								`🔍 Detected duplicate response by sourceId: "${newMsg.sourceId}"`
+							);
+							return true;
+						}
+					}
+
 					if (
 						newMsg.type !== "workflow_subnet" ||
 						existingMsg.type !== "workflow_subnet"
