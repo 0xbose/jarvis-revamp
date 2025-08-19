@@ -803,7 +803,7 @@ export default function AgentChatPage() {
 					<div className="flex-1 p-4 pb-20 min-h-0 w-full overflow-y-auto scrollbar-hide h-[calc(100vh-10rem)]">
 						<div
 							ref={chatContainerRef}
-							className=" flex flex-col gap-4 w-10/12  mx-auto"
+							className=" flex flex-col gap-4 w-10/12 max-w-7xl mx-auto"
 							onScroll={handleScroll}
 						>
 							{chatMessages

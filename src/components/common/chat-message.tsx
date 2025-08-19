@@ -651,6 +651,11 @@ export function ChatMessage({
 																.text,
 															"Yes, proceed"
 														);
+
+														// Hide feedback buttons after proceeding
+														setHideFeedbackButtons(
+															true
+														);
 													}
 												}}
 												variant="outline"
@@ -757,14 +762,10 @@ export function ChatMessage({
 																setShowFeedbackInput(
 																	false
 																);
-																// Hide the feedback buttons after successful submission (only for history/non-executing workflows)
-																if (
-																	!isWorkflowActivelyExecuting()
-																) {
-																	setHideFeedbackButtons(
-																		true
-																	);
-																}
+																// Hide the feedback buttons after successful submission
+																setHideFeedbackButtons(
+																	true
+																);
 															}
 														} catch (error) {
 															console.error(
@@ -872,6 +873,11 @@ export function ChatMessage({
 															message.questionData
 																.text,
 															"Yes, I have authenticated successfully"
+														);
+
+														// Hide feedback buttons after proceeding
+														setHideFeedbackButtons(
+															true
 														);
 													}
 												}}
@@ -1209,7 +1215,6 @@ export function ChatMessage({
 								)}
 							</div>
 						)}
-						
 					</div>
 				</div>
 			</div>
@@ -1307,7 +1312,6 @@ export function ChatMessage({
 							</Button>
 						</div>
 					)}
-					
 				</div>
 			</div>
 		</div>
