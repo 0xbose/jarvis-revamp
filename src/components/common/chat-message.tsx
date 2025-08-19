@@ -1244,7 +1244,11 @@ export function ChatMessage({
 			)}
 			<div className="relative flex items-start">
 				<div className="relative z-10 flex-shrink-0 ml-0.5 mr-4 pt-1">
-					<div className="size-3 rounded-full border-2 border-gray-700 bg-gray-500"></div>
+					{message.content === "Workflow executed successfully" ? (
+						<div className="size-3 rounded-full border-2 border-green-600 bg-green-500 flex items-center justify-center"></div>
+					) : (
+						<div className="size-3 rounded-full border-2 border-gray-700 bg-gray-500"></div>
+					)}
 				</div>
 				<div className="flex-1 min-w-0 p-4 border border-border/50 rounded-lg">
 					{message.toolName && (
@@ -1276,6 +1280,41 @@ export function ChatMessage({
 							</div>
 						)}
 					</div>
+					{/* Display image if present in feedback response */}
+					{message.imageData && message.isImage && (
+						<div className="mt-3">
+							<Image
+								src={base64ToDataUrl(
+									message.imageData,
+									message.contentType || "image/jpeg"
+								)}
+								alt="Generated image"
+								width={400}
+								height={400}
+								className="rounded-lg border border-border/50"
+							/>
+							<Button
+								onClick={() => {
+									const link = document.createElement("a");
+									link.href = base64ToDataUrl(
+										message.imageData!,
+										message.contentType || "image/jpeg"
+									);
+									link.download =
+										"generated_image." +
+										(message.contentType?.split("/")[1] ||
+											"jpg");
+									link.click();
+								}}
+								variant="outline"
+								size="sm"
+								className="mt-2 text-xs"
+							>
+								<DownloadIcon className="w-3 h-3 mr-1" />
+								Download Image
+							</Button>
+						</div>
+					)}
 					{/* <div className="text-xs text-gray-500 mt-2">
 						{message.timestamp.toLocaleTimeString([], {
 							hour: "2-digit",

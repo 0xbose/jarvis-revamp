@@ -587,6 +587,15 @@ export const useSubnetCache = () => {
 									subnetIndex: index,
 									sourceId: sourceId,
 									prompt: subnet.prompt,
+									// Include image data if present
+									imageData: feedbackItem.response.fileData,
+									isImage:
+										!!feedbackItem.response.fileData &&
+										feedbackItem.response.contentType?.startsWith(
+											"image/"
+										),
+									contentType:
+										feedbackItem.response.contentType,
 								};
 								dataMessages.push(responseMessage);
 								messageIds.add(responseKey);

@@ -43,6 +43,8 @@ export type FeedbackHistoryItem = {
 		success: boolean;
 		message: string;
 		data: any;
+		fileData?: string;
+		contentType?: string;
 	};
 	user_answer: string | null;
 	continue: boolean;
