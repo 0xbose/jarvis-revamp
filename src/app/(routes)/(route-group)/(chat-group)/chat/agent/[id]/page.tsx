@@ -76,9 +76,34 @@ export default function AgentChatPage() {
 				console.log(
 					`📋 Loading cached messages for workflow: ${urlWorkflowId}`
 				);
+
+				const sortedCachedMessages = [...cachedMessages].sort(
+					(a, b) => {
+						if (a.content === "Workflow executed successfully")
+							return 1;
+						if (b.content === "Workflow executed successfully")
+							return -1;
+
+						const timeA = a.timestamp
+							? new Date(a.timestamp).getTime()
+							: 0;
+						const timeB = b.timestamp
+							? new Date(b.timestamp).getTime()
+							: 0;
+						return timeA - timeB;
+					}
+				);
+
+				console.log(
+					`🔄 Sorted ${cachedMessages.length} cached messages, completion message moved to end`
+				);
+
 				setIsShowingCachedMessages(true);
 				setHasCachedMessagesLoaded(true);
-				setChatMessagesWithWorkflowCheck(cachedMessages, urlWorkflowId);
+				setChatMessagesWithWorkflowCheck(
+					sortedCachedMessages,
+					urlWorkflowId
+				);
 
 				// Set the workflow ID to ensure proper tracking
 				setWorkflowId(urlWorkflowId);
@@ -353,13 +378,39 @@ export default function AgentChatPage() {
 						setPendingNotifications([]);
 						resetFeedbackState();
 
-						// Set the workflow ID first to ensure proper tracking
 						setWorkflowId(urlWorkflowId);
+
+						const sortedCachedMessages = [...cachedMessages].sort(
+							(a, b) => {
+								if (
+									a.content ===
+									"Workflow executed successfully"
+								)
+									return 1;
+								if (
+									b.content ===
+									"Workflow executed successfully"
+								)
+									return -1;
+
+								const timeA = a.timestamp
+									? new Date(a.timestamp).getTime()
+									: 0;
+								const timeB = b.timestamp
+									? new Date(b.timestamp).getTime()
+									: 0;
+								return timeA - timeB;
+							}
+						);
+
+						console.log(
+							`🔄 Sorted ${cachedMessages.length} cached messages, completion message moved to end`
+						);
 
 						setIsShowingCachedMessages(true);
 						setHasCachedMessagesLoaded(true);
 						setChatMessagesWithWorkflowCheck(
-							cachedMessages,
+							sortedCachedMessages,
 							urlWorkflowId
 						);
 
