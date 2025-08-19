@@ -80,14 +80,27 @@ export const useFeedback = ({
 		try {
 			setIsSubmittingFeedback(true);
 
-			// Find the subnet that has the question
+			// Find the subnet that has the SPECIFIC question being answered
 			const subnetWithQuestionIndex =
-				currentWorkflowData?.subnets?.findIndex(
-					(subnet: any) =>
-						(subnet.status === "waiting_response" ||
-							(subnet.status === "pending" && subnet.question)) &&
-						subnet.question
-				);
+				currentWorkflowData?.subnets?.findIndex((subnet: any) => {
+					// Check if the subnet has the question directly
+					if (subnet.question?.text === question) {
+						return true;
+					}
+
+					// Check if the question is in the feedbackHistory
+					if (
+						subnet.feedbackHistory &&
+						subnet.feedbackHistory.length > 0
+					) {
+						return subnet.feedbackHistory.some(
+							(feedback: any) =>
+								feedback.feedback_question === question
+						);
+					}
+
+					return false;
+				});
 
 			if (
 				subnetWithQuestionIndex !== undefined &&
@@ -114,23 +127,11 @@ export const useFeedback = ({
 						?.toolName,
 			};
 
-			// Insert feedback message after the subnet question instead of appending to end
+			// Always append feedback message to the end for natural chat flow
 			setChatMessages((prev) => {
 				const newMessages = [...prev];
-				// Find the question message for this subnet and insert the feedback message after it
-				const questionIndex = newMessages.findIndex(
-					(msg) =>
-						msg.subnetIndex === subnetWithQuestionIndex &&
-						msg.type === "question"
-				);
-
-				if (questionIndex !== -1) {
-					// Insert after the question
-					newMessages.splice(questionIndex + 1, 0, feedbackMessage);
-				} else {
-					// Fallback: append to end if question not found
-					newMessages.push(feedbackMessage);
-				}
+				// Always append to end to maintain chronological chat order
+				newMessages.push(feedbackMessage);
 				return newMessages;
 			});
 
@@ -156,18 +157,10 @@ export const useFeedback = ({
 						?.toolName,
 			};
 
-			// Insert submitting message after the feedback message
+			// Always append submitting message to end
 			setChatMessages((prev) => {
 				const newMessages = [...prev];
-				const feedbackIndex = newMessages.findIndex(
-					(msg) => msg.id === feedbackMessage.id
-				);
-
-				if (feedbackIndex !== -1) {
-					newMessages.splice(feedbackIndex + 1, 0, submittingMessage);
-				} else {
-					newMessages.push(submittingMessage);
-				}
+				newMessages.push(submittingMessage);
 				return newMessages;
 			});
 
@@ -193,18 +186,10 @@ export const useFeedback = ({
 						?.toolName,
 			};
 
-			// Insert success message after the feedback message
+			// Always append success message to end
 			setChatMessages((prev) => {
 				const newMessages = [...prev];
-				const feedbackIndex = newMessages.findIndex(
-					(msg) => msg.id === feedbackMessage.id
-				);
-
-				if (feedbackIndex !== -1) {
-					newMessages.splice(feedbackIndex + 1, 0, successMessage);
-				} else {
-					newMessages.push(successMessage);
-				}
+				newMessages.push(successMessage);
 				return newMessages;
 			});
 
@@ -244,14 +229,27 @@ export const useFeedback = ({
 		try {
 			setIsSubmittingFeedback(true);
 
-			// Find the subnet that has the question
+			// Find the subnet that has the SPECIFIC question being answered
 			const subnetWithQuestionIndex =
-				currentWorkflowData?.subnets?.findIndex(
-					(subnet: any) =>
-						(subnet.status === "waiting_response" ||
-							(subnet.status === "pending" && subnet.question)) &&
-						subnet.question
-				);
+				currentWorkflowData?.subnets?.findIndex((subnet: any) => {
+					// Check if the subnet has the question directly
+					if (subnet.question?.text === question) {
+						return true;
+					}
+
+					// Check if the question is in the feedbackHistory
+					if (
+						subnet.feedbackHistory &&
+						subnet.feedbackHistory.length > 0
+					) {
+						return subnet.feedbackHistory.some(
+							(feedback: any) =>
+								feedback.feedback_question === question
+						);
+					}
+
+					return false;
+				});
 
 			if (
 				subnetWithQuestionIndex !== undefined &&
@@ -278,23 +276,11 @@ export const useFeedback = ({
 						?.toolName,
 			};
 
-			// Insert proceed message after the subnet question instead of appending to end
+			// Always append proceed message to the end for natural chat flow
 			setChatMessages((prev) => {
 				const newMessages = [...prev];
-				// Find the question message for this subnet and insert the proceed message after it
-				const questionIndex = newMessages.findIndex(
-					(msg) =>
-						msg.subnetIndex === subnetWithQuestionIndex &&
-						msg.type === "question"
-				);
-
-				if (questionIndex !== -1) {
-					// Insert after the question
-					newMessages.splice(questionIndex + 1, 0, proceedMessage);
-				} else {
-					// Fallback: append to end if question not found
-					newMessages.push(proceedMessage);
-				}
+				// Always append to end to maintain chronological chat order
+				newMessages.push(proceedMessage);
 				return newMessages;
 			});
 
@@ -309,18 +295,10 @@ export const useFeedback = ({
 						?.toolName,
 			};
 
-			// Insert submitting message after the proceed message
+			// Always append submitting message to end
 			setChatMessages((prev) => {
 				const newMessages = [...prev];
-				const proceedIndex = newMessages.findIndex(
-					(msg) => msg.id === proceedMessage.id
-				);
-
-				if (proceedIndex !== -1) {
-					newMessages.splice(proceedIndex + 1, 0, submittingMessage);
-				} else {
-					newMessages.push(submittingMessage);
-				}
+				newMessages.push(submittingMessage);
 				return newMessages;
 			});
 
@@ -343,18 +321,10 @@ export const useFeedback = ({
 						?.toolName,
 			};
 
-			// Insert success message after the proceed message
+			// Always append success message to end
 			setChatMessages((prev) => {
 				const newMessages = [...prev];
-				const proceedIndex = newMessages.findIndex(
-					(msg) => msg.id === proceedMessage.id
-				);
-
-				if (proceedIndex !== -1) {
-					newMessages.splice(proceedIndex + 1, 0, successMessage);
-				} else {
-					newMessages.push(successMessage);
-				}
+				newMessages.push(successMessage);
 				return newMessages;
 			});
 
@@ -394,7 +364,7 @@ export const useFeedback = ({
 		try {
 			setIsSubmittingFeedback(true);
 
-			// Find the subnet that has the question
+			// Find the first subnet that has a question (for general feedback responses)
 			const subnetWithQuestionIndex =
 				currentWorkflowData?.subnets?.findIndex(
 					(subnet: any) =>
@@ -428,23 +398,11 @@ export const useFeedback = ({
 						?.toolName,
 			};
 
-			// Insert feedback message after the subnet question instead of appending to end
+			// Always append feedback message to the end for natural chat flow
 			setChatMessages((prev) => {
 				const newMessages = [...prev];
-				// Find the question message for this subnet and insert the feedback message after it
-				const questionIndex = newMessages.findIndex(
-					(msg) =>
-						msg.subnetIndex === subnetWithQuestionIndex &&
-						msg.type === "question"
-				);
-
-				if (questionIndex !== -1) {
-					// Insert after the question
-					newMessages.splice(questionIndex + 1, 0, feedbackMessage);
-				} else {
-					// Fallback: append to end if question not found
-					newMessages.push(feedbackMessage);
-				}
+				// Always append to end to maintain chronological chat order
+				newMessages.push(feedbackMessage);
 				return newMessages;
 			});
 
@@ -470,18 +428,10 @@ export const useFeedback = ({
 						?.toolName,
 			};
 
-			// Insert submitting message after the feedback message
+			// Always append submitting message to end
 			setChatMessages((prev) => {
 				const newMessages = [...prev];
-				const feedbackIndex = newMessages.findIndex(
-					(msg) => msg.id === feedbackMessage.id
-				);
-
-				if (feedbackIndex !== -1) {
-					newMessages.splice(feedbackIndex + 1, 0, submittingMessage);
-				} else {
-					newMessages.push(submittingMessage);
-				}
+				newMessages.push(submittingMessage);
 				return newMessages;
 			});
 
@@ -507,18 +457,10 @@ export const useFeedback = ({
 						?.toolName,
 			};
 
-			// Insert success message after the feedback message
+			// Always append success message to end
 			setChatMessages((prev) => {
 				const newMessages = [...prev];
-				const feedbackIndex = newMessages.findIndex(
-					(msg) => msg.id === feedbackMessage.id
-				);
-
-				if (feedbackIndex !== -1) {
-					newMessages.splice(feedbackIndex + 1, 0, successMessage);
-				} else {
-					newMessages.push(successMessage);
-				}
+				newMessages.push(successMessage);
 				return newMessages;
 			});
 

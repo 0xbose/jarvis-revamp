@@ -179,11 +179,27 @@ export const useSubnetCacheStore = create<SubnetCacheStoreState>()(
 				JSON.stringify(cached.question) ===
 					JSON.stringify(newData.question);
 
+			// Special handling for waiting_response status
+			// If subnet is in waiting_response and gets data, that's a significant change
+			const isWaitingResponseGettingData =
+				cached.status === "waiting_response" &&
+				newData.status === "waiting_response" &&
+				(!cached.data || cached.data.length === 0) &&
+				newData.data &&
+				newData.data.length > 0;
+
 			if (isWaitingResponseResumption && !hasChanged) {
 				console.log(
 					`🔄 Subnet ${subnetIndex} in workflow ${workflowId}: Detected workflow resumption - no actual change`
 				);
 				return false;
+			}
+
+			if (isWaitingResponseGettingData) {
+				console.log(
+					`📊 Subnet ${subnetIndex} in workflow ${workflowId}: waiting_response subnet received data - significant change detected`
+				);
+				return true;
 			}
 
 			console.log(

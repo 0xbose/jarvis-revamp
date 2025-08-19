@@ -439,18 +439,8 @@ export default function AgentChatPage() {
 								timestamp: new Date(0),
 							};
 
-							const allMessages = [
-								userMessage,
-								...prevMessages,
-							].sort((a, b) => {
-								const timeA = a.timestamp
-									? new Date(a.timestamp).getTime()
-									: 0;
-								const timeB = b.timestamp
-									? new Date(b.timestamp).getTime()
-									: 0;
-								return timeA - timeB;
-							});
+							// Put user message at the beginning (chronologically first)
+							const allMessages = [userMessage, ...prevMessages];
 
 							console.log(
 								`📝 Added user prompt to beginning of workflow ${urlWorkflowId}`
@@ -738,68 +728,7 @@ export default function AgentChatPage() {
 
 									return true;
 								})
-								.sort((a, b) => {
-									// Workflow status messages should appear at the very bottom
-									const isAWorkflowStatus =
-										a.type === "response" &&
-										(a.content?.includes(
-											"Workflow executed successfully"
-										) ||
-											a.content?.includes(
-												"Workflow completed"
-											) ||
-											a.content?.includes(
-												"Workflow failed"
-											) ||
-											a.content?.includes(
-												"Workflow execution failed"
-											));
-									const isBWorkflowStatus =
-										b.type === "response" &&
-										(b.content?.includes(
-											"Workflow executed successfully"
-										) ||
-											b.content?.includes(
-												"Workflow completed"
-											) ||
-											b.content?.includes(
-												"Workflow failed"
-											) ||
-											b.content?.includes(
-												"Workflow execution failed"
-											));
-
-									// If one is a workflow status message, it should come last
-									if (
-										isAWorkflowStatus &&
-										!isBWorkflowStatus
-									) {
-										return 1; // Workflow status comes last
-									}
-									if (
-										isBWorkflowStatus &&
-										!isAWorkflowStatus
-									) {
-										return -1; // Workflow status comes last
-									}
-
-									// If both are workflow status messages, sort by timestamp
-									if (
-										isAWorkflowStatus &&
-										isBWorkflowStatus
-									) {
-										const timeA = a.timestamp
-											? new Date(a.timestamp).getTime()
-											: 0;
-										const timeB = b.timestamp
-											? new Date(b.timestamp).getTime()
-											: 0;
-										return timeA - timeB;
-									}
-
-									// For non-workflow status messages, maintain original order
-									return 0;
-								})
+								// No sorting - maintain chronological order as messages arrive
 								.map((message, index) => (
 									<ChatMessage
 										key={`${urlWorkflowId}-${message.id}`}
@@ -839,7 +768,62 @@ export default function AgentChatPage() {
 												currentWorkflowData?.workflowStatus ===
 													"waiting_response" ||
 												workflowStatus ===
-													"waiting_response")
+													"waiting_response") &&
+											// Check if this question already has a user_answer
+											(() => {
+												if (
+													!message.questionData
+														?.text ||
+													!currentWorkflowData?.subnets
+												) {
+													console.log(
+														`🔍 Feedback UI: No question data or subnets, showing buttons`
+													);
+													return true; // Show buttons if we can't determine
+												}
+
+												// Find the subnet for this message
+												const subnet =
+													currentWorkflowData.subnets.find(
+														(s: any) =>
+															s.itemID ===
+																message.subnetIndex +
+																	1 ||
+															s.toolName ===
+																message.toolName
+													);
+
+												if (!subnet?.feedbackHistory) {
+													console.log(
+														`🔍 Feedback UI: No feedback history for subnet ${message.toolName}, showing buttons`
+													);
+													return true; // Show buttons if no feedback history
+												}
+
+												// Check if any feedback history item has this question AND a user_answer
+												const hasUserAnswer =
+													subnet.feedbackHistory.some(
+														(feedback: any) =>
+															feedback.feedback_question ===
+																message
+																	.questionData
+																	.text &&
+															feedback.user_answer !==
+																null &&
+															feedback.user_answer !==
+																undefined &&
+															feedback.user_answer.trim() !==
+																""
+													);
+
+												console.log(
+													`🔍 Feedback UI: Question "${
+														message.questionData
+															.text
+													}" hasUserAnswer: ${hasUserAnswer}, showing buttons: ${!hasUserAnswer}`
+												);
+												return !hasUserAnswer; // Show buttons only if no user_answer exists
+											})()
 										}
 										workflowStatus={workflowStatus}
 									/>

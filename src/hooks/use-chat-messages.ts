@@ -120,6 +120,44 @@ export const useChatMessages = () => {
 						}
 					}
 
+					// Handle question message duplicates
+					if (
+						newMsg.type === "question" &&
+						existingMsg.type === "question"
+					) {
+						if (
+							newMsg.subnetIndex === existingMsg.subnetIndex &&
+							newMsg.content === existingMsg.content &&
+							newMsg.questionData?.text ===
+								existingMsg.questionData?.text
+						) {
+							console.log(
+								`🔍 Detected duplicate question for subnet ${newMsg.subnetIndex}: "${newMsg.content}"`
+							);
+							return true;
+						}
+					}
+
+					// Handle answer message duplicates
+					if (
+						newMsg.type === "answer" &&
+						existingMsg.type === "answer"
+					) {
+						if (
+							newMsg.subnetIndex === existingMsg.subnetIndex &&
+							newMsg.content === existingMsg.content &&
+							Math.abs(
+								new Date(newMsg.timestamp).getTime() -
+									new Date(existingMsg.timestamp).getTime()
+							) < 5000 // Within 5 seconds
+						) {
+							console.log(
+								`🔍 Detected duplicate answer for subnet ${newMsg.subnetIndex}: "${newMsg.content}"`
+							);
+							return true;
+						}
+					}
+
 					if (
 						newMsg.type !== "workflow_subnet" ||
 						existingMsg.type !== "workflow_subnet"
@@ -303,73 +341,15 @@ export const useChatMessages = () => {
 					`📝 Adding ${uniqueNewMessages.length} unique new messages`
 				);
 
+				// Simple append: always add new messages to the end for natural chat flow
 				const finalMessages = [
 					...filteredMessages,
 					...uniqueNewMessages,
-				].sort((a, b) => {
-					// Custom sorting logic to group messages by subnet, with proper ordering
-					const subnetA = a.subnetIndex ?? -1;
-					const subnetB = b.subnetIndex ?? -1;
+				];
 
-					if (subnetA !== subnetB) {
-						return subnetA - subnetB;
-					}
-
-					// Within the same subnet, use a more sophisticated ordering
-					const getMessagePriority = (msg: ChatMsg) => {
-						// Priority order: data -> question -> answer -> response/status
-						if (
-							msg.type === "workflow_subnet" ||
-							msg.type === "response"
-						) {
-							// Check if it's a status message that should come after questions
-							if (
-								msg.content?.includes(
-									"Proceeding with current result"
-								) ||
-								msg.content?.includes(
-									"Feedback processed successfully"
-								) ||
-								msg.content?.includes(
-									"Feedback submitted successfully"
-								) ||
-								msg.content?.includes("Processing feedback") ||
-								msg.content?.includes("Submitting feedback")
-							) {
-								return 3; // Status messages come after questions and answers
-							}
-							// Check if it's a processing or waiting message that should come after data
-							if (
-								msg.content?.includes("Processing with") ||
-								msg.content?.includes(
-									"Waiting for your response"
-								)
-							) {
-								return 2; // Processing/waiting messages come after data but before questions
-							}
-							return 1; // Regular data/response messages come first
-						}
-						if (msg.type === "question") return 2; // Questions come after data
-						if (msg.type === "answer") return 2; // Answers come after questions
-						return 4; // Other message types come last
-					};
-
-					const priorityA = getMessagePriority(a);
-					const priorityB = getMessagePriority(b);
-
-					if (priorityA !== priorityB) {
-						return priorityA - priorityB;
-					}
-
-					// For messages of the same priority within the same subnet, sort by timestamp
-					const timeA = a.timestamp
-						? new Date(a.timestamp).getTime()
-						: 0;
-					const timeB = b.timestamp
-						? new Date(b.timestamp).getTime()
-						: 0;
-					return timeA - timeB;
-				});
+				console.log(
+					`📝 Appended ${uniqueNewMessages.length} new messages to end of chat`
+				);
 
 				if (finalMessages.length === 0 && prevMessages.length > 0) {
 					console.warn(

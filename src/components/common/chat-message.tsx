@@ -136,20 +136,6 @@ export function ChatMessage({
 		return false;
 	};
 
-	console.log(`🔍 ChatMessage debug:`, {
-		messageType: message.type,
-		subnetStatus: message.subnetStatus,
-		workflowStatus,
-		shouldHideInteractiveElements: shouldHideInteractiveElements(),
-		shouldHideMessageContent: shouldHideMessageContent(),
-		showFeedbackButtons,
-		hasQuestionData: !!message.questionData,
-		questionType: message.questionData?.type,
-		isAuthentication: message.questionData?.type === "authentication",
-		isFeedback: message.questionData?.type === "feedback",
-		isNotification: message.questionData?.type === "notification",
-	});
-
 	const shouldHideAuthButton = () =>
 		shouldHideInteractiveElements() || hideAuthButton;
 	const shouldHideFeedbackButtons = () =>
@@ -176,6 +162,14 @@ export function ChatMessage({
 			}
 		}
 	}, [workflowStatus, clickedButtonType]);
+
+	// Reset button states when showing feedback input to clear any stuck states
+	useEffect(() => {
+		if (showFeedbackInput) {
+			setClickedButtonType(null);
+			setIsButtonPending(false);
+		}
+	}, [showFeedbackInput]);
 
 	if (message.type === "user") {
 		return (
@@ -679,19 +673,8 @@ export function ChatMessage({
 													if (shouldDisableButtons())
 														return;
 
-													// Set button state for workflow execution
-													if (
-														isWorkflowActivelyExecuting()
-													) {
-														setClickedButtonType(
-															"feedback-input"
-														);
-														setIsButtonPending(
-															true
-														);
-													}
-
-													// Don't hide feedback buttons, just show input
+													// Don't set button pending state for just showing the input
+													// The pending state should only be set when actually submitting
 													setShowFeedbackInput(true);
 												}}
 												variant="outline"
@@ -725,55 +708,84 @@ export function ChatMessage({
 												/>
 												<Button
 													onClick={async () => {
+														// Don't proceed if no feedback text
 														if (
-															shouldDisableButtons()
-														)
-															return;
-
-														// Set button state for workflow execution
-														if (
-															isWorkflowActivelyExecuting()
+															!feedbackText.trim()
 														) {
-															setClickedButtonType(
-																"feedback-submit"
-															);
-															setIsButtonPending(
-																true
-															);
+															return;
 														}
 
+														// Don't proceed if button is disabled for other reasons
 														if (
-															onFeedbackSubmit &&
-															message.questionData
-																?.text &&
-															feedbackText.trim()
+															isButtonPending &&
+															clickedButtonType !==
+																"feedback-submit"
 														) {
-															await onFeedbackSubmit(
-																message
-																	.questionData
-																	.text,
-																"User feedback",
-																feedbackText.trim()
-															);
-															setFeedbackText("");
-															setShowFeedbackInput(
-																false
-															);
-															// Hide the feedback buttons after successful submission (only for history/non-executing workflows)
+															return;
+														}
+
+														try {
+															// Set button state for workflow execution
 															if (
-																!isWorkflowActivelyExecuting()
+																isWorkflowActivelyExecuting()
 															) {
-																setHideFeedbackButtons(
+																setClickedButtonType(
+																	"feedback-submit"
+																);
+																setIsButtonPending(
 																	true
 																);
 															}
+
+															if (
+																onFeedbackSubmit &&
+																message
+																	.questionData
+																	?.text
+															) {
+																await onFeedbackSubmit(
+																	message
+																		.questionData
+																		.text,
+																	"User feedback",
+																	feedbackText.trim()
+																);
+
+																setFeedbackText(
+																	""
+																);
+																setShowFeedbackInput(
+																	false
+																);
+																// Hide the feedback buttons after successful submission (only for history/non-executing workflows)
+																if (
+																	!isWorkflowActivelyExecuting()
+																) {
+																	setHideFeedbackButtons(
+																		true
+																	);
+																}
+															}
+														} catch (error) {
+															console.error(
+																"Error submitting feedback:",
+																error
+															);
+														} finally {
+															// Always reset button state
+															setClickedButtonType(
+																null
+															);
+															setIsButtonPending(
+																false
+															);
 														}
 													}}
 													variant="outline"
 													size="sm"
 													disabled={
 														!feedbackText.trim() ||
-														(shouldDisableButtons() &&
+														(isButtonPending &&
 															clickedButtonType !==
 																"feedback-submit")
 													}
@@ -788,9 +800,6 @@ export function ChatMessage({
 											</div>
 											<Button
 												onClick={() => {
-													if (shouldDisableButtons())
-														return;
-
 													setShowFeedbackInput(false);
 													setFeedbackText("");
 													// Reset button states when canceling
@@ -954,6 +963,13 @@ export function ChatMessage({
 						<div className="text-sm mb-1 flex items-center gap-2">
 							<span className="italic text-gray-400">
 								Your answer
+								{message.toolName &&
+									` for ${
+										message.toolName
+											.charAt(0)
+											.toUpperCase() +
+										message.toolName.slice(1)
+									} Agent`}
 							</span>
 						</div>
 						{isMarkdownContent(message.content) ? (

@@ -353,6 +353,27 @@ export class WorkflowExecutor {
 						subnet.question?.type === "authentication"
 				);
 
+				// Check if any subnet is in waiting_response status without data
+				// Continue polling until these subnets receive data
+				const hasWaitingResponseWithoutData = statusData.subnets?.some(
+					(subnet: any) =>
+						subnet.status === "waiting_response" &&
+						(!subnet.data || subnet.data.length === 0)
+				);
+
+				console.log(`🔍 Subnet status check for ${workflowId}:`, {
+					hasNonAuthFeedback,
+					hasAuthenticationPending,
+					hasWaitingResponseWithoutData,
+					waitingResponseSubnets: statusData.subnets
+						?.filter((s: any) => s.status === "waiting_response")
+						.map((s: any) => ({
+							toolName: s.toolName,
+							hasData: !!s.data,
+							dataLength: s.data?.length || 0,
+						})),
+				});
+
 				const isTerminalState =
 					statusData.workflowStatus === "completed" ||
 					statusData.workflowStatus === "failed";
@@ -393,6 +414,11 @@ export class WorkflowExecutor {
 					);
 					// For authentication, we might want to adjust the polling interval
 					// But we continue polling
+				} else if (hasWaitingResponseWithoutData) {
+					console.log(
+						`⏳ Workflow ${workflowId} has subnets in waiting_response without data, continuing polling...`
+					);
+					// Continue polling until waiting_response subnets receive data
 				}
 			} catch (error) {
 				console.error(
@@ -847,6 +873,30 @@ export class WorkflowExecutor {
 							subnet.question?.type === "authentication"
 					);
 
+					// Check if any subnet is in waiting_response status without data
+					// Continue polling until these subnets receive data
+					const hasWaitingResponseWithoutData =
+						statusData.subnets?.some(
+							(subnet: any) =>
+								subnet.status === "waiting_response" &&
+								(!subnet.data || subnet.data.length === 0)
+						);
+
+					console.log(`🔍 Subnet status check for ${requestId}:`, {
+						hasNonAuthFeedback,
+						hasAuthenticationPending,
+						hasWaitingResponseWithoutData,
+						waitingResponseSubnets: statusData.subnets
+							?.filter(
+								(s: any) => s.status === "waiting_response"
+							)
+							.map((s: any) => ({
+								toolName: s.toolName,
+								hasData: !!s.data,
+								dataLength: s.data?.length || 0,
+							})),
+					});
+
 					const isTerminalState =
 						statusData.workflowStatus === "completed" ||
 						statusData.workflowStatus === "failed";
@@ -886,6 +936,11 @@ export class WorkflowExecutor {
 							`🔐 Workflow ${requestId} waiting for authentication, continuing polling...`
 						);
 						// Continue polling for authentication
+					} else if (hasWaitingResponseWithoutData) {
+						console.log(
+							`⏳ Workflow ${requestId} has subnets in waiting_response without data, continuing polling...`
+						);
+						// Continue polling until waiting_response subnets receive data
 					}
 				} catch (error) {
 					console.error(
