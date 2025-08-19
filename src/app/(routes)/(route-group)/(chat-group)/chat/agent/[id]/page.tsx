@@ -321,45 +321,44 @@ export default function AgentChatPage() {
 					);
 					clearWorkflow();
 
-					setTimeout(() => {
-						if (urlWorkflowId === searchParams.get("workflowId")) {
+					// Remove artificial delay - execute immediately
+					if (urlWorkflowId === searchParams.get("workflowId")) {
+						console.log(
+							`🔄 Switching to workflow: ${urlWorkflowId}`
+						);
+
+						const cachedMessages =
+							getCachedChatMessages(urlWorkflowId);
+						if (cachedMessages && cachedMessages.length > 0) {
 							console.log(
-								`🔄 Switching to workflow: ${urlWorkflowId}`
+								`📋 Loading cached messages for workflow: ${urlWorkflowId}`
 							);
 
-							const cachedMessages =
-								getCachedChatMessages(urlWorkflowId);
-							if (cachedMessages && cachedMessages.length > 0) {
-								console.log(
-									`📋 Loading cached messages for workflow: ${urlWorkflowId}`
-								);
+							clearMessages();
+							resetFeedbackState();
+							setChatMessages([]);
+							setPendingNotifications([]);
 
-								clearMessages();
-								resetFeedbackState();
-								setChatMessages([]);
-								setPendingNotifications([]);
-
-								setIsShowingCachedMessages(true);
-								setChatMessagesWithWorkflowCheck(
-									cachedMessages,
-									urlWorkflowId
-								);
-							} else {
-								console.log(
-									`📋 No cached messages found for workflow: ${urlWorkflowId} - keeping current state`
-								);
-
-								setIsShowingCachedMessages(false);
-								resetFeedbackState();
-							}
-
-							startPollingExistingWorkflow(
-								urlWorkflowId,
-								skyBrowser,
-								address
+							setIsShowingCachedMessages(true);
+							setChatMessagesWithWorkflowCheck(
+								cachedMessages,
+								urlWorkflowId
 							);
+						} else {
+							console.log(
+								`📋 No cached messages found for workflow: ${urlWorkflowId} - keeping current state`
+							);
+
+							setIsShowingCachedMessages(false);
+							resetFeedbackState();
 						}
-					}, 100);
+
+						startPollingExistingWorkflow(
+							urlWorkflowId,
+							skyBrowser,
+							address
+						);
+					}
 				} else {
 					console.log(`🔄 Starting new workflow: ${urlWorkflowId}`);
 
@@ -369,11 +368,6 @@ export default function AgentChatPage() {
 							`📋 Loading cached messages for workflow: ${urlWorkflowId}`
 						);
 
-						// CRITICAL FIX: Don't clear the workflow cache when loading cached messages
-						// This prevents the subnet cache from being cleared, which was causing reprocessing
-						console.log(
-							`🔧 Clearing messages but preserving subnet cache for workflow: ${urlWorkflowId}`
-						);
 						setChatMessages([]);
 						setPendingNotifications([]);
 						resetFeedbackState();
@@ -678,9 +672,8 @@ export default function AgentChatPage() {
 
 		if (canAutoSubmit) {
 			hasAutoSubmittedRef.current = true;
-			setTimeout(() => {
-				handlePromptSubmit(prompt);
-			}, 100);
+			// Remove artificial delay - execute immediately
+			handlePromptSubmit(prompt);
 		}
 	}, [
 		isLoading,
@@ -847,85 +840,283 @@ export default function AgentChatPage() {
 										onFeedbackProceed={
 											handleFeedbackProceed
 										}
-										showFeedbackButtons={
-											!isShowingCachedMessages &&
-											message.type === "question" &&
-											message.questionData?.type ===
-												"feedback" &&
-											currentWorkflowData?.workflowStatus !==
-												"completed" &&
-											currentWorkflowData?.workflowStatus !==
-												"failed" &&
-											currentWorkflowData?.workflowStatus !==
-												"stopped" &&
-											workflowStatus !== "completed" &&
-											workflowStatus !== "failed" &&
-											workflowStatus !== "stopped" &&
-											(message.subnetStatus ===
-												"waiting_response" ||
+										showFeedbackButtons={(() => {
+											// Quick early returns for better performance
+											if (message.type !== "question") {
+												console.log(
+													`🚫 Feedback buttons hidden - message type: ${message.type}`
+												);
+												return false;
+											}
+											if (
+												message.questionData?.type !==
+												"feedback"
+											) {
+												console.log(
+													`🚫 Feedback buttons hidden - question type: ${message.questionData?.type} (expected: feedback)`
+												);
+												return false;
+											}
+
+											// Check if this is a cached message that's no longer active
+											// Only hide feedback buttons for cached messages if the workflow is not waiting for response
+											if (isShowingCachedMessages) {
+												const isWorkflowWaitingForResponse =
+													currentWorkflowData?.workflowStatus ===
+														"waiting_response" ||
+													workflowStatus ===
+														"waiting_response";
+
+												const currentSubnetStatus =
+													message.subnetIndex !==
+													undefined
+														? currentWorkflowData
+																?.subnets?.[
+																message
+																	.subnetIndex
+														  ]?.status
+														: null;
+
+												const isSubnetWaitingForResponse =
+													message.subnetStatus ===
+														"waiting_response" ||
+													currentSubnetStatus ===
+														"waiting_response";
+
+												// If workflow or subnet is waiting for response, keep buttons active even for cached messages
+												if (
+													!isWorkflowWaitingForResponse &&
+													!isSubnetWaitingForResponse
+												) {
+													console.log(
+														`🚫 Feedback buttons hidden - cached message not waiting for response: workflow=${currentWorkflowData?.workflowStatus}, subnet=${currentSubnetStatus}`
+													);
+													return false;
+												} else {
+													console.log(
+														`✅ Feedback buttons kept active for cached message - workflow or subnet waiting for response: workflow=${currentWorkflowData?.workflowStatus}, subnet=${currentSubnetStatus}`
+													);
+												}
+											}
+
+											// Check workflow completion status
+											const isWorkflowComplete =
+												currentWorkflowData?.workflowStatus ===
+													"completed" ||
+												currentWorkflowData?.workflowStatus ===
+													"failed" ||
+												currentWorkflowData?.workflowStatus ===
+													"stopped" ||
+												workflowStatus ===
+													"completed" ||
+												workflowStatus === "failed" ||
+												workflowStatus === "stopped";
+
+											if (isWorkflowComplete) {
+												console.log(
+													`🚫 Feedback buttons hidden - workflow complete: ${
+														currentWorkflowData?.workflowStatus ||
+														workflowStatus
+													}`
+												);
+												return false;
+											}
+
+											// Check if waiting for response
+											// For feedback questions, also check the current subnet status
+											const currentSubnetStatus =
+												message.subnetIndex !==
+												undefined
+													? currentWorkflowData
+															?.subnets?.[
+															message.subnetIndex
+													  ]?.status
+													: null;
+
+											const isWaitingForResponse =
+												message.subnetStatus ===
+													"waiting_response" ||
 												message.subnetStatus ===
 													"pending" ||
+												currentSubnetStatus ===
+													"waiting_response" || // Check current subnet status
 												currentWorkflowData?.workflowStatus ===
 													"waiting_response" ||
 												workflowStatus ===
-													"waiting_response") &&
-											// Check if this question already has a user_answer
-											(() => {
-												if (
-													!message.questionData
-														?.text ||
-													!currentWorkflowData?.subnets
-												) {
-													console.log(
-														`🔍 Feedback UI: No question data or subnets, showing buttons`
-													);
-													return true; // Show buttons if we can't determine
-												}
+													"waiting_response";
 
-												// Find the subnet for this message
-												const subnet =
-													currentWorkflowData.subnets.find(
-														(s: any) =>
-															s.itemID ===
-																(message.subnetIndex ??
-																	-1) +
-																	1 ||
-															s.toolName ===
-																message.toolName
-													);
-
-												if (!subnet?.feedbackHistory) {
-													console.log(
-														`🔍 Feedback UI: No feedback history for subnet ${message.toolName}, showing buttons`
-													);
-													return true; // Show buttons if no feedback history
-												}
-
-												// Check if any feedback history item has this question AND a user_answer
-												const hasUserAnswer =
-													subnet.feedbackHistory.some(
-														(feedback: any) =>
-															feedback.feedback_question ===
-																message
-																	.questionData
-																	?.text &&
-															feedback.user_answer !==
-																null &&
-															feedback.user_answer !==
-																undefined &&
-															feedback.user_answer.trim() !==
-																""
-													);
-
+											if (
+												message.type === "question" &&
+												message.questionData?.type ===
+													"feedback"
+											) {
 												console.log(
-													`🔍 Feedback UI: Question "${
-														message.questionData
-															.text
-													}" hasUserAnswer: ${hasUserAnswer}, showing buttons: ${!hasUserAnswer}`
+													`🔍 Feedback question waiting check:`,
+													{
+														messageId: message.id,
+														messageSubnetStatus:
+															message.subnetStatus,
+														currentSubnetStatus,
+														workflowStatus:
+															currentWorkflowData?.workflowStatus ||
+															workflowStatus,
+														isWaitingForResponse,
+														subnetIndex:
+															message.subnetIndex,
+													}
 												);
-												return !hasUserAnswer; // Show buttons only if no user_answer exists
-											})()
-										}
+											}
+
+											if (!isWaitingForResponse) {
+												console.log(
+													`🚫 Feedback buttons hidden - not waiting for response. Message status: ${
+														message.subnetStatus
+													}, workflow status: ${
+														currentWorkflowData?.workflowStatus ||
+														workflowStatus
+													}`,
+													{
+														messageId: message.id,
+														messageType:
+															message.type,
+														questionType:
+															message.questionData
+																?.type,
+														questionText:
+															message.questionData?.text?.slice(
+																0,
+																30
+															),
+														subnetIndex:
+															message.subnetIndex,
+														toolName:
+															message.toolName,
+														actualSubnetStatus:
+															currentWorkflowData
+																?.subnets?.[
+																message.subnetIndex ||
+																	0
+															]?.status,
+													}
+												);
+												return false;
+											}
+
+											// Optimize subnet lookup and answer checking
+											if (
+												!message.questionData?.text ||
+												!currentWorkflowData?.subnets
+											) {
+												console.log(
+													`✅ Feedback buttons shown - no question text or subnets to check`
+												);
+												return true;
+											}
+
+											// Improved subnet matching logic
+											const subnet =
+												currentWorkflowData.subnets.find(
+													(s: any) => {
+														// Try multiple matching strategies
+														const itemIdMatch =
+															s.itemID ===
+															(message.subnetIndex ??
+																-1) +
+																1;
+														const toolNameMatch =
+															s.toolName ===
+															message.toolName;
+														const indexMatch =
+															currentWorkflowData.subnets.indexOf(
+																s
+															) ===
+															message.subnetIndex;
+
+														return (
+															itemIdMatch ||
+															toolNameMatch ||
+															indexMatch
+														);
+													}
+												);
+
+											console.log(
+												`🔍 Subnet lookup for feedback buttons:`,
+												{
+													messageSubnetIndex:
+														message.subnetIndex,
+													messageToolName:
+														message.toolName,
+													questionText:
+														message.questionData?.text?.slice(
+															0,
+															50
+														),
+													foundSubnet: !!subnet,
+													subnetItemID:
+														subnet?.itemID,
+													subnetToolName:
+														subnet?.toolName,
+													hasFeedbackHistory:
+														!!subnet?.feedbackHistory,
+													feedbackHistoryLength:
+														subnet?.feedbackHistory
+															?.length || 0,
+												}
+											);
+
+											if (!subnet?.feedbackHistory) {
+												console.log(
+													`✅ Feedback buttons shown - no feedback history`
+												);
+												return true;
+											}
+
+											// Check for existing user answer (optimized)
+											const hasExistingAnswer =
+												subnet.feedbackHistory.some(
+													(feedback: any) =>
+														feedback.feedback_question ===
+															message.questionData
+																?.text &&
+														feedback.user_answer?.trim()
+												);
+
+											console.log(
+												`🔍 Existing answer check:`,
+												{
+													hasExistingAnswer,
+													feedbackHistory:
+														subnet.feedbackHistory.map(
+															(f: any) => ({
+																question:
+																	f.feedback_question?.slice(
+																		0,
+																		30
+																	),
+																answer:
+																	f.user_answer?.slice(
+																		0,
+																		20
+																	) || "none",
+															})
+														),
+												}
+											);
+
+											const shouldShow =
+												!hasExistingAnswer;
+											console.log(
+												`${
+													shouldShow ? "✅" : "🚫"
+												} Feedback buttons ${
+													shouldShow
+														? "shown"
+														: "hidden"
+												} - existing answer: ${hasExistingAnswer}`
+											);
+											return shouldShow;
+										})()}
 										workflowStatus={workflowStatus}
 									/>
 								))}

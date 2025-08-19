@@ -86,7 +86,6 @@ export function ChatMessage({
 	);
 	const [isButtonPending, setIsButtonPending] = useState(false);
 
-	// Helper function to determine if workflow is actively executing (not just viewing history)
 	const isWorkflowActivelyExecuting = () => {
 		return (
 			workflowStatus === "running" ||
@@ -96,21 +95,17 @@ export function ChatMessage({
 		);
 	};
 
-	// Helper function to determine if buttons should be disabled during execution
 	const shouldDisableButtons = () => {
 		return isWorkflowActivelyExecuting() && isButtonPending;
 	};
 
-	// Helper function to get button styling based on state
 	const getButtonClassName = (baseClassName: string, buttonType: string) => {
 		const isThisButtonClicked = clickedButtonType === buttonType;
 		const isDisabled = shouldDisableButtons();
 
 		if (isDisabled && isThisButtonClicked) {
-			// Highlight the clicked button during execution
 			return `${baseClassName} opacity-100 ring-2 ring-blue-400/50 bg-blue-950/80 border-blue-600`;
 		} else if (isDisabled && !isThisButtonClicked) {
-			// Disable other buttons
 			return `${baseClassName} opacity-50 cursor-not-allowed`;
 		}
 
@@ -122,11 +117,21 @@ export function ChatMessage({
 			message.subnetStatus !== "waiting_response" &&
 			workflowStatus !== "waiting_response";
 
+		if (
+			message.type === "question" &&
+			message.questionData?.type === "feedback"
+		) {
+			return false;
+		}
+
 		if (message.subnetStatus) {
 			if (message.subnetStatus === "pending" && message.questionData) {
 				return false;
 			}
-			return message.subnetStatus !== "waiting_response";
+			const hideBasedOnStatus =
+				message.subnetStatus !== "waiting_response";
+
+			return hideBasedOnStatus;
 		}
 
 		return shouldHide;
@@ -138,8 +143,25 @@ export function ChatMessage({
 
 	const shouldHideAuthButton = () =>
 		shouldHideInteractiveElements() || hideAuthButton;
-	const shouldHideFeedbackButtons = () =>
-		shouldHideInteractiveElements() || hideFeedbackButtons;
+	const shouldHideFeedbackButtons = () => {
+		const hideInteractive = shouldHideInteractiveElements();
+		const shouldHide = hideInteractive || hideFeedbackButtons;
+
+		if (
+			message.type === "question" &&
+			message.questionData?.type === "feedback"
+		) {
+			console.log(`🔍 shouldHideFeedbackButtons for feedback question:`, {
+				messageId: message.id,
+				hideInteractive,
+				hideFeedbackButtons,
+				shouldHide,
+				questionText: message.questionData?.text?.slice(0, 30),
+			});
+		}
+
+		return shouldHide;
+	};
 	const shouldHideNotificationButtons = () =>
 		shouldHideInteractiveElements() || hideNotificationButtons;
 
@@ -941,7 +963,6 @@ export function ChatMessage({
 		);
 	}
 
-	// Answer message - user's response to a question
 	if (message.type === "answer") {
 		return (
 			<div className="relative mb-0">
@@ -985,12 +1006,6 @@ export function ChatMessage({
 						) : (
 							convertUrlsToLinks(message.content)
 						)}
-						{/* <div className="text-xs text-gray-500 mt-2">
-							{message.timestamp.toLocaleTimeString([], {
-								hour: "2-digit",
-								minute: "2-digit",
-							})}
-						</div> */}
 					</div>
 				</div>
 			</div>
