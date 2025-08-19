@@ -408,14 +408,44 @@ export const useChatMessages = () => {
 					});
 				});
 
-				// Simple append: always add new messages to the end for natural chat flow
-				const finalMessages = [
-					...filteredMessages,
+				// CRITICAL FIX: Ensure completion message always appears at the end
+				let messagesWithoutCompletion = filteredMessages;
+				let completionMessage = null;
+
+				// Extract completion message if it exists
+				const completionIndex = filteredMessages.findIndex(
+					(msg) => msg.content === "Workflow executed successfully"
+				);
+				if (completionIndex !== -1) {
+					completionMessage = filteredMessages[completionIndex];
+					messagesWithoutCompletion = [
+						...filteredMessages.slice(0, completionIndex),
+						...filteredMessages.slice(completionIndex + 1),
+					];
+					console.log(
+						`🔄 Extracted completion message to move to end`
+					);
+				}
+
+				// Add new messages
+				const messagesWithNew = [
+					...messagesWithoutCompletion,
 					...uniqueNewMessages,
 				];
 
+				// Add completion message back at the very end if it exists
+				const finalMessages = completionMessage
+					? [...messagesWithNew, completionMessage]
+					: messagesWithNew;
+
 				console.log(
-					`📝 Appended ${uniqueNewMessages.length} new messages to end of chat`
+					`📝 Appended ${
+						uniqueNewMessages.length
+					} new messages to end of chat${
+						completionMessage
+							? " (completion message moved to final position)"
+							: ""
+					}`
 				);
 
 				if (finalMessages.length === 0 && prevMessages.length > 0) {
