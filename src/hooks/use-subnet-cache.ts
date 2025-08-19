@@ -710,16 +710,24 @@ export const useSubnetCache = () => {
 						}
 					);
 
-					// Handle current question if it's different from feedback history
+					// Handle current question if it's different from feedback history OR if it needs a user response
 					if (subnet.question) {
 						const lastFeedbackQuestion =
 							subnet.feedbackHistory[
 								subnet.feedbackHistory.length - 1
 							]?.feedback_question;
+						const lastFeedbackAnswer =
+							subnet.feedbackHistory[
+								subnet.feedbackHistory.length - 1
+							]?.user_answer;
 						const isNewQuestion =
 							subnet.question.text !== lastFeedbackQuestion;
+						const needsUserResponse =
+							subnet.question.text === lastFeedbackQuestion &&
+							(!lastFeedbackAnswer ||
+								lastFeedbackAnswer.trim() === "");
 
-						if (isNewQuestion) {
+						if (isNewQuestion || needsUserResponse) {
 							const currentQuestionKey = `current_question_${workflowId}_${index}`;
 							if (!messageIds.has(currentQuestionKey)) {
 								// Use subnet's updatedAt if available for proper chronological ordering
@@ -751,6 +759,11 @@ export const useSubnetCache = () => {
 											subnet.question.text?.slice(0, 50),
 										timestamp:
 											currentQuestionMessage.timestamp,
+										isNewQuestion,
+										needsUserResponse,
+										lastFeedbackAnswer:
+											lastFeedbackAnswer?.slice(0, 20) ||
+											"none",
 									}
 								);
 							}
