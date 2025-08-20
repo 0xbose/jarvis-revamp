@@ -84,7 +84,13 @@ export interface WorkflowItem {
 
 export interface WorkflowExecutionResponse {
 	requestId: string;
-	status: "pending" | "processing" | "in_progress" | "completed" | "error";
+	status:
+		| "pending"
+		| "processing"
+		| "in_progress"
+		| "waiting"
+		| "completed"
+		| "error";
 	message?: string;
 	data?: Record<string, unknown>;
 	workflowStatus?: string;
@@ -107,7 +113,7 @@ export interface WorkflowExecutionResponse {
 			| "in_progress"
 			| "completed"
 			| "failed"
-			| "waiting_response";
+			| "awaiting_response";
 		data: any;
 		prompt: string | null;
 		question?: {
@@ -223,7 +229,7 @@ export interface HistoryItem {
 		| "pending"
 		| "failed"
 		| "stopped"
-		| "waiting_response";
+		| "awaiting_response";
 	createdAt: string;
 	updatedAt: string;
 	percentage?: number;

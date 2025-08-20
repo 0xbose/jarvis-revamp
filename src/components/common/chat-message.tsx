@@ -118,9 +118,9 @@ export function ChatMessage({
 		const oneMinuteMs = 60 * 1000;
 
 		return (
-			workflowStatus === "waiting_response" &&
+			workflowStatus === "awaiting_response" &&
 			timeSinceStoppedMs > oneMinuteMs &&
-			message.subnetStatus === "waiting_response" &&
+			message.subnetStatus === "awaiting_response" &&
 			isLast
 		);
 	};
@@ -129,7 +129,8 @@ export function ChatMessage({
 		return (
 			workflowStatus === "running" ||
 			workflowStatus === "in_progress" ||
-			workflowStatus === "waiting_response" ||
+			workflowStatus === "waiting" ||
+			workflowStatus === "awaiting_response" ||
 			workflowStatus === "pending"
 		);
 	};
@@ -153,8 +154,8 @@ export function ChatMessage({
 
 	const shouldHideInteractiveElements = () => {
 		const shouldHide =
-			message.subnetStatus !== "waiting_response" &&
-			workflowStatus !== "waiting_response";
+			message.subnetStatus !== "awaiting_response" &&
+			workflowStatus !== "awaiting_response";
 
 		if (
 			message.type === "question" &&
@@ -168,7 +169,7 @@ export function ChatMessage({
 				return false;
 			}
 			const hideBasedOnStatus =
-				message.subnetStatus !== "waiting_response";
+				message.subnetStatus !== "awaiting_response";
 
 			return hideBasedOnStatus;
 		}
@@ -1083,7 +1084,7 @@ export function ChatMessage({
 		const getStatusIcon = () => {
 			switch (message.subnetStatus) {
 				case "in_progress":
-				case "waiting_response":
+				case "awaiting_response":
 					return (
 						<span className="relative flex size-3">
 							<span className="absolute h-full w-full animate-ping rounded-full bg-accent opacity-75"></span>
@@ -1116,7 +1117,7 @@ export function ChatMessage({
 					return "Queued";
 				case "in_progress":
 					return "Processing";
-				case "waiting_response":
+				case "awaiting_response":
 					return "Waiting for input";
 				case "done":
 					return "Completed";

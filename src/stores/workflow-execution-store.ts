@@ -7,9 +7,10 @@ export interface SubnetStatus {
 	status:
 		| "pending"
 		| "in_progress"
+		| "waiting"
 		| "completed"
 		| "failed"
-		| "waiting_response";
+		| "awaiting_response";
 	data: any;
 	prompt: string | null;
 	question?: {
@@ -26,10 +27,11 @@ export interface WorkflowExecutionStatus {
 	workflowStatus:
 		| "pending"
 		| "in_progress"
+		| "waiting"
 		| "completed"
 		| "failed"
 		| "stopped"
-		| "waiting_response";
+		| "awaiting_response";
 	percentage: number;
 	totalSubnets: number;
 	completedSubnets: number;

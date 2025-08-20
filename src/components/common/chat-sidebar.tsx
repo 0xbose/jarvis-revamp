@@ -62,12 +62,14 @@ const getWorkflowIcon = (status: string) => {
 	switch (status) {
 		case "completed":
 			return CheckCircle;
-		case "waiting_response":
+		case "awaiting_response":
 			return TimerIcon;
 		case "stopped":
 		case "failed":
 			return XCircle;
 		case "in_progress":
+			return TimerIcon;
+		case "waiting":
 			return TimerIcon;
 		case "pending":
 		default:
@@ -192,12 +194,13 @@ const ChatSidebar = React.memo(() => {
 
 	const hasWallet = !!address;
 
-	// Check if any workflow in the history is active (processing or waiting_response)
+	// Check if any workflow in the history is active (processing or awaiting_response)
 	const hasActiveWorkflow = (workflows: WorkflowItem[]) => {
 		return workflows.some(
 			(workflow) =>
 				workflow.status === "in_progress" ||
-				workflow.status === "waiting_response" ||
+				workflow.status === "waiting" ||
+				workflow.status === "awaiting_response" ||
 				workflow.status === "pending"
 		);
 	};
@@ -461,8 +464,9 @@ const ChatSidebar = React.memo(() => {
 
 										const isRunning =
 											workflow.status === "in_progress" ||
+											workflow.status === "waiting" ||
 											workflow.status ===
-												"waiting_response" ||
+												"awaiting_response" ||
 											workflow.status === "pending";
 
 										return (

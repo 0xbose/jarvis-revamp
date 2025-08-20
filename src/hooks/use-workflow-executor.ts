@@ -45,7 +45,10 @@ export function useWorkflowExecutor() {
 							});
 						}
 
-						if (statusData.workflowStatus === "in_progress") {
+						if (
+							statusData.workflowStatus === "in_progress" ||
+							statusData.workflowStatus === "waiting"
+						) {
 							updateExecutionStatus({
 								currentSubnet: statusData.currentSubnet,
 							});
@@ -110,7 +113,10 @@ export function useWorkflowExecutor() {
 							});
 						}
 
-						if (statusData.workflowStatus === "in_progress") {
+						if (
+							statusData.workflowStatus === "in_progress" ||
+							statusData.workflowStatus === "waiting"
+						) {
 							updateExecutionStatus({
 								currentSubnet: statusData.currentSubnet,
 							});

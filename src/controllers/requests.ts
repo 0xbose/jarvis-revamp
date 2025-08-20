@@ -25,11 +25,12 @@ export const getHistory = async (
 		agentId?: string;
 		status?:
 			| "in_progress"
+			| "waiting"
 			| "completed"
 			| "pending"
 			| "failed"
 			| "stopped"
-			| "waiting_response";
+			| "awaiting_response";
 	},
 	skyBrowser?: SkyMainBrowser,
 	web3Context?: Web3Context

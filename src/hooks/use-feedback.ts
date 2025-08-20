@@ -138,7 +138,7 @@ export const useFeedback = ({
 
 			const subnetWithQuestion = currentWorkflowData?.subnets?.find(
 				(subnet: any) =>
-					(subnet.status === "waiting_response" ||
+					(subnet.status === "awaiting_response" ||
 						(subnet.status === "pending" && subnet.question)) &&
 					subnet.question
 			);
@@ -370,7 +370,7 @@ export const useFeedback = ({
 			const subnetWithQuestionIndex =
 				currentWorkflowData?.subnets?.findIndex(
 					(subnet: any) =>
-						(subnet.status === "waiting_response" ||
+						(subnet.status === "awaiting_response" ||
 							(subnet.status === "pending" && subnet.question)) &&
 						subnet.question
 				);
@@ -411,7 +411,7 @@ export const useFeedback = ({
 
 			const subnetWithQuestion = currentWorkflowData?.subnets?.find(
 				(subnet: any) =>
-					(subnet.status === "waiting_response" ||
+					(subnet.status === "awaiting_response" ||
 						(subnet.status === "pending" && subnet.question)) &&
 					subnet.question
 			);

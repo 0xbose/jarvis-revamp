@@ -404,7 +404,7 @@ export const useChatMessages = () => {
 									newMsg.subnetIndex === msg.subnetIndex &&
 									(newMsg.subnetStatus === "done" ||
 										newMsg.subnetStatus ===
-											"waiting_response")
+											"awaiting_response")
 							);
 
 							if (
@@ -432,7 +432,7 @@ export const useChatMessages = () => {
 							}
 
 							if (
-								msg.subnetStatus === "waiting_response" &&
+								msg.subnetStatus === "awaiting_response" &&
 								msg.content.includes("Waiting for")
 							) {
 								console.log(

@@ -362,7 +362,7 @@ export class WorkflowExecutor {
 				// Check if any subnet needs non-authentication feedback
 				const hasNonAuthFeedback = statusData.subnets?.some(
 					(subnet: any) =>
-						subnet.status === "waiting_response" &&
+						subnet.status === "awaiting_response" &&
 						subnet.question &&
 						subnet.question.type !== "authentication"
 				);
@@ -370,7 +370,7 @@ export class WorkflowExecutor {
 				// Check if any subnet needs authentication
 				const hasAuthenticationPending = statusData.subnets?.some(
 					(subnet: any) =>
-						subnet.status === "waiting_response" &&
+						subnet.status === "awaiting_response" &&
 						subnet.question?.type === "authentication"
 				);
 
@@ -378,7 +378,7 @@ export class WorkflowExecutor {
 				// Continue polling until these subnets receive data
 				const hasWaitingResponseWithoutData = statusData.subnets?.some(
 					(subnet: any) =>
-						subnet.status === "waiting_response" &&
+						subnet.status === "awaiting_response" &&
 						(!subnet.data || subnet.data.length === 0)
 				);
 
@@ -387,7 +387,7 @@ export class WorkflowExecutor {
 					hasAuthenticationPending,
 					hasWaitingResponseWithoutData,
 					waitingResponseSubnets: statusData.subnets
-						?.filter((s: any) => s.status === "waiting_response")
+						?.filter((s: any) => s.status === "awaiting_response")
 						.map((s: any) => ({
 							toolName: s.toolName,
 							hasData: !!s.data,
@@ -418,7 +418,7 @@ export class WorkflowExecutor {
 					// Don't set callback to null to allow resume, but ensure polling is stopped
 					return; // Exit the interval function
 				} else if (
-					statusData.workflowStatus === "waiting_response" &&
+					statusData.workflowStatus === "awaiting_response" &&
 					hasNonAuthFeedback
 				) {
 					console.log(
@@ -427,7 +427,7 @@ export class WorkflowExecutor {
 					this.stopPolling();
 					// Keep workflow ID and callback for resuming after feedback
 				} else if (
-					statusData.workflowStatus === "waiting_response" &&
+					statusData.workflowStatus === "awaiting_response" &&
 					hasAuthenticationPending
 				) {
 					console.log(
@@ -765,14 +765,15 @@ export class WorkflowExecutor {
 
 				const isActiveState =
 					statusData.workflowStatus === "in_progress" ||
+					statusData.workflowStatus === "waiting" ||
 					statusData.workflowStatus === "pending" ||
 					statusData.workflowStatus === "awaiting_response" ||
-					statusData.workflowStatus === "waiting_response";
+					statusData.workflowStatus === "awaiting_response";
 
 				// Check if any subnet needs authentication (special case for continuous polling)
 				const hasAuthenticationPending = statusData.subnets?.some(
 					(subnet: any) =>
-						subnet.status === "waiting_response" &&
+						subnet.status === "awaiting_response" &&
 						subnet.question?.type === "authentication"
 				);
 
@@ -882,7 +883,7 @@ export class WorkflowExecutor {
 					// Check if any subnet needs non-authentication feedback
 					const hasNonAuthFeedback = statusData.subnets?.some(
 						(subnet: any) =>
-							subnet.status === "waiting_response" &&
+							subnet.status === "awaiting_response" &&
 							subnet.question &&
 							subnet.question.type !== "authentication"
 					);
@@ -890,7 +891,7 @@ export class WorkflowExecutor {
 					// Check if any subnet needs authentication
 					const hasAuthenticationPending = statusData.subnets?.some(
 						(subnet: any) =>
-							subnet.status === "waiting_response" &&
+							subnet.status === "awaiting_response" &&
 							subnet.question?.type === "authentication"
 					);
 
@@ -899,7 +900,7 @@ export class WorkflowExecutor {
 					const hasWaitingResponseWithoutData =
 						statusData.subnets?.some(
 							(subnet: any) =>
-								subnet.status === "waiting_response" &&
+								subnet.status === "awaiting_response" &&
 								(!subnet.data || subnet.data.length === 0)
 						);
 
@@ -909,7 +910,7 @@ export class WorkflowExecutor {
 						hasWaitingResponseWithoutData,
 						waitingResponseSubnets: statusData.subnets
 							?.filter(
-								(s: any) => s.status === "waiting_response"
+								(s: any) => s.status === "awaiting_response"
 							)
 							.map((s: any) => ({
 								toolName: s.toolName,
@@ -941,7 +942,7 @@ export class WorkflowExecutor {
 						// Ensure no further polling
 						return;
 					} else if (
-						statusData.workflowStatus === "waiting_response" &&
+						statusData.workflowStatus === "awaiting_response" &&
 						hasNonAuthFeedback
 					) {
 						console.log(
@@ -950,7 +951,7 @@ export class WorkflowExecutor {
 						this.stopPolling();
 						// Keep workflow ID and callback for resuming after feedback
 					} else if (
-						statusData.workflowStatus === "waiting_response" &&
+						statusData.workflowStatus === "awaiting_response" &&
 						hasAuthenticationPending
 					) {
 						console.log(

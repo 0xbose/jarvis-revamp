@@ -15,7 +15,7 @@ export type ChatMsg = {
 		| "in_progress"
 		| "done"
 		| "failed"
-		| "waiting_response";
+		| "awaiting_response";
 	toolName?: string;
 	subnetIndex?: number;
 	imageData?: string;
@@ -57,8 +57,9 @@ export type WorkflowStatus =
 	| "stopped"
 	| "completed"
 	| "failed"
-	| "waiting_response"
+	| "awaiting_response"
 	| "in_progress"
+	| "waiting"
 	| "pending";
 
 export interface AgentResponse {

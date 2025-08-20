@@ -185,7 +185,9 @@ export default function AgentChatPage() {
 			if (workflowId === urlWorkflowId) {
 				const status = currentWorkflowData.workflowStatus;
 				const shouldPoll =
-					status === "in_progress" || status === "waiting_response";
+					status === "in_progress" ||
+					status === "waiting" ||
+					status === "awaiting_response";
 
 				setIsPolling(shouldPoll);
 
@@ -572,7 +574,7 @@ export default function AgentChatPage() {
 
 		if (
 			isInFeedbackMode ||
-			currentWorkflowData?.workflowStatus === "waiting_response"
+			currentWorkflowData?.workflowStatus === "awaiting_response"
 		) {
 			await handleFeedbackResponse(message);
 			return;
@@ -637,7 +639,8 @@ export default function AgentChatPage() {
 			Array.isArray(currentWorkflowData.subnets)
 		) {
 			const inProgressSubnet = currentWorkflowData.subnets.find(
-				(subnet: any) => subnet.status === "in_progress"
+				(subnet: any) =>
+					subnet.status === "in_progress" || subnet.status === "waiting"
 			);
 
 			if (inProgressSubnet) {
@@ -781,7 +784,7 @@ export default function AgentChatPage() {
 				subnet.status === "in_progress" ||
 				subnet.status === "done" ||
 				subnet.status === "completed" ||
-				subnet.status === "waiting_response" ||
+				subnet.status === "awaiting_response" ||
 				subnet.data
 		);
 
@@ -870,9 +873,9 @@ export default function AgentChatPage() {
 											if (isShowingCachedMessages) {
 												const isWorkflowWaitingForResponse =
 													currentWorkflowData?.workflowStatus ===
-														"waiting_response" ||
+														"awaiting_response" ||
 													workflowStatus ===
-														"waiting_response";
+														"awaiting_response";
 
 												const currentSubnetStatus =
 													message.subnetIndex !==
@@ -886,9 +889,9 @@ export default function AgentChatPage() {
 
 												const isSubnetWaitingForResponse =
 													message.subnetStatus ===
-														"waiting_response" ||
+														"awaiting_response" ||
 													currentSubnetStatus ===
-														"waiting_response";
+														"awaiting_response";
 
 												// If workflow or subnet is waiting for response, keep buttons active even for cached messages
 												if (
@@ -942,15 +945,15 @@ export default function AgentChatPage() {
 
 											const isWaitingForResponse =
 												message.subnetStatus ===
-													"waiting_response" ||
+													"awaiting_response" ||
 												message.subnetStatus ===
 													"pending" ||
 												currentSubnetStatus ===
-													"waiting_response" || // Check current subnet status
+													"awaiting_response" || // Check current subnet status
 												currentWorkflowData?.workflowStatus ===
-													"waiting_response" ||
+													"awaiting_response" ||
 												workflowStatus ===
-													"waiting_response";
+													"awaiting_response";
 
 											if (
 												message.type === "question" &&
@@ -1183,14 +1186,14 @@ export default function AgentChatPage() {
 						(workflowStatus === "stopped"
 							? false
 							: currentExecution?.workflowStatus ===
-							  "waiting_response")
+							  "awaiting_response")
 					}
 					workflowStatus={
 						workflowStatus === "stopped"
 							? "stopped"
 							: currentWorkflowData?.workflowStatus ===
-							  "waiting_response"
-							? "waiting_response"
+							  "awaiting_response"
+							? "awaiting_response"
 							: workflowStatus === "pending"
 							? undefined
 							: workflowStatus

@@ -94,14 +94,14 @@ export const useWorkflowExecution = ({
 
 				const hasNonAuthFeedback = data.subnets?.some(
 					(subnet: any) =>
-						subnet.status === "waiting_response" &&
+						subnet.status === "awaiting_response" &&
 						subnet.question &&
 						subnet.question.type !== "authentication"
 				);
 
 				const hasAuthenticationPending = data.subnets?.some(
 					(subnet: any) =>
-						subnet.status === "waiting_response" &&
+						subnet.status === "awaiting_response" &&
 						subnet.question?.type === "authentication"
 				);
 
@@ -210,30 +210,33 @@ export const useWorkflowExecution = ({
 						data.requestId || currentWorkflowId || ""
 					);
 					stopCurrentExecution();
-				} else if (data.workflowStatus === "in_progress") {
+				} else if (
+					data.workflowStatus === "in_progress" ||
+					data.workflowStatus === "waiting"
+				) {
 					setIsExecuting(true);
 					setPollingStatus(true);
 					setPollingStoppedAt(null); // Clear stopped time when polling resumes
 					setWorkflowStatus("in_progress");
 					setIsInFeedbackMode(false);
-				} else if (data.workflowStatus === "waiting_response") {
+				} else if (data.workflowStatus === "awaiting_response") {
 					if (hasNonAuthFeedback) {
 						setIsExecuting(true);
 						setPollingStatus(false);
 						setPollingStoppedAt(new Date()); // Record when polling stopped
-						setWorkflowStatus("waiting_response");
+						setWorkflowStatus("awaiting_response");
 						setIsInFeedbackMode(true);
 					} else if (hasAuthenticationPending) {
 						setIsExecuting(true);
 						setPollingStatus(true);
 						setPollingStoppedAt(null); // Clear stopped time when polling resumes
-						setWorkflowStatus("waiting_response");
+						setWorkflowStatus("awaiting_response");
 						setIsInFeedbackMode(false);
 					} else {
 						setIsExecuting(true);
 						setPollingStatus(true);
 						setPollingStoppedAt(null); // Clear stopped time when polling resumes
-						setWorkflowStatus("waiting_response");
+						setWorkflowStatus("awaiting_response");
 						setIsInFeedbackMode(true);
 					}
 				} else if (data.workflowStatus === "pending") {

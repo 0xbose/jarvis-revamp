@@ -147,20 +147,20 @@ export const useSubnetCache = () => {
 				const hasChanged = hasSubnetChanged(workflowId, index, subnet);
 
 				const isRegenerating =
-					prevStatus === "waiting_response" &&
+					prevStatus === "awaiting_response" &&
 					currentStatus === "in_progress";
 				const isShowingQuestion =
 					prevStatus === "in_progress" &&
-					currentStatus === "waiting_response";
+					currentStatus === "awaiting_response";
 
 				const isResumingWorkflow =
 					!prevStatus &&
-					currentStatus === "waiting_response" &&
+					currentStatus === "awaiting_response" &&
 					subnet.data;
 
 				const isQuestionArrivingLater =
-					prevStatus === "waiting_response" &&
-					currentStatus === "waiting_response" &&
+					prevStatus === "awaiting_response" &&
+					currentStatus === "awaiting_response" &&
 					subnet.question &&
 					!subnet.data;
 
@@ -189,7 +189,7 @@ export const useSubnetCache = () => {
 				// For running workflows: prioritize feedback history over subnet data to avoid duplicates
 				const isRunningWorkflow =
 					subnet.status === "in_progress" ||
-					subnet.status === "waiting_response" ||
+					subnet.status === "awaiting_response" ||
 					subnet.status === "pending";
 
 				// SIMPLE LOGIC:
@@ -205,7 +205,7 @@ export const useSubnetCache = () => {
 						(subnet.status === "in_progress" &&
 							prevStatus === "pending") || // Start processing
 						(subnet.status === "done" && subnet.data) || // Completed with data
-						(subnet.status === "waiting_response" &&
+						(subnet.status === "awaiting_response" &&
 							subnet.data &&
 							(prevStatus || !includeHistory)) || // Has data and waiting for response - always show during real-time updates
 						(subnet.status === "pending" && hasSubstantialData) || // Pending with real data
@@ -240,13 +240,13 @@ export const useSubnetCache = () => {
 								).slice(0, 100)}`;
 							} else if (
 								message.type === "workflow_subnet" &&
-								message.subnetStatus === "waiting_response"
+								message.subnetStatus === "awaiting_response"
 							) {
-								// Special handling for waiting_response messages to prevent duplicates during resumption
+								// Special handling for awaiting_response messages to prevent duplicates during resumption
 								const dataHash = subnet.data
 									? JSON.stringify(subnet.data).slice(0, 100)
 									: "no-data";
-								messageKey = `${workflowId}_${index}_waiting_response_data_${dataHash}`;
+								messageKey = `${workflowId}_${index}_awaiting_response_data_${dataHash}`;
 							} else {
 								messageKey = `${workflowId}_${index}_${
 									message.type
@@ -1451,7 +1451,7 @@ export const useSubnetCache = () => {
 									type: "question" as const,
 									content: questionData.text,
 									timestamp: questionTimestamp,
-									subnetStatus: "waiting_response" as const,
+									subnetStatus: "awaiting_response" as const,
 									toolName: subnet.toolName,
 									subnetIndex: index,
 									questionData: questionData,
@@ -1577,7 +1577,7 @@ export const useSubnetCache = () => {
 									type: "question" as const,
 									content: questionData.text,
 									timestamp: questionTimestamp,
-									subnetStatus: "waiting_response" as const,
+									subnetStatus: "awaiting_response" as const,
 									toolName: subnet.toolName,
 									subnetIndex: index,
 									questionData: questionData,
@@ -1589,7 +1589,7 @@ export const useSubnetCache = () => {
 					}
 					break;
 
-				case "waiting_response":
+				case "awaiting_response":
 					let content = "";
 					let hasDataContent = false;
 					let hasDirectQuestion = false;
@@ -1723,7 +1723,7 @@ export const useSubnetCache = () => {
 								type: "question" as const,
 								content: finalQuestionData.text,
 								timestamp: questionTimestamp,
-								subnetStatus: "waiting_response" as const,
+								subnetStatus: "awaiting_response" as const,
 								toolName: subnet.toolName,
 								subnetIndex: index,
 								questionData: finalQuestionData,
@@ -1739,7 +1739,7 @@ export const useSubnetCache = () => {
 							type: "workflow_subnet",
 							content: `Waiting for your response...`,
 							timestamp: new Date(),
-							subnetStatus: "waiting_response",
+							subnetStatus: "awaiting_response",
 							toolName: subnet.toolName,
 							subnetIndex: index,
 							sourceId: sourceId,

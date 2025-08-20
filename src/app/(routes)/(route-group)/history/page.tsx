@@ -43,7 +43,7 @@ const getStatusBadge = (status: string) => {
 			variant: "secondary" as const,
 			className: "bg-orange-100 text-orange-800 hover:bg-orange-100",
 		},
-		waiting_response: {
+		awaiting_response: {
 			label: "Waiting Response",
 			variant: "secondary" as const,
 			className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
@@ -54,6 +54,11 @@ const getStatusBadge = (status: string) => {
 			className: "bg-red-100 text-red-800 hover:bg-red-100",
 		},
 		in_progress: {
+			label: "In Progress",
+			variant: "secondary" as const,
+			className: "bg-blue-100 text-blue-800 hover:bg-blue-100",
+		},
+		waiting: {
 			label: "In Progress",
 			variant: "secondary" as const,
 			className: "bg-blue-100 text-blue-800 hover:bg-blue-100",
@@ -165,11 +170,12 @@ export default function WorkflowHistory() {
 						statusFilter.length > 0
 							? (statusFilter[0] as
 									| "in_progress"
+									| "waiting"
 									| "completed"
 									| "pending"
 									| "failed"
 									| "stopped"
-									| "waiting_response")
+									| "awaiting_response")
 							: undefined,
 				},
 				skyBrowser,
@@ -391,9 +397,10 @@ export default function WorkflowHistory() {
 									{[
 										"completed",
 										"stopped",
-										"waiting_response",
+										"awaiting_response",
 										"failed",
 										"in_progress",
+										"waiting",
 										"pending",
 									].map((status: string) => (
 										<DropdownMenuCheckboxItem

@@ -78,7 +78,7 @@ export default function ChatInput({
 
 	// Get appropriate placeholder text
 	const getPlaceholderText = () => {
-		if (isExecuting && workflowStatus === "waiting_response") {
+		if (isExecuting && workflowStatus === "awaiting_response") {
 			return "Provide feedback to continue...";
 		}
 		if (isExecuting) {

@@ -4,7 +4,7 @@ import { subscribeWithSelector } from "zustand/middleware";
 export interface CachedSubnetData {
 	itemID: number;
 	toolName: string;
-	status: "pending" | "in_progress" | "done" | "failed" | "waiting_response";
+	status: "pending" | "in_progress" | "done" | "failed" | "awaiting_response";
 	data: any;
 	prompt: string | null;
 	question?: {
@@ -174,20 +174,20 @@ export const useSubnetCacheStore = create<SubnetCacheStoreState>()(
 			const hasChanged = cached.contentHash !== newContentHash;
 
 			// Special handling for workflow resumption scenarios
-			// If the subnet is in waiting_response with the same data/question, don't consider it changed
+			// If the subnet is in awaiting_response with the same data/question, don't consider it changed
 			// even if the status temporarily appeared different during resumption
 			const isWaitingResponseResumption =
-				cached.status === "waiting_response" &&
-				newData.status === "waiting_response" &&
+				cached.status === "awaiting_response" &&
+				newData.status === "awaiting_response" &&
 				cached.data === newData.data &&
 				JSON.stringify(cached.question) ===
 					JSON.stringify(newData.question);
 
-			// Special handling for waiting_response status
-			// If subnet is in waiting_response and gets data, that's a significant change
+			// Special handling for awaiting_response status
+			// If subnet is in awaiting_response and gets data, that's a significant change
 			const isWaitingResponseGettingData =
-				cached.status === "waiting_response" &&
-				newData.status === "waiting_response" &&
+				cached.status === "awaiting_response" &&
+				newData.status === "awaiting_response" &&
 				(!cached.data || cached.data.length === 0) &&
 				newData.data &&
 				newData.data.length > 0;
@@ -201,7 +201,7 @@ export const useSubnetCacheStore = create<SubnetCacheStoreState>()(
 
 			if (isWaitingResponseGettingData) {
 				console.log(
-					`📊 Subnet ${subnetIndex} in workflow ${workflowId}: waiting_response subnet received data - significant change detected`
+					`📊 Subnet ${subnetIndex} in workflow ${workflowId}: awaiting_response subnet received data - significant change detected`
 				);
 				return true;
 			}
