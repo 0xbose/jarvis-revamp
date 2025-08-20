@@ -807,6 +807,15 @@ export default function AgentChatPage() {
 						>
 							{chatMessages
 								.filter((message) => {
+									// Hide trivial confirmation echoes like "Yes, proceed"
+									if (
+										typeof message.content === "string" &&
+										message.content.trim().toLowerCase() ===
+											"yes, proceed"
+									) {
+										return false;
+									}
+
 									const isWorkflowCompleted =
 										currentWorkflowData?.workflowStatus ===
 											"completed" ||
