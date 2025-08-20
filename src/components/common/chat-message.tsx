@@ -64,6 +64,24 @@ interface ChatMessageProps {
 	onRefreshPolling?: () => void;
 }
 
+// Loading dots component for workflow in_progress status
+const LoadingDots = () => (
+	<div className="flex items-center justify-center space-x-1 mt-3">
+		<div
+			className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+			style={{ animationDelay: "0ms" }}
+		></div>
+		<div
+			className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+			style={{ animationDelay: "150ms" }}
+		></div>
+		<div
+			className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+			style={{ animationDelay: "300ms" }}
+		></div>
+	</div>
+);
+
 export function ChatMessage({
 	message,
 	isLast = false,
@@ -330,6 +348,8 @@ export function ChatMessage({
 						</div>
 					)}
 				</div>
+				{/* Show loading dots below the message if this is the last message and workflow is in_progress */}
+				{isLast && workflowStatus === "in_progress" && <LoadingDots />}
 			</div>
 		);
 	}
@@ -475,6 +495,8 @@ export function ChatMessage({
 						</div> */}
 					</div>
 				</div>
+				{/* Show loading dots below the message if this is the last message and workflow is in_progress */}
+				{isLast && workflowStatus === "in_progress" && <LoadingDots />}
 			</div>
 		);
 	}
@@ -999,6 +1021,8 @@ export function ChatMessage({
 						</div> */}
 					</div>
 				</div>
+				{/* Show loading dots below the message if this is the last message and workflow is in_progress */}
+				{isLast && workflowStatus === "in_progress" && <LoadingDots />}
 			</div>
 		);
 	}
@@ -1048,6 +1072,8 @@ export function ChatMessage({
 						)}
 					</div>
 				</div>
+				{/* Show loading dots below the message if this is the last message and workflow is in_progress */}
+				{isLast && workflowStatus === "in_progress" && <LoadingDots />}
 			</div>
 		);
 	}
@@ -1296,12 +1322,15 @@ export function ChatMessage({
 									</Button>
 								</div>
 								<p className="text-xs text-yellow-300/70 mt-2">
-									Click refresh to check for the latest updates.
+									Click refresh to check for the latest
+									updates.
 								</p>
 							</div>
 						)}
 					</div>
 				</div>
+				{/* Show loading dots below the message if this is the last message and workflow is in_progress */}
+				{isLast && workflowStatus === "in_progress" && <LoadingDots />}
 			</div>
 		);
 	}
@@ -1399,6 +1428,8 @@ export function ChatMessage({
 					)}
 				</div>
 			</div>
+			{/* Show loading dots below the message if this is the last message and workflow is in_progress */}
+			{isLast && workflowStatus === "in_progress" && <LoadingDots />}
 		</div>
 	);
 }
