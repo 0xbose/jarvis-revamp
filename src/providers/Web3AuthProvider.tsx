@@ -63,16 +63,15 @@ const Web3AuthContext = createContext<Record<string, unknown> | null>(null);
 
 // Error boundary for Web3Auth
 class Web3AuthErrorBoundary extends Component<
-	{ children: ReactNode },
+	{ children: ReactNode; appChildren: ReactNode },
 	{ hasError: boolean }
 > {
-	constructor(props: { children: ReactNode }) {
+	constructor(props: { children: ReactNode; appChildren: ReactNode }) {
 		super(props);
 		this.state = { hasError: false };
 	}
 
 	static getDerivedStateFromError(error: Error) {
-		// Log the error but don't crash the app
 		console.warn("Web3Auth Error Boundary caught an error:", error);
 		return { hasError: true };
 	}
@@ -83,8 +82,9 @@ class Web3AuthErrorBoundary extends Component<
 
 	render() {
 		if (this.state.hasError) {
-			// Return children without Web3Auth functionality
-			return this.props.children;
+			return (
+				<FallbackWeb3AuthProvider>{this.props.appChildren}</FallbackWeb3AuthProvider>
+			);
 		}
 
 		return this.props.children;
@@ -181,8 +181,18 @@ export function Web3AuthProvider({ children }: { children: ReactNode }) {
 		return <FallbackWeb3AuthProvider>{children}</FallbackWeb3AuthProvider>;
 	}
 
+	// If essential config is missing, fall back silently
+	const isConfigMissing =
+		!web3AuthConfig.clientId || !web3AuthConfig.chainConfig.rpcTarget;
+	if (isConfigMissing) {
+		console.warn(
+			"Web3Auth config missing (clientId or rpcTarget). Falling back to no-op provider."
+		);
+		return <FallbackWeb3AuthProvider>{children}</FallbackWeb3AuthProvider>;
+	}
+
 	return (
-		<Web3AuthErrorBoundary>
+		<Web3AuthErrorBoundary appChildren={children}>
 			<Web3AuthModalProvider config={web3AuthConfig}>
 				<Web3AuthWrapper>{children}</Web3AuthWrapper>
 			</Web3AuthModalProvider>

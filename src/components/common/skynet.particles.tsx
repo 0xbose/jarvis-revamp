@@ -1,11 +1,11 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect } from "react";
 import ConnectButton from "../wallet/connect-button";
 
 export default function SkynetParticles() {
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const mousePositionRef = useRef({ x: 0, y: 0 });
 	const isTouchingRef = useRef(false);
-	const [isMobile, setIsMobile] = useState(false);
+	// Avoid React state here to prevent re-render loops while animating
 
 	useEffect(() => {
 		const canvas = canvasRef.current;
@@ -17,7 +17,6 @@ export default function SkynetParticles() {
 		const updateCanvasSize = () => {
 			canvas.width = window.innerWidth;
 			canvas.height = window.innerHeight;
-			setIsMobile(window.innerWidth < 768);
 		};
 
 		updateCanvasSize();
@@ -42,7 +41,8 @@ export default function SkynetParticles() {
 			ctx.fillStyle = "white";
 			ctx.save();
 
-			const logoHeight = isMobile ? 80 : 140;
+			const isMobileLocal = window.innerWidth < 768;
+			const logoHeight = isMobileLocal ? 80 : 140;
 			const scale = logoHeight / 142;
 			const logoWidth = 797 * scale;
 
@@ -800,7 +800,8 @@ export default function SkynetParticles() {
 				const y = Math.floor(Math.random() * canvas.height);
 
 				if (data[(y * canvas.width + x) * 4 + 3] > 128) {
-					const logoHeight = isMobile ? 80 : 140;
+					const isMobileLocal = window.innerWidth < 768;
+					const logoHeight = isMobileLocal ? 80 : 140;
 					const logoWidth = 797 * (logoHeight / 142);
 					const centerX = canvas.width / 2;
 					const centerY = canvas.height / 2;
@@ -840,7 +841,9 @@ export default function SkynetParticles() {
 			const baseParticleCount = 7000;
 			const particleCount = Math.floor(
 				baseParticleCount *
-					Math.sqrt((canvas.width * canvas.height) / (1920 * 1080))
+					Math.sqrt(
+						(canvas?.width ?? 0) * (canvas?.height ?? 0) / (1920 * 1080)
+					)
 			);
 			for (let i = 0; i < particleCount; i++) {
 				const particle = createParticle(scale);
@@ -969,7 +972,7 @@ export default function SkynetParticles() {
 			canvas.removeEventListener("touchend", handleTouchEnd);
 			cancelAnimationFrame(animationFrameId);
 		};
-	}, [isMobile]);
+	}, []);
 
 	return (
 		<div className="relative w-full h-dvh flex flex-col items-center justify-center bg-black">
