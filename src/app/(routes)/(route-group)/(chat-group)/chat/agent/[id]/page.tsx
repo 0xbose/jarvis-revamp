@@ -815,9 +815,13 @@ export default function AgentChatPage() {
 										workflowStatus === "failed" ||
 										workflowStatus === "stopped";
 
+									// Don't filter out feedback questions even if workflow is stopped
+									// They might be from feedback history that needs to be displayed
 									if (
 										isWorkflowCompleted &&
-										message.type === "question"
+										message.type === "question" &&
+										message.questionData?.type !==
+											"feedback"
 									) {
 										return false;
 									}

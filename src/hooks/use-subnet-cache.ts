@@ -322,12 +322,114 @@ export const useSubnetCache = () => {
 
 				// SIMPLE: If we have feedback history, use ONLY that
 				if (hasFeedbackData) {
+					console.log(
+						`📊 Processing feedback history for subnet ${index}:`,
+						{
+							feedbackHistoryLength:
+								subnet.feedbackHistory.length,
+							firstFeedbackItem: subnet.feedbackHistory[0]
+								? {
+										question:
+											subnet.feedbackHistory[0].feedback_question?.slice(
+												0,
+												50
+											),
+										responseMessage:
+											subnet.feedbackHistory[0].response?.message?.slice(
+												0,
+												50
+											),
+										userAnswer:
+											subnet.feedbackHistory[0]
+												.user_answer,
+								  }
+								: null,
+						}
+					);
+
+					// CRITICAL FIX: Reset message tracking for this subnet when processing feedback history
+					// This ensures new feedback items are always processed
+					const subnetMessageKeys = Array.from(messageIds).filter(
+						(key) =>
+							key.startsWith(`feedback_${workflowId}_${index}_`)
+					);
+					subnetMessageKeys.forEach((key) => messageIds.delete(key));
+
+					console.log(
+						`🔄 Reset message tracking for subnet ${index}, cleared ${subnetMessageKeys.length} keys`
+					);
+
+					// DEBUG: Log all feedback history items to understand what's being processed
+					console.log(
+						`🔍 Processing ${subnet.feedbackHistory.length} feedback history items:`,
+						subnet.feedbackHistory.map(
+							(item: any, idx: number) => ({
+								index: idx,
+								question: item.feedback_question?.slice(0, 50),
+								response: item.response?.message?.slice(0, 50),
+								userAnswer: item.user_answer,
+								hasUserAnswer: !!(
+									item.user_answer &&
+									item.user_answer.trim() !== "" &&
+									item.user_answer !== null
+								),
+								createdAt: item.created_at,
+								updatedAt: item.updated_at,
+							})
+						)
+					);
+
+					// Process feedback history to show refined responses and questions
+					// This replaces original subnet data with processed feedback responses
+					console.log(
+						`🚀 Starting feedback history processing for subnet ${index}:`,
+						{
+							feedbackHistoryLength:
+								subnet.feedbackHistory.length,
+							messageIdsSize: messageIds.size,
+							willProcessItems: subnet.feedbackHistory.length,
+						}
+					);
+
 					subnet.feedbackHistory.forEach(
 						(feedbackItem: any, feedbackIndex: number) => {
 							const feedbackBaseKey = `feedback_${workflowId}_${index}_${feedbackIndex}`;
 
+							console.log(
+								`🔍 Processing feedback item ${feedbackIndex}:`,
+								{
+									question:
+										feedbackItem.feedback_question?.slice(
+											0,
+											50
+										),
+									response:
+										feedbackItem.response?.message?.slice(
+											0,
+											50
+										),
+									userAnswer: feedbackItem.user_answer,
+									hasUserAnswer: !!(
+										feedbackItem.user_answer &&
+										feedbackItem.user_answer.trim() !==
+											"" &&
+										feedbackItem.user_answer !== null
+									),
+									// CRITICAL DEBUG: Show full response structure
+									fullResponse: feedbackItem.response,
+									hasResponse: !!feedbackItem.response,
+									hasResponseMessage:
+										!!feedbackItem.response?.message,
+									responseMessageType:
+										typeof feedbackItem.response?.message,
+									responseMessageLength:
+										feedbackItem.response?.message?.length,
+								}
+							);
+
 							// Create system response message from feedback history
 							// This is the processed/refined version that replaces subnet.data
+							// IMPORTANT: Response appears FIRST, then question follows
 							const responseKey = `${feedbackBaseKey}_response`;
 							const sourceId = `subnet_${index}_feedback_response_${feedbackIndex}`;
 
@@ -340,10 +442,103 @@ export const useSubnetCache = () => {
 									(msg) => msg.sourceId === sourceId
 								);
 
-							if (
-								!messageIds.has(responseKey) &&
-								!messageAlreadyExists
-							) {
+							console.log(
+								`🔍 Feedback response message check for index ${feedbackIndex}:`,
+								{
+									responseKey,
+									sourceId,
+									messageIdsHasKey:
+										messageIds.has(responseKey),
+									messageAlreadyExists,
+									responseContent:
+										feedbackItem.response?.message?.slice(
+											0,
+											100
+										),
+									willCreate:
+										!messageIds.has(responseKey) &&
+										!messageAlreadyExists,
+								}
+							);
+
+							// CRITICAL FIX: Always create feedback history responses, ignore messageIds check
+							// since we cleared the tracking for this subnet above
+							if (!messageAlreadyExists) {
+								// CRITICAL CHECK: Ensure we have valid content before creating message
+								if (
+									!feedbackItem.response?.message ||
+									feedbackItem.response.message.trim() === ""
+								) {
+									console.log(
+										`⚠️ SKIPPING feedback response creation - no valid content:`,
+										{
+											feedbackIndex,
+											hasResponse:
+												!!feedbackItem.response,
+											hasMessage:
+												!!feedbackItem.response
+													?.message,
+											messageContent:
+												feedbackItem.response?.message,
+											messageLength:
+												feedbackItem.response?.message
+													?.length,
+											messageTrimmed:
+												feedbackItem.response?.message?.trim(),
+										}
+									);
+									return; // Skip this feedback item
+								}
+								console.log(
+									`📝 Creating feedback response message:`,
+									{
+										feedbackIndex,
+										messageContent:
+											feedbackItem.response?.message?.slice(
+												0,
+												100
+											),
+										hasMessage:
+											!!feedbackItem.response?.message,
+										responseStructure: {
+											hasResponse:
+												!!feedbackItem.response,
+											hasMessage:
+												!!feedbackItem.response
+													?.message,
+											hasData:
+												!!feedbackItem.response?.data,
+											hasSuccess:
+												feedbackItem.response
+													?.success !== undefined,
+										},
+									}
+								);
+
+								// CRITICAL DEBUG: Log the exact content being used
+								console.log(
+									`🔍 Creating response message with content:`,
+									{
+										rawContent:
+											feedbackItem.response.message,
+										contentType:
+											typeof feedbackItem.response
+												.message,
+										contentLength:
+											feedbackItem.response.message
+												?.length,
+										contentPreview:
+											feedbackItem.response.message?.slice(
+												0,
+												100
+											),
+										willUseContent:
+											!!feedbackItem.response.message &&
+											feedbackItem.response.message.trim() !==
+												"",
+									}
+								);
+
 								const responseMessage: ChatMsg = {
 									id: `feedback_response_${index}_${feedbackIndex}_${Date.now()}`,
 									type: "response",
@@ -367,6 +562,52 @@ export const useSubnetCache = () => {
 								};
 								dataMessages.push(responseMessage);
 								messageIds.add(responseKey);
+
+								// CRITICAL DEBUG: Verify message was added
+								console.log(
+									`🔍 After adding response message:`,
+									{
+										dataMessagesLength: dataMessages.length,
+										lastMessage:
+											dataMessages[
+												dataMessages.length - 1
+											],
+										messageIdsSize: messageIds.size,
+										addedMessageId: responseMessage.id,
+										addedMessageContent:
+											responseMessage.content?.slice(
+												0,
+												50
+											),
+									}
+								);
+
+								console.log(
+									`✅ Successfully created and added feedback response message:`,
+									{
+										messageId: responseMessage.id,
+										sourceId: responseMessage.sourceId,
+										content: responseMessage.content?.slice(
+											0,
+											50
+										),
+										timestamp: responseMessage.timestamp,
+										createdAt: feedbackItem.created_at,
+										dataMessagesLength: dataMessages.length,
+										messageIdsSize: messageIds.size,
+										allDataMessages: dataMessages.map(
+											(msg) => ({
+												type: msg.type,
+												content: msg.content?.slice(
+													0,
+													30
+												),
+												sourceId: msg.sourceId,
+												timestamp: msg.timestamp,
+											})
+										),
+									}
+								);
 							} else {
 								console.log(
 									`⏭️ SKIPPING duplicate feedback response for subnet ${index}, feedback ${feedbackIndex} - messageIds: ${messageIds.has(
@@ -375,77 +616,93 @@ export const useSubnetCache = () => {
 								);
 							}
 
-							// Create question message from feedback history ONLY if user hasn't answered it yet
-							// This ensures only unanswered questions are shown with interactive buttons
-							const hasUserAnswer =
-								feedbackItem.user_answer &&
-								feedbackItem.user_answer.trim() !== "" &&
-								feedbackItem.user_answer !== null;
+							// Create question message from feedback history
+							// ALL questions in feedbackHistory should be type: "feedback"
+							// IMPORTANT: Question appears AFTER the response message to ensure proper chat flow
+							const questionKey = `${feedbackBaseKey}_question`;
+							const questionSourceId = `subnet_${index}_feedback_question_${feedbackIndex}`;
 
-							if (!hasUserAnswer) {
-								const questionKey = `${feedbackBaseKey}_question`;
-								const questionSourceId = `subnet_${index}_feedback_question_${feedbackIndex}`;
+							// CRITICAL FIX: Check if question message already exists
+							const questionAlreadyExists =
+								dataMessages.some(
+									(msg) => msg.sourceId === questionSourceId
+								) ||
+								questionMessages.some(
+									(msg) => msg.sourceId === questionSourceId
+								);
 
-								// CRITICAL FIX: Check if question message already exists
-								const questionAlreadyExists =
-									dataMessages.some(
-										(msg) =>
-											msg.sourceId === questionSourceId
-									) ||
-									questionMessages.some(
-										(msg) =>
-											msg.sourceId === questionSourceId
-									);
+							// CRITICAL FIX: Always create feedback history questions, ignore messageIds check
+							// since we cleared the tracking for this subnet above
+							if (!questionAlreadyExists) {
+								// Question should appear after response - add small offset to created_at
+								const responseTimestamp = new Date(
+									feedbackItem.created_at
+								);
+								const questionTimestamp = new Date(
+									responseTimestamp.getTime() + 2000
+								); // 2 seconds after response to ensure proper ordering
 
-								if (
-									!messageIds.has(questionKey) &&
-									!questionAlreadyExists
-								) {
-									// Question should appear after response - minimal offset for ordering
-									const responseTimestamp = new Date(
-										feedbackItem.created_at
-									);
-									const questionTimestamp = new Date(
-										responseTimestamp.getTime() + 10
-									); // Minimal 10ms offset for proper ordering
+								console.log(
+									`✅ Creating question message for feedback:`,
+									{
+										feedbackIndex,
+										questionText:
+											feedbackItem.feedback_question?.slice(
+												0,
+												50
+											),
+										hasUserAnswer: !!(
+											feedbackItem.user_answer &&
+											feedbackItem.user_answer.trim() !==
+												"" &&
+											feedbackItem.user_answer !== null
+										),
+										userAnswer: feedbackItem.user_answer,
+										fullQuestion:
+											feedbackItem.feedback_question,
+									}
+								);
 
-									console.log(
-										`✅ Creating question message for unanswered feedback:`,
-										{
-											feedbackIndex,
-											questionText:
-												feedbackItem.feedback_question?.slice(
-													0,
-													50
-												),
-											hasUserAnswer,
-											userAnswer:
-												feedbackItem.user_answer,
-										}
-									);
+								const questionMessage: ChatMsg = {
+									id: `feedback_question_${index}_${feedbackIndex}_${Date.now()}`,
+									type: "question",
+									content: feedbackItem.feedback_question,
+									timestamp: questionTimestamp,
+									toolName: subnet.toolName,
+									subnetIndex: index,
+									subnetStatus: subnet.status, // Add subnet status for feedback button logic
+									questionData: {
+										type: "feedback", // ALWAYS feedback type for questions in feedbackHistory
+										text: feedbackItem.feedback_question,
+										itemID: feedbackItem.item_id,
+										expiresAt: feedbackItem.updated_at,
+									},
+									sourceId: questionSourceId,
+								};
+								questionMessages.push(questionMessage);
+								messageIds.add(questionKey);
 
-									const questionMessage: ChatMsg = {
-										id: `feedback_question_${index}_${feedbackIndex}_${Date.now()}`,
-										type: "question",
-										content: feedbackItem.feedback_question,
-										timestamp: questionTimestamp,
-										toolName: subnet.toolName,
-										subnetIndex: index,
-										subnetStatus: subnet.status, // Add subnet status for feedback button logic
-										questionData: {
-											type: "feedback", // ALWAYS feedback type for questions in feedbackHistory
-											text: feedbackItem.feedback_question,
-											itemID: feedbackItem.item_id,
-											expiresAt: feedbackItem.updated_at,
-										},
-										sourceId: questionSourceId,
-									};
-									questionMessages.push(questionMessage);
-									messageIds.add(questionKey);
-								}
+								console.log(
+									`✅ Successfully created and added feedback question message:`,
+									{
+										messageId: questionMessage.id,
+										sourceId: questionMessage.sourceId,
+										content: questionMessage.content?.slice(
+											0,
+											50
+										),
+										timestamp: questionMessage.timestamp,
+										responseTimestamp: new Date(
+											feedbackItem.created_at
+										),
+										timeOffset: "2 seconds after response",
+										questionMessagesLength:
+											questionMessages.length,
+									}
+								);
 							} else {
 								console.log(
-									`⏭️ Skipping question for answered feedback:`,
+									`⏭️ Skipping duplicate question for feedback:`,
 									{
 										feedbackIndex,
 										questionText:
@@ -463,6 +720,7 @@ export const useSubnetCache = () => {
 							}
 
 							// Create answer message if user provided an answer
+							// IMPORTANT: Answer appears AFTER the question to complete the feedback flow
 							if (
 								feedbackItem.user_answer &&
 								feedbackItem.user_answer.trim() !== ""
@@ -479,19 +737,21 @@ export const useSubnetCache = () => {
 										(msg) => msg.sourceId === answerSourceId
 									);
 
-								if (
-									!messageIds.has(answerKey) &&
-									!answerAlreadyExists
-								) {
-									// Answer appears after question
+								// CRITICAL FIX: Always create feedback history answers, ignore messageIds check
+								// since we cleared the tracking for this subnet above
+								if (!answerAlreadyExists) {
+									// Answer appears after question - ensure proper chronological order
 									const responseTimestamp = new Date(
 										feedbackItem.created_at
+									);
+									const questionTimestamp = new Date(
+										responseTimestamp.getTime() + 2000
 									);
 									const answerTimestamp = new Date(
 										feedbackItem.updated_at ||
 											new Date(
-												responseTimestamp.getTime() +
-													2000
+												questionTimestamp.getTime() +
+													1000
 											)
 									);
 
@@ -506,9 +766,104 @@ export const useSubnetCache = () => {
 									};
 									questionMessages.push(answerMessage);
 									messageIds.add(answerKey);
+
+									console.log(
+										`✅ Successfully created and added feedback answer message:`,
+										{
+											messageId: answerMessage.id,
+											sourceId: answerMessage.sourceId,
+											content:
+												answerMessage.content?.slice(
+													0,
+													50
+												),
+											timestamp: answerMessage.timestamp,
+											responseTimestamp: new Date(
+												feedbackItem.created_at
+											),
+											questionTimestamp:
+												new Date(
+													feedbackItem.created_at
+												).getTime() + 2000,
+											timeOffset:
+												"1 second after question",
+											questionMessagesLength:
+												questionMessages.length,
+										}
+									);
 								}
 							}
 						}
+					);
+
+					// DEBUG: Log what was created for this subnet
+					console.log(
+						`📊 Feedback processing summary for subnet ${index}:`,
+						{
+							dataMessagesLength: dataMessages.length,
+							questionMessagesLength: questionMessages.length,
+							feedbackDataMessages: dataMessages.filter((msg) =>
+								msg.sourceId?.startsWith(
+									`subnet_${index}_feedback_`
+								)
+							).length,
+							feedbackQuestionMessages: questionMessages.filter(
+								(msg) =>
+									msg.sourceId?.startsWith(
+										`subnet_${index}_feedback_`
+									)
+							).length,
+							allFeedbackMessages: [
+								...dataMessages.filter((msg) =>
+									msg.sourceId?.startsWith(
+										`subnet_${index}_feedback_`
+									)
+								),
+								...questionMessages.filter((msg) =>
+									msg.sourceId?.startsWith(
+										`subnet_${index}_feedback_`
+									)
+								),
+							].map((msg) => ({
+								type: msg.type,
+								sourceId: msg.sourceId,
+								content: msg.content?.slice(0, 30),
+								timestamp: msg.timestamp,
+							})),
+						}
+					);
+
+					// CRITICAL DEBUG: Show message flow with timestamps
+					const feedbackMessageFlow = [
+						...dataMessages.filter((msg) =>
+							msg.sourceId?.startsWith(
+								`subnet_${index}_feedback_`
+							)
+						),
+						...questionMessages.filter((msg) =>
+							msg.sourceId?.startsWith(
+								`subnet_${index}_feedback_`
+							)
+						),
+					].sort((a, b) => {
+						const timeA = a.timestamp
+							? new Date(a.timestamp).getTime()
+							: 0;
+						const timeB = b.timestamp
+							? new Date(b.timestamp).getTime()
+							: 0;
+						return timeA - timeB;
+					});
+
+					console.log(
+						`🔍 Feedback message flow for subnet ${index} (chronological order):`,
+						feedbackMessageFlow.map((msg, idx) => ({
+							order: idx + 1,
+							type: msg.type,
+							content: msg.content?.slice(0, 50),
+							timestamp: msg.timestamp,
+							sourceId: msg.sourceId,
+						}))
 					);
 
 					// CRITICAL FIX: Always process subnet.question if it exists, regardless of feedback history
@@ -526,7 +881,19 @@ export const useSubnetCache = () => {
 							}
 						);
 
-						if (true) {
+						// CRITICAL FIX: Only show current subnet.question if it's NOT already answered in feedback history
+						// This prevents showing old questions when new feedback history exists
+						const isQuestionAlreadyAnswered =
+							subnet.feedbackHistory?.some(
+								(feedback: any) =>
+									feedback.feedback_question ===
+										subnet.question.text &&
+									feedback.user_answer &&
+									feedback.user_answer.trim() !== "" &&
+									feedback.user_answer !== null
+							);
+
+						if (!isQuestionAlreadyAnswered) {
 							// Always show current active subnet questions
 							const currentQuestionKey = `current_question_${workflowId}_${index}`;
 							if (!messageIds.has(currentQuestionKey)) {
@@ -567,10 +934,102 @@ export const useSubnetCache = () => {
 							}
 						} else {
 							console.log(
-								`⏭️ Skipping question message for subnet ${index} - question already processed or not needed`
+								`⏭️ Skipping current subnet question - already answered in feedback history: "${subnet.question.text?.slice(
+									0,
+									50
+								)}"`
 							);
 						}
 					}
+
+					// DEBUG: Log summary of created messages
+					console.log(
+						`📊 Feedback history processing complete for subnet ${index}:`,
+						{
+							dataMessagesCreated: dataMessages.filter((msg) =>
+								msg.sourceId?.startsWith(
+									`subnet_${index}_feedback_response_`
+								)
+							).length,
+							questionMessagesCreated: questionMessages.filter(
+								(msg) =>
+									msg.sourceId?.startsWith(
+										`subnet_${index}_feedback_question_`
+									)
+							).length,
+							answerMessagesCreated: questionMessages.filter(
+								(msg) =>
+									msg.sourceId?.startsWith(
+										`subnet_${index}_feedback_answer_`
+									)
+							).length,
+							totalMessagesCreated:
+								dataMessages.length + questionMessages.length,
+							feedbackHistoryLength:
+								subnet.feedbackHistory.length,
+						}
+					);
+
+					// CRITICAL DEBUG: Log all feedback messages that were created
+					const feedbackMessages = [
+						...dataMessages.filter((msg) =>
+							msg.sourceId?.startsWith(
+								`subnet_${index}_feedback_`
+							)
+						),
+						...questionMessages.filter((msg) =>
+							msg.sourceId?.startsWith(
+								`subnet_${index}_feedback_`
+							)
+						),
+					];
+
+					console.log(
+						`🔍 All feedback messages created for subnet ${index}:`,
+						feedbackMessages.map((msg) => ({
+							type: msg.type,
+							content: msg.content?.slice(0, 50),
+							sourceId: msg.sourceId,
+							timestamp: msg.timestamp,
+							subnetIndex: msg.subnetIndex,
+						}))
+					);
+
+					// DEBUG: Log all created messages for this subnet
+					const subnetDataMessages = dataMessages.filter(
+						(msg) =>
+							msg.subnetIndex === index &&
+							msg.sourceId?.startsWith(
+								`subnet_${index}_feedback_`
+							)
+					);
+					const subnetQuestionMessages = questionMessages.filter(
+						(msg) =>
+							msg.subnetIndex === index &&
+							msg.sourceId?.startsWith(
+								`subnet_${index}_feedback_`
+							)
+					);
+
+					console.log(
+						`🔍 All created messages for subnet ${index}:`,
+						{
+							dataMessages: subnetDataMessages.map((msg) => ({
+								type: msg.type,
+								content: msg.content?.slice(0, 50),
+								sourceId: msg.sourceId,
+								timestamp: msg.timestamp,
+							})),
+							questionMessages: subnetQuestionMessages.map(
+								(msg) => ({
+									type: msg.type,
+									content: msg.content?.slice(0, 50),
+									sourceId: msg.sourceId,
+									timestamp: msg.timestamp,
+								})
+							),
+						}
+					);
 				} else {
 					if (hasFeedbackData) {
 						console.log(
@@ -588,10 +1047,82 @@ export const useSubnetCache = () => {
 					processingMap.delete(index);
 					feedbackSet.delete(index);
 				}
+
+				// DEBUG: Log final state for this subnet
+				console.log(`📊 Final subnet ${index} state:`, {
+					status: currentStatus,
+					hasFeedbackHistory: !!subnet.feedbackHistory?.length,
+					dataMessagesCount: dataMessages.filter(
+						(msg) => msg.subnetIndex === index
+					).length,
+					questionMessagesCount: questionMessages.filter(
+						(msg) => msg.subnetIndex === index
+					).length,
+					feedbackMessagesCount: [
+						...dataMessages.filter(
+							(msg) =>
+								msg.subnetIndex === index &&
+								msg.sourceId?.includes("feedback")
+						),
+						...questionMessages.filter(
+							(msg) =>
+								msg.subnetIndex === index &&
+								msg.sourceId?.includes("feedback")
+						),
+					].length,
+				});
+			});
+
+			// DEBUG: Log state after all subnets processed
+			console.log(`📊 After processing all subnets:`, {
+				totalDataMessages: dataMessages.length,
+				totalQuestionMessages: questionMessages.length,
+				totalFeedbackMessages: [
+					...dataMessages.filter((msg) =>
+						msg.sourceId?.includes("feedback")
+					),
+					...questionMessages.filter((msg) =>
+						msg.sourceId?.includes("feedback")
+					),
+				].length,
+				feedbackDataMessages: dataMessages
+					.filter((msg) => msg.sourceId?.includes("feedback"))
+					.map((msg) => ({
+						type: msg.type,
+						sourceId: msg.sourceId,
+						subnetIndex: msg.subnetIndex,
+					})),
+				feedbackQuestionMessages: questionMessages
+					.filter((msg) => msg.sourceId?.includes("feedback"))
+					.map((msg) => ({
+						type: msg.type,
+						sourceId: msg.sourceId,
+						subnetIndex: msg.subnetIndex,
+					})),
 			});
 
 			// Final safeguard: Remove any original data messages if feedback history exists for the same subnet
+			console.log(
+				`🔍 Starting safeguarding process for ${dataMessages.length} data messages:`,
+				dataMessages.map((msg) => ({
+					type: msg.type,
+					sourceId: msg.sourceId,
+					subnetIndex: msg.subnetIndex,
+					content: msg.content?.slice(0, 30),
+					hasFeedbackInSource: msg.sourceId?.includes("feedback"),
+				}))
+			);
+
 			const safeguardedDataMessages = dataMessages.filter((msg) => {
+				console.log(`🔍 Safeguarding message:`, {
+					messageId: msg.id,
+					type: msg.type,
+					sourceId: msg.sourceId,
+					subnetIndex: msg.subnetIndex,
+					content: msg.content?.slice(0, 30),
+					hasFeedbackInSource: msg.sourceId?.includes("feedback"),
+				});
+
 				if (
 					msg.type === "workflow_subnet" &&
 					msg.subnetIndex !== undefined
@@ -608,11 +1139,46 @@ export const useSubnetCache = () => {
 							!msg.sourceId?.includes("feedback");
 
 						if (isOriginalDataMessage) {
+							console.log(
+								`🚫 Filtering out original data message for subnet ${subnetIndex}`,
+								{
+									messageId: msg.id,
+									sourceId: msg.sourceId,
+									content: msg.content?.slice(0, 50),
+								}
+							);
 							return false;
 						}
 					}
 				}
+				// For response messages from feedback history, always keep them
+				if (
+					msg.type === "response" &&
+					msg.sourceId?.includes("feedback")
+				) {
+					console.log(`✅ Keeping feedback response message`, {
+						messageId: msg.id,
+						sourceId: msg.sourceId,
+						content: msg.content?.slice(0, 50),
+						subnetIndex: msg.subnetIndex,
+					});
+				}
+
+				console.log(`🔍 Message ${msg.id} will be kept`);
 				return true;
+			});
+
+			console.log(`🔍 Data messages after safeguarding:`, {
+				originalCount: dataMessages.length,
+				safeguardedCount: safeguardedDataMessages.length,
+				filteredOut:
+					dataMessages.length - safeguardedDataMessages.length,
+				keptMessages: safeguardedDataMessages.map((msg) => ({
+					type: msg.type,
+					content: msg.content?.slice(0, 30),
+					sourceId: msg.sourceId,
+					subnetIndex: msg.subnetIndex,
+				})),
 			});
 
 			// Apply the same safeguard to question messages
@@ -629,10 +1195,28 @@ export const useSubnetCache = () => {
 							// Check if this is an original question (not from feedback history)
 							const isOriginalQuestion =
 								!msg.sourceId?.includes("feedback");
+							// Only filter out original questions, keep feedback questions
 							if (isOriginalQuestion && msg.type === "question") {
+								console.log(
+									`🚫 Filtering out original question message for subnet ${subnetIndex}`,
+									{
+										messageId: msg.id,
+										sourceId: msg.sourceId,
+										content: msg.content?.slice(0, 50),
+									}
+								);
 								return false;
 							}
 						}
+					}
+					// Always keep feedback questions
+					if (msg.sourceId?.includes("feedback")) {
+						console.log(`✅ Keeping feedback question message`, {
+							messageId: msg.id,
+							sourceId: msg.sourceId,
+							content: msg.content?.slice(0, 50),
+							subnetIndex: msg.subnetIndex,
+						});
 					}
 					return true;
 				}
@@ -647,6 +1231,87 @@ export const useSubnetCache = () => {
 				const timeB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
 				return timeA - timeB;
 			});
+
+			// CRITICAL DEBUG: Show final message array before returning
+			console.log(`🔍 Final allMessages array before return:`, {
+				totalMessages: allMessages.length,
+				messageTypes: allMessages.map((msg, idx) => ({
+					index: idx,
+					type: msg.type,
+					sourceId: msg.sourceId,
+					content: msg.content?.slice(0, 50),
+					hasFeedbackInSource: msg.sourceId?.includes("feedback"),
+					subnetIndex: msg.subnetIndex,
+					timestamp: msg.timestamp,
+				})),
+			});
+
+			// CRITICAL DEBUG: Log what happened to feedback messages during safeguarding
+			const feedbackMessagesBeforeSafeguard = [
+				...dataMessages.filter((msg) =>
+					msg.sourceId?.includes("feedback")
+				),
+				...questionMessages.filter((msg) =>
+					msg.sourceId?.includes("feedback")
+				),
+			];
+			const feedbackMessagesAfterSafeguard = allMessages.filter((msg) =>
+				msg.sourceId?.includes("feedback")
+			);
+
+			console.log(`🔍 Feedback messages safeguarding check:`, {
+				beforeSafeguard: feedbackMessagesBeforeSafeguard.length,
+				afterSafeguard: feedbackMessagesAfterSafeguard.length,
+				lostMessages:
+					feedbackMessagesBeforeSafeguard.length -
+					feedbackMessagesAfterSafeguard.length,
+				beforeMessages: feedbackMessagesBeforeSafeguard.map((msg) => ({
+					type: msg.type,
+					sourceId: msg.sourceId,
+					content: msg.content?.slice(0, 30),
+				})),
+				afterMessages: feedbackMessagesAfterSafeguard.map((msg) => ({
+					type: msg.type,
+					sourceId: msg.sourceId,
+					content: msg.content?.slice(0, 30),
+				})),
+			});
+
+			console.log(`📊 Final message array for workflow ${workflowId}:`, {
+				totalMessages: allMessages.length,
+				messageTypes: allMessages.map((msg) => ({
+					type: msg.type,
+					sourceId: msg.sourceId,
+					content: msg.content?.slice(0, 30),
+					hasFeedbackInSource: msg.sourceId?.includes("feedback"),
+					subnetIndex: msg.subnetIndex,
+				})),
+			});
+
+			// DEBUG: Log final message summary before returning
+			console.log(
+				`📊 processSubnetData complete for workflow ${workflowId}:`,
+				{
+					totalDataMessages: dataMessages.length,
+					totalQuestionMessages: questionMessages.length,
+					totalMessages:
+						dataMessages.length + questionMessages.length,
+					subnetCount: subnetData.length,
+					finalReturnedMessages: allMessages.length,
+					messageTypes: {
+						data: dataMessages.map((msg) => ({
+							type: msg.type,
+							content: msg.content?.slice(0, 50),
+							sourceId: msg.sourceId,
+						})),
+						questions: questionMessages.map((msg) => ({
+							type: msg.type,
+							content: msg.content?.slice(0, 50),
+							sourceId: msg.sourceId,
+						})),
+					},
+				}
+			);
 
 			return allMessages;
 		},

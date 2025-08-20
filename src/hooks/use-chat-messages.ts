@@ -113,6 +113,7 @@ export const useChatMessages = () => {
 						sourceId: msg.sourceId,
 						contentPreview: msg.content?.slice(0, 100),
 						timestamp: msg.timestamp,
+						isFeedbackMessage: msg.sourceId?.includes("feedback"),
 					}
 				);
 			});
@@ -121,7 +122,40 @@ export const useChatMessages = () => {
 				newMsg: ChatMsg,
 				existingMsgs: ChatMsg[]
 			) => {
+				// DEBUG: Special logging for feedback messages
+				if (newMsg.sourceId?.includes("feedback")) {
+					console.log(
+						`🔍 Checking if feedback message is duplicate:`,
+						{
+							type: newMsg.type,
+							content: newMsg.content?.slice(0, 50),
+							sourceId: newMsg.sourceId,
+							subnetIndex: newMsg.subnetIndex,
+							toolName: newMsg.toolName,
+						}
+					);
+				}
+
 				return existingMsgs.some((existingMsg) => {
+					// DEBUG: Log comparison details for feedback messages
+					if (newMsg.sourceId?.includes("feedback")) {
+						console.log(
+							`🔍 Comparing feedback message with existing:`,
+							{
+								newMsg: {
+									type: newMsg.type,
+									content: newMsg.content?.slice(0, 30),
+									sourceId: newMsg.sourceId,
+								},
+								existingMsg: {
+									type: existingMsg.type,
+									content: existingMsg.content?.slice(0, 30),
+									sourceId: existingMsg.sourceId,
+								},
+							}
+						);
+					}
+
 					if (
 						(newMsg.type === "workflow_subnet" &&
 							existingMsg.type === "response") ||
@@ -185,23 +219,8 @@ export const useChatMessages = () => {
 						newMsg.type === "response" &&
 						existingMsg.type === "response"
 					) {
-						// Check for exact content match with same subnet and toolName
-						if (
-							newMsg.subnetIndex === existingMsg.subnetIndex &&
-							newMsg.toolName === existingMsg.toolName &&
-							newMsg.content === existingMsg.content
-						) {
-							console.log(
-								`🔍 Detected duplicate response for subnet ${
-									newMsg.subnetIndex
-								} (${
-									newMsg.toolName
-								}): "${newMsg.content?.slice(0, 50)}..."`
-							);
-							return true;
-						}
-
-						// Also check by sourceId for feedback history messages
+						// CRITICAL: For feedback history messages, we need to be more lenient
+						// Only consider them duplicates if they have EXACTLY the same sourceId
 						if (
 							newMsg.sourceId &&
 							existingMsg.sourceId &&
@@ -210,7 +229,66 @@ export const useChatMessages = () => {
 							console.log(
 								`🔍 Detected duplicate response by sourceId: "${newMsg.sourceId}"`
 							);
+							if (newMsg.sourceId?.includes("feedback")) {
+								console.log(
+									`🚫 FEEDBACK MESSAGE MARKED AS DUPLICATE by sourceId!`
+								);
+							}
 							return true;
+						}
+
+						// For non-feedback messages, check for content similarity
+						if (
+							!newMsg.sourceId?.includes("feedback") &&
+							!existingMsg.sourceId?.includes("feedback")
+						) {
+							if (
+								newMsg.subnetIndex ===
+									existingMsg.subnetIndex &&
+								newMsg.toolName === existingMsg.toolName &&
+								newMsg.content === existingMsg.content
+							) {
+								console.log(
+									`🔍 Detected duplicate response for subnet ${
+										newMsg.subnetIndex
+									} (${
+										newMsg.toolName
+									}): "${newMsg.content?.slice(0, 50)}..."`
+								);
+								return true;
+							}
+						}
+
+						// DEBUG: Log when response messages are NOT considered duplicates
+						console.log(
+							`🔍 Response message NOT considered duplicate:`,
+							{
+								newMsg: {
+									subnetIndex: newMsg.subnetIndex,
+									toolName: newMsg.toolName,
+									content: newMsg.content?.slice(0, 50),
+									sourceId: newMsg.sourceId,
+									isFeedback:
+										newMsg.sourceId?.includes("feedback"),
+								},
+								existingMsg: {
+									subnetIndex: existingMsg.subnetIndex,
+									toolName: existingMsg.toolName,
+									content: existingMsg.content?.slice(0, 50),
+									sourceId: existingMsg.sourceId,
+									isFeedback:
+										existingMsg.sourceId?.includes(
+											"feedback"
+										),
+								},
+							}
+						);
+
+						// Special logging for feedback messages
+						if (newMsg.sourceId?.includes("feedback")) {
+							console.log(
+								`✅ FEEDBACK MESSAGE NOT CONSIDERED DUPLICATE - will be added`
+							);
 						}
 					}
 
@@ -230,6 +308,12 @@ export const useChatMessages = () => {
 						return true;
 					}
 
+					// DEBUG: Log final result for feedback messages
+					if (newMsg.sourceId?.includes("feedback")) {
+						console.log(
+							`🔍 Final duplicate check result for feedback message: false (NOT duplicate)`
+						);
+					}
 					return false;
 				});
 			};
@@ -252,6 +336,16 @@ export const useChatMessages = () => {
 					data.workflowStatus === "stopped";
 
 				const filteredMessages = prevMessages.filter((msg) => {
+					// DEBUG: Special logging for feedback messages in filtering
+					if (msg.sourceId?.includes("feedback")) {
+						console.log(`🔍 Filtering feedback message:`, {
+							type: msg.type,
+							content: msg.content?.slice(0, 50),
+							sourceId: msg.sourceId,
+							subnetIndex: msg.subnetIndex,
+						});
+					}
+
 					if (msg.type === "user" || msg.type === "response") {
 						console.log(
 							`✅ Keeping ${
@@ -412,6 +506,74 @@ export const useChatMessages = () => {
 					`📊 After filtering: ${filteredMessages.length} messages preserved`
 				);
 
+				// Count feedback messages in filtered messages
+				const filteredFeedbackCount = filteredMessages.filter((msg) =>
+					msg.sourceId?.includes("feedback")
+				).length;
+				console.log(
+					`🔍 Feedback messages in filtered messages: ${filteredFeedbackCount}`
+				);
+
+				// DEBUG: Special handling for feedback messages
+				console.log(
+					`🔍 Processing ${newMessages.length} new messages for deduplication`
+				);
+				newMessages.forEach((msg, idx) => {
+					if (msg.sourceId?.includes("feedback")) {
+						console.log(`🔍 FEEDBACK MESSAGE ${idx}:`, {
+							type: msg.type,
+							content: msg.content?.slice(0, 50),
+							sourceId: msg.sourceId,
+							subnetIndex: msg.subnetIndex,
+							toolName: msg.toolName,
+						});
+					}
+				});
+
+				// Count feedback messages
+				const feedbackMessageCount = newMessages.filter((msg) =>
+					msg.sourceId?.includes("feedback")
+				).length;
+				console.log(
+					`🔍 Total feedback messages to process: ${feedbackMessageCount}`
+				);
+
+				// Show all feedback messages that will be processed
+				if (feedbackMessageCount > 0) {
+					console.log(
+						`🔍 FEEDBACK MESSAGES TO PROCESS:`,
+						newMessages
+							.filter((msg) => msg.sourceId?.includes("feedback"))
+							.map((msg, idx) => ({
+								index: idx,
+								type: msg.type,
+								content: msg.content?.slice(0, 50),
+								sourceId: msg.sourceId,
+								subnetIndex: msg.subnetIndex,
+								toolName: msg.toolName,
+							}))
+					);
+				}
+
+				// Process each feedback message individually to see what happens
+				const feedbackMessages = newMessages.filter((msg) =>
+					msg.sourceId?.includes("feedback")
+				);
+				feedbackMessages.forEach((feedbackMsg, idx) => {
+					const isDuplicate = isDuplicateMessage(
+						feedbackMsg,
+						filteredMessages
+					);
+					console.log(`🔍 Feedback message ${idx} duplicate check:`, {
+						type: feedbackMsg.type,
+						content: feedbackMsg.content?.slice(0, 50),
+						sourceId: feedbackMsg.sourceId,
+						subnetIndex: feedbackMsg.subnetIndex,
+						isDuplicate,
+						willBeAdded: !isDuplicate,
+					});
+				});
+
 				const uniqueNewMessages = newMessages.filter(
 					(newMsg) => !isDuplicateMessage(newMsg, filteredMessages)
 				);
@@ -419,6 +581,41 @@ export const useChatMessages = () => {
 				console.log(
 					`📝 Adding ${uniqueNewMessages.length} unique new messages`
 				);
+
+				// DEBUG: Log which messages are being filtered out as duplicates
+				const duplicateMessages = newMessages.filter((newMsg) =>
+					isDuplicateMessage(newMsg, filteredMessages)
+				);
+
+				if (duplicateMessages.length > 0) {
+					console.log(
+						`🚫 Filtered out ${duplicateMessages.length} duplicate messages:`,
+						duplicateMessages.map((msg) => ({
+							type: msg.type,
+							content: msg.content?.slice(0, 50),
+							sourceId: msg.sourceId,
+							subnetIndex: msg.subnetIndex,
+							isFeedback: msg.sourceId?.includes("feedback"),
+						}))
+					);
+
+					// Special debugging for feedback messages that are filtered out
+					const duplicateFeedbackMessages = duplicateMessages.filter(
+						(msg) => msg.sourceId?.includes("feedback")
+					);
+					if (duplicateFeedbackMessages.length > 0) {
+						console.log(
+							`🚫 FEEDBACK MESSAGES FILTERED OUT:`,
+							duplicateFeedbackMessages.map((msg) => ({
+								type: msg.type,
+								content: msg.content?.slice(0, 50),
+								sourceId: msg.sourceId,
+								subnetIndex: msg.subnetIndex,
+								toolName: msg.toolName,
+							}))
+						);
+					}
+				}
 
 				// DEBUG: Log which messages are being added
 				uniqueNewMessages.forEach((msg, idx) => {
@@ -428,8 +625,30 @@ export const useChatMessages = () => {
 						subnetIndex: msg.subnetIndex,
 						sourceId: msg.sourceId,
 						contentPreview: msg.content?.slice(0, 50),
+						isFeedback: msg.sourceId?.includes("feedback"),
 					});
 				});
+
+				// Special debugging for feedback messages that are being added
+				const addedFeedbackMessages = uniqueNewMessages.filter((msg) =>
+					msg.sourceId?.includes("feedback")
+				);
+				if (addedFeedbackMessages.length > 0) {
+					console.log(
+						`✅ FEEDBACK MESSAGES BEING ADDED:`,
+						addedFeedbackMessages.map((msg) => ({
+							type: msg.type,
+							content: msg.content?.slice(0, 50),
+							sourceId: msg.sourceId,
+							subnetIndex: msg.subnetIndex,
+							toolName: msg.toolName,
+						}))
+					);
+				} else {
+					console.log(
+						`⚠️ NO FEEDBACK MESSAGES BEING ADDED after deduplication!`
+					);
+				}
 
 				// CRITICAL FIX: Ensure completion message always appears at the end
 				let messagesWithoutCompletion = filteredMessages;
@@ -456,6 +675,21 @@ export const useChatMessages = () => {
 					...uniqueNewMessages,
 				];
 
+				// DEBUG: Check message ordering for feedback messages
+				console.log(`🔍 Message ordering check:`, {
+					messagesWithoutCompletionCount:
+						messagesWithoutCompletion.length,
+					uniqueNewMessagesCount: uniqueNewMessages.length,
+					messagesWithNewCount: messagesWithNew.length,
+					feedbackMessagesInNew: uniqueNewMessages.filter((msg) =>
+						msg.sourceId?.includes("feedback")
+					).length,
+					feedbackMessagesInExisting:
+						messagesWithoutCompletion.filter((msg) =>
+							msg.sourceId?.includes("feedback")
+						).length,
+				});
+
 				// Add completion message back at the very end if it exists
 				const finalMessages = completionMessage
 					? [...messagesWithNew, completionMessage]
@@ -470,6 +704,45 @@ export const useChatMessages = () => {
 							: ""
 					}`
 				);
+
+				// DEBUG: Log final message structure
+				console.log(
+					`🔍 Final message structure:`,
+					finalMessages.map((msg, idx) => ({
+						index: idx,
+						type: msg.type,
+						content: msg.content?.slice(0, 50),
+						sourceId: msg.sourceId,
+						subnetIndex: msg.subnetIndex,
+						isFeedback: msg.sourceId?.includes("feedback"),
+					}))
+				);
+
+				// Special debugging for feedback messages in final structure
+				const finalFeedbackMessages = finalMessages.filter((msg) =>
+					msg.sourceId?.includes("feedback")
+				);
+				if (finalFeedbackMessages.length > 0) {
+					console.log(
+						`✅ FEEDBACK MESSAGES IN FINAL STRUCTURE:`,
+						finalFeedbackMessages.map((msg, idx) => ({
+							index: finalMessages.indexOf(msg),
+							type: msg.type,
+							content: msg.content?.slice(0, 50),
+							sourceId: msg.sourceId,
+							subnetIndex: msg.subnetIndex,
+							toolName: msg.toolName,
+						}))
+					);
+					console.log(
+						`✅ Total feedback messages in final structure: ${finalFeedbackMessages.length}`
+					);
+				} else {
+					console.log(`⚠️ NO FEEDBACK MESSAGES IN FINAL STRUCTURE!`);
+					console.log(
+						`⚠️ This means feedback messages were either filtered out or not generated!`
+					);
+				}
 
 				if (finalMessages.length === 0 && prevMessages.length > 0) {
 					console.warn(
@@ -486,6 +759,21 @@ export const useChatMessages = () => {
 						content: msg.content?.slice(0, 50),
 						subnetStatus: msg.subnetStatus,
 						toolName: msg.toolName,
+					}))
+				);
+
+				// Final detailed check of all messages
+				console.log(
+					`🔍 COMPLETE FINAL MESSAGE STRUCTURE:`,
+					finalMessages.map((msg, idx) => ({
+						index: idx,
+						type: msg.type,
+						content: msg.content?.slice(0, 100),
+						sourceId: msg.sourceId,
+						subnetIndex: msg.subnetIndex,
+						toolName: msg.toolName,
+						timestamp: msg.timestamp,
+						isFeedback: msg.sourceId?.includes("feedback"),
 					}))
 				);
 				return finalMessages;
