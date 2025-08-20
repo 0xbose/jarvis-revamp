@@ -767,7 +767,6 @@ export class WorkflowExecutor {
 					statusData.workflowStatus === "in_progress" ||
 					statusData.workflowStatus === "waiting" ||
 					statusData.workflowStatus === "pending" ||
-					statusData.workflowStatus === "awaiting_response" ||
 					statusData.workflowStatus === "awaiting_response";
 
 				// Check if any subnet needs authentication (special case for continuous polling)
