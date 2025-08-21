@@ -283,24 +283,25 @@ export default function WorkflowHistory() {
 		{
 			accessorKey: "userPrompt",
 			header: () => (
-				<div className="text-gray-400 font-semibold flex items-center gap-2 min-w-24">
+				<div className="text-gray-400 font-semibold flex items-center gap-2 w-24">
 					<Clock className="size-4" />
 					<span>Workflow</span>
 				</div>
 			),
 			cell: ({ row }) => (
-				<div className="max-w-[300px]">
+				<>
 					<button
 						onClick={() => {
 							const workflowId = row.original.requestId;
 							const agentId = row.original.agentId;
 							router.push(`/chat/agent/${agentId}?workflowId=${workflowId}`);
 						}}
-						className="text-sm text-gray-300 truncate block hover:text-blue-400 transition-colors cursor-pointer text-left"
+						className="text-sm text-gray-300 block hover:text-blue-400 transition-colors cursor-pointer text-left w-full max-w-[350px] overflow-hidden whitespace-nowrap text-ellipsis"
+						title={row.original.userPrompt || "Untitled workflow"}
 					>
 						{row.original.userPrompt || "Untitled workflow"}
 					</button>
-				</div>
+				</>
 			),
 		},
 		{
