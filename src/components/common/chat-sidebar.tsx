@@ -72,17 +72,7 @@ const getWorkflowIcon = (status: string, questionType?: string) => {
 		case "completed":
 			return CheckCircle; 
 		case "awaiting_response":
-			// Different icons for different question types
-			switch (questionType) {
-				case "notification":
-					return ShieldAlert; // Yellow shield for notifications
-				case "feedback":
-					return MessageCircle; // Blue message circle for feedback
-				case "authentication":
-					return Shield; // Blue shield for authentication
-				default:
-					return ShieldAlert; // Default to shield alert
-			}
+			return ShieldAlert; 
 		case "stopped":
 			return CircleStop; 
 		case "failed":
@@ -103,17 +93,7 @@ const getWorkflowIconColor = (status: string, questionType?: string) => {
 		case "completed":
 			return "text-green-700"; 
 		case "awaiting_response":
-			// Different colors for different question types
-			switch (questionType) {
-				case "notification":
-					return "text-yellow-700"; // Yellow for notifications
-				case "feedback":
-					return "text-blue-700"; // Blue for feedback
-				case "authentication":
-					return "text-blue-700"; // Blue for authentication
-				default:
-					return "text-yellow-700"; // Default to yellow
-			}
+			return "text-yellow-500"; 
 		case "stopped":
 			return "text-red-700"; 
 		case "failed":
