@@ -17,6 +17,10 @@ export class WorkflowExecutor {
 	private currentStatusCallback:
 		| ((data: WorkflowExecutionResponse) => void)
 		| null = null;
+	private pollingStartTime: number | null = null;
+	private lastStatusChangeTime: number | null = null;
+	private lastWorkflowStatus: string | null = null;
+	private statusTimeoutId: NodeJS.Timeout | null = null;
 
 	public static getInstance(): WorkflowExecutor {
 		if (!WorkflowExecutor.instance) {
@@ -158,6 +162,108 @@ export class WorkflowExecutor {
 	}
 
 	/**
+	 * Check if polling has been running for more than 5 minutes
+	 */
+	public isPollingTimedOut(): boolean {
+		if (!this.pollingStartTime) return false;
+		const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
+		return Date.now() - this.pollingStartTime > fiveMinutes;
+	}
+
+	/**
+	 * Check if status hasn't changed for 5 minutes
+	 */
+	public isStatusStale(): boolean {
+		if (!this.lastStatusChangeTime) return false;
+		const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
+		return Date.now() - this.lastStatusChangeTime > fiveMinutes;
+	}
+
+	/**
+	 * Get the current polling duration in milliseconds
+	 */
+	public getPollingDuration(): number {
+		if (!this.pollingStartTime) return 0;
+		return Date.now() - this.pollingStartTime;
+	}
+
+	/**
+	 * Get the time since last status change in milliseconds
+	 */
+	public getTimeSinceStatusChange(): number {
+		if (!this.lastStatusChangeTime) return 0;
+		return Date.now() - this.lastStatusChangeTime;
+	}
+
+	/**
+	 * Get the current workflow status
+	 */
+	public getCurrentWorkflowStatus(): string | null {
+		return this.lastWorkflowStatus;
+	}
+
+	/**
+	 * Check if refresh UI should be shown considering current workflow status
+	 */
+	public shouldShowRefreshUIWithStatus(): boolean {
+		// Don't show refresh UI when status is awaiting_response
+		if (this.lastWorkflowStatus === "awaiting_response") {
+			return false;
+		}
+		
+		// Don't show refresh UI if not polling
+		if (!this.isPolling()) {
+			return false;
+		}
+		
+		// Only show if polling has timed out
+		return this.isPollingTimedOut();
+	}
+
+	/**
+	 * Check if refresh UI should be shown (polling has been running for more than 5 minutes)
+	 */
+	public shouldShowRefreshUI(): boolean {
+		// Don't show refresh UI when status is awaiting_response
+		if (this.lastWorkflowStatus === "awaiting_response") {
+			return false;
+		}
+		return this.isPollingTimedOut() && this.isPolling();
+	}
+
+	/**
+	 * Refresh polling and reset the 10-second timeout
+	 */
+	public refreshPolling(): void {
+		if (this.currentWorkflowId && this.currentStatusCallback) {
+			console.log(`🔄 Refreshing polling for workflow: ${this.currentWorkflowId}`);
+			
+			// Clear existing timeout
+			if (this.statusTimeoutId) {
+				console.log(`🧹 Clearing existing timeout`);
+				clearTimeout(this.statusTimeoutId);
+			}
+			
+			// Reset timers
+			this.pollingStartTime = Date.now();
+			this.lastStatusChangeTime = Date.now();
+			console.log(`⏰ Timers reset for workflow ${this.currentWorkflowId}`);
+			
+			// Set up new 5-minute timeout (just for logging, no callback notification)
+			this.statusTimeoutId = setTimeout(() => {
+				if (this.currentWorkflowId) {
+					console.log(`⏰ 5-minute timeout reached for workflow: ${this.currentWorkflowId}`);
+					console.log(`🔍 Timeout detected - refresh UI should be shown by the hook`);
+				}
+			}, 5 * 60 * 1000); // 5 minutes
+			
+			console.log(`⏰ New timeout set for workflow ${this.currentWorkflowId} - will trigger in 5 minutes`);
+		} else {
+			console.log(`⚠️ Cannot refresh polling - missing workflow ID or status callback`);
+		}
+	}
+
+	/**
 	 * Emergency stop the current workflow
 	 */
 	public async emergencyStop(
@@ -287,6 +393,12 @@ export class WorkflowExecutor {
 			);
 		}
 
+		// Clear the 5-minute timeout
+		if (this.statusTimeoutId) {
+			clearTimeout(this.statusTimeoutId);
+			this.statusTimeoutId = null;
+		}
+
 		// Always clear the callback to prevent stale callbacks from being called
 		// Note: We may want to keep the callback for resume scenarios
 		if (this.currentStatusCallback) {
@@ -310,6 +422,9 @@ export class WorkflowExecutor {
 		// Clear all state
 		this.currentWorkflowId = null;
 		this.currentStatusCallback = null;
+		this.pollingStartTime = null;
+		this.lastStatusChangeTime = null;
+		this.lastWorkflowStatus = null;
 
 		console.log(`✅ Workflow state cleared completely`);
 	}
@@ -703,9 +818,13 @@ export class WorkflowExecutor {
 		this.stopPolling();
 
 		this.currentWorkflowId = requestId;
+		this.pollingStartTime = Date.now();
+		this.lastStatusChangeTime = Date.now();
+		this.lastWorkflowStatus = null;
 
 		if (onStatusUpdate) {
 			this.currentStatusCallback = onStatusUpdate;
+			console.log(`✅ Status callback set for workflow ${requestId}`);
 		}
 
 		let shouldContinuePolling = false;
@@ -732,6 +851,12 @@ export class WorkflowExecutor {
 
 				const statusData = statusResponse.data;
 
+				// Check if status has changed
+				if (this.lastWorkflowStatus !== statusData.workflowStatus) {
+					this.lastWorkflowStatus = statusData.workflowStatus;
+					this.lastStatusChangeTime = Date.now();
+					console.log(`🔄 Status changed for workflow ${requestId}: ${statusData.workflowStatus}`);
+				}
 
 				if (this.currentWorkflowId !== requestId) {
 					console.log(
@@ -743,10 +868,6 @@ export class WorkflowExecutor {
 				if (onStatusUpdate) {
 					onStatusUpdate(statusData);
 				}
-
-				console.log(
-					`📊 Workflow ${requestId} initial status: ${statusData.workflowStatus}`
-				);
 
 				const isActiveState =
 					statusData.workflowStatus === "in_progress" ||
@@ -852,6 +973,14 @@ export class WorkflowExecutor {
 					});
 
 					const statusData = statusResponse.data;
+
+					// Check if status has changed
+					if (this.lastWorkflowStatus !== statusData.workflowStatus) {
+						this.lastWorkflowStatus = statusData.workflowStatus;
+						this.lastStatusChangeTime = Date.now();
+						console.log(`🔄 Status changed for workflow ${requestId}: ${statusData.workflowStatus}`);
+					}
+
 
 					if (this.currentWorkflowId !== requestId) {
 						console.log(

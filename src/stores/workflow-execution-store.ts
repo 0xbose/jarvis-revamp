@@ -47,12 +47,19 @@ interface WorkflowExecutionStoreState {
 	currentExecution: WorkflowExecutionStatus | null;
 	executionHistory: WorkflowExecutionStatus[];
 	isPolling: boolean;
+	isPollingTimedOut: boolean;
+	shouldShowRefreshUI: boolean;
+	pollingDuration: number;
+	timeSinceStatusChange: number;
 
 	// Actions
 	setCurrentExecution: (execution: WorkflowExecutionStatus | null) => void;
 	updateExecutionStatus: (execution: WorkflowExecutionStatus) => void;
 	addToExecutionHistory: (execution: WorkflowExecutionStatus) => void;
 	setPollingStatus: (isPolling: boolean) => void;
+	setPollingTimeoutStatus: (isTimedOut: boolean) => void;
+	setRefreshUIStatus: (shouldShow: boolean) => void;
+	setPollingTimers: (duration: number, timeSinceChange: number) => void;
 	clearCurrentExecution: () => void;
 	clearExecutionHistory: () => void;
 	stopCurrentExecution: () => void;
@@ -64,6 +71,10 @@ export const useWorkflowExecutionStore = create<WorkflowExecutionStoreState>()(
 		currentExecution: null,
 		executionHistory: [],
 		isPolling: false,
+		isPollingTimedOut: false,
+		shouldShowRefreshUI: false,
+		pollingDuration: 0,
+		timeSinceStatusChange: 0,
 
 		setCurrentExecution: (execution) =>
 			set({ currentExecution: execution }),
@@ -83,6 +94,13 @@ export const useWorkflowExecutionStore = create<WorkflowExecutionStoreState>()(
 			})),
 
 		setPollingStatus: (isPolling) => set({ isPolling }),
+
+		setPollingTimeoutStatus: (isTimedOut) => set({ isPollingTimedOut: isTimedOut }),
+
+		setRefreshUIStatus: (shouldShow) => set({ shouldShowRefreshUI: shouldShow }),
+
+		setPollingTimers: (duration, timeSinceChange) =>
+			set({ pollingDuration: duration, timeSinceStatusChange: timeSinceChange }),
 
 		clearCurrentExecution: () => set({ currentExecution: null }),
 
@@ -107,6 +125,10 @@ export const useWorkflowExecutionStore = create<WorkflowExecutionStoreState>()(
 				currentExecution: null,
 				executionHistory: [],
 				isPolling: false,
+				isPollingTimedOut: false,
+				shouldShowRefreshUI: false,
+				pollingDuration: 0,
+				timeSinceStatusChange: 0,
 			}),
 	}))
 );

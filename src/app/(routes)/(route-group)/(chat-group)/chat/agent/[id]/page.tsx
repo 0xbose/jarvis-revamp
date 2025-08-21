@@ -69,6 +69,8 @@ export default function AgentChatPage() {
 		setWorkflowId,
 	} = useChatMessages();
 
+
+
 	useEffect(() => {
 		if (urlWorkflowId) {
 			const cachedMessages = getCachedChatMessages(urlWorkflowId);
@@ -778,6 +780,7 @@ export default function AgentChatPage() {
 										onFeedbackProceed={
 											handleFeedbackProceed
 										}
+										onRefreshPolling={refreshPolling}
 										showFeedbackButtons={(() => {
 											// Quick early returns for better performance
 											if (message.type !== "question") {
@@ -1057,7 +1060,6 @@ export default function AgentChatPage() {
 										})()}
 										workflowStatus={workflowStatus}
 										pollingStoppedAt={pollingStoppedAt}
-										onRefreshPolling={refreshPolling}
 									/>
 								))}
 

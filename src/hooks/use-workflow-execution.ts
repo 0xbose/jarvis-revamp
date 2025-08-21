@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ChatMsg, WorkflowStatus } from "@/types/chat";
 import { workflowExecutor } from "@/utils/workflow-executor";
 import { useWorkflowExecutionStore } from "@/stores/workflow-execution-store";
@@ -42,9 +42,15 @@ export const useWorkflowExecution = ({
 		null
 	);
 	const [pollingStoppedAt, setPollingStoppedAt] = useState<Date | null>(null);
+	const hasTimeoutMessageRef = useRef(false);
 
-	const { setPollingStatus, stopCurrentExecution } =
-		useWorkflowExecutionStore();
+	const { 
+		setPollingStatus, 
+		stopCurrentExecution,
+		setPollingTimeoutStatus,
+		setRefreshUIStatus,
+		setPollingTimers
+	} = useWorkflowExecutionStore();
 	const { executeAgentWorkflow } = useWorkflowExecutor();
 	const { clearWorkflowCache } = useSubnetCacheStore();
 
@@ -57,8 +63,11 @@ export const useWorkflowExecution = ({
 					isNewWorkflow,
 					isExistingWorkflow,
 					isFirstUpdate,
+					workflowStatus: data?.workflowStatus,
 				});
 				setCurrentWorkflowData(data);
+
+
 
 				const workflowId = data?.requestId || data?.workflowId;
 				if (workflowId && !currentWorkflowId) {
@@ -501,25 +510,82 @@ export const useWorkflowExecution = ({
 
 		// Resume polling with the current status handler
 		const statusHandler = createStatusUpdateHandler(false, true);
-
-		// Get the API key from localStorage or environment
-		const apiKey =
-			localStorage.getItem("api_key") || process.env.NEXT_PUBLIC_API_KEY;
-
-		if (!apiKey) {
+		if (statusHandler) {
+			// Get API key and resume polling
+			// This will be handled by the workflow executor
+			workflowExecutor.refreshPolling();
+			
+			// Update polling status
+			setPollingStatus(true);
+		} else {
 			console.error("❌ Cannot refresh polling - no API key available");
+		}
+	}, [currentWorkflowId, createStatusUpdateHandler, setPollingStatus]);
+
+	// Monitor workflow executor for timeout and refresh UI status
+	useEffect(() => {
+		if (!isExecuting) {
+			setPollingTimeoutStatus(false);
+			setRefreshUIStatus(false);
+			setPollingTimers(0, 0);
 			return;
 		}
 
-		workflowExecutor.resumePolling(
-			currentWorkflowId,
-			apiKey,
-			statusHandler
-		);
+		const interval = setInterval(() => {
+			// Check if polling has timed out
+			const isTimedOut = workflowExecutor.isPollingTimedOut();
+			setPollingTimeoutStatus(isTimedOut);
+			
+			// Check if refresh UI should be shown (based on polling duration only)
+			const shouldShowRefresh = workflowExecutor.shouldShowRefreshUIWithStatus();
+			setRefreshUIStatus(shouldShowRefresh);
+			
+			// Update timer values
+			const duration = workflowExecutor.getPollingDuration();
+			const timeSinceChange = workflowExecutor.getTimeSinceStatusChange();
+			setPollingTimers(duration, timeSinceChange);
+			
+			// If polling has timed out, show refresh UI message
+			// But only if we're actually polling and not in awaiting_response status
+			if (isTimedOut && !hasTimeoutMessageRef.current && workflowExecutor.shouldShowRefreshUIWithStatus()) {
+				console.log("⏰ Polling timeout detected, showing refresh UI message");
+				hasTimeoutMessageRef.current = true;
+				
+				const timeoutMessage: ChatMsg = {
+					id: `timeout_${Date.now()}`,
+					type: "response",
+					content: "Polling has been running for more than 5 minutes. Click refresh to continue monitoring the workflow.",
+					timestamp: new Date(),
+					isTimeoutMessage: true,
+					showRefreshButton: true
+				};
+				
+				console.log("📝 Adding refresh UI message to chat:", timeoutMessage);
+				console.log("🔍 Message properties:", {
+					isTimeoutMessage: timeoutMessage.isTimeoutMessage,
+					showRefreshButton: timeoutMessage.showRefreshButton,
+					type: timeoutMessage.type
+				});
+				setChatMessages(prev => [...prev, timeoutMessage]);
+			}
+			
+			// If polling is refreshed and we have a timeout message, remove it
+			if (!isTimedOut && hasTimeoutMessageRef.current) {
+				console.log("🔄 Polling refreshed, removing refresh UI message");
+				hasTimeoutMessageRef.current = false;
+				setChatMessages(prev => prev.filter(msg => !msg.isTimeoutMessage));
+			}
+			
+			// Also remove timeout message if status changes to awaiting_response
+			if (hasTimeoutMessageRef.current && workflowExecutor.getCurrentWorkflowStatus() === "awaiting_response") {
+				console.log("🔄 Status changed to awaiting_response, removing refresh UI message");
+				hasTimeoutMessageRef.current = false;
+				setChatMessages(prev => prev.filter(msg => !msg.isTimeoutMessage));
+			}
+		}, 1000); // Check every second
 
-		// Update polling status
-		setPollingStatus(true);
-	}, [currentWorkflowId, createStatusUpdateHandler, setPollingStatus]);
+		return () => clearInterval(interval);
+	}, [isExecuting, setPollingTimeoutStatus, setRefreshUIStatus, setPollingTimers, setChatMessages]);
 
 	return {
 		isExecuting,

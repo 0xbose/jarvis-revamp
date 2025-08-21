@@ -87,6 +87,9 @@ export function ChatMessage({
 	const [showAuthConfirmation, setShowAuthConfirmation] = useState(false);
 	const [feedbackProcessed, setFeedbackProcessed] = useState(false);
 
+	// Test state for simulating timeout scenarios
+	const [showTestTimeout, setShowTestTimeout] = useState(false);
+
 	// New state for button interaction tracking during workflow execution
 	const [clickedButtonType, setClickedButtonType] = useState<string | null>(
 		null
@@ -95,14 +98,20 @@ export function ChatMessage({
 
 	// Helper function to check if refresh UI should be shown
 	const shouldShowRefreshUI = () => {
+		// Case 1: Show refresh UI for timeout messages
+		if (message.isTimeoutMessage && message.showRefreshButton) {
+			return true;
+		}
+
+		// Case 2: Show refresh UI when polling has stopped for more than 5 minutes
 		if (!pollingStoppedAt || !onRefreshPolling) return false;
 
 		const timeSinceStoppedMs = Date.now() - pollingStoppedAt.getTime();
-		const oneMinuteMs = 60 * 1000;
+		const fiveMinutesMs = 5 * 60 * 1000; // Updated to 5 minutes
 
 		return (
 			workflowStatus === "awaiting_response" &&
-			timeSinceStoppedMs > oneMinuteMs &&
+			timeSinceStoppedMs > fiveMinutesMs &&
 			message.subnetStatus === "awaiting_response" &&
 			isLast
 		);
@@ -1282,7 +1291,7 @@ export function ChatMessage({
 							</div>
 						)}
 
-						{/* Show refresh UI when polling has stopped for more than 1 minute */}
+						{/* Show refresh UI when polling has stopped for more than 5 minutes */}
 						{shouldShowRefreshUI() && (
 							<div className="mt-4 p-3 border border-yellow-500/30 rounded-lg bg-yellow-950/20">
 								<div className="flex items-center justify-between">
@@ -1312,6 +1321,38 @@ export function ChatMessage({
 								</p>
 							</div>
 						)}
+
+						{/* Show timeout message with refresh button */}
+						{message.isTimeoutMessage && message.showRefreshButton && (
+						<div className="mt-4 p-3 border border-border rounded-lg bg-muted/20">
+								<div className="flex items-center justify-between">
+									<div className="flex  items-center gap-2 text-yellow-400">
+										<AlertTriangleIcon className="w-4 h-4 text-yellow-400" />
+										<span className="text-sm font-medium">
+											Polling Timeout
+										</span>
+									</div>
+								</div>
+								<p className="text-xs text-orange-300/70 mt-2">
+									Polling has been running for more than 5 minutes. Click refresh to continue monitoring the workflow.
+								</p>
+								<div className="mt-3 flex justify-end">
+									<Button
+										onClick={() => {
+											if (onRefreshPolling) {
+												onRefreshPolling();
+											}
+										}}
+										variant="outline"
+										size="sm"
+										className="flex items-center gap-2 text-gray-400 hover:text-gray-300 bg-muted/20 hover:bg-muted/30 border border-border/50 hover:border-border/70"
+									>
+										<RefreshCw className="w-4 h-4" />
+										Refresh
+									</Button>
+								</div>
+							</div>
+						 )}
 					</div>
 				</div>
 				

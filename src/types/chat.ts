@@ -33,6 +33,8 @@ export type ChatMsg = {
 	question?: string;
 	answer?: string;
 	prompt?: string;
+	isTimeoutMessage?: boolean;
+	showRefreshButton?: boolean;
 };
 
 export type FeedbackHistoryItem = {
