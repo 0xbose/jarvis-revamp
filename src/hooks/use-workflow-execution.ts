@@ -92,17 +92,17 @@ export const useWorkflowExecution = ({
 					});
 				}
 
-				const hasNonAuthFeedback = data.subnets?.some(
+				const hasUserInputRequired = data.subnets?.some(
 					(subnet: any) =>
 						subnet.status === "awaiting_response" &&
 						subnet.question &&
-						subnet.question.type !== "authentication"
+						subnet.question.type !== "notification"
 				);
 
-				const hasAuthenticationPending = data.subnets?.some(
+				const hasNotificationQuestion = data.subnets?.some(
 					(subnet: any) =>
 						subnet.status === "awaiting_response" &&
-						subnet.question?.type === "authentication"
+						subnet.question?.type === "notification"
 				);
 
 				if (data.workflowStatus === "completed") {
@@ -220,13 +220,13 @@ export const useWorkflowExecution = ({
 					setWorkflowStatus("in_progress");
 					setIsInFeedbackMode(false);
 				} else if (data.workflowStatus === "awaiting_response") {
-					if (hasNonAuthFeedback) {
+					if (hasUserInputRequired) {
 						setIsExecuting(true);
 						setPollingStatus(false);
 						setPollingStoppedAt(new Date()); // Record when polling stopped
 						setWorkflowStatus("awaiting_response");
 						setIsInFeedbackMode(true);
-					} else if (hasAuthenticationPending) {
+					} else if (hasNotificationQuestion) {
 						setIsExecuting(true);
 						setPollingStatus(true);
 						setPollingStoppedAt(null); // Clear stopped time when polling resumes

@@ -359,19 +359,19 @@ export class WorkflowExecutor {
 					`📊 Workflow ${workflowId} status: ${statusData.workflowStatus} - Continuous polling...`
 				);
 
-				// Check if any subnet needs non-authentication feedback
-				const hasNonAuthFeedback = statusData.subnets?.some(
+				// Check if any subnet needs user input (authentication or feedback, but not notifications)
+				const hasUserInputRequired = statusData.subnets?.some(
 					(subnet: any) =>
 						subnet.status === "awaiting_response" &&
 						subnet.question &&
-						subnet.question.type !== "authentication"
+						subnet.question.type !== "notification"
 				);
 
-				// Check if any subnet needs authentication
-				const hasAuthenticationPending = statusData.subnets?.some(
+				// Check if any subnet has notification questions (continue polling)
+				const hasNotificationQuestion = statusData.subnets?.some(
 					(subnet: any) =>
 						subnet.status === "awaiting_response" &&
-						subnet.question?.type === "authentication"
+						subnet.question?.type === "notification"
 				);
 
 				// Check if any subnet is in waiting_response status without data
@@ -383,8 +383,8 @@ export class WorkflowExecutor {
 				);
 
 				console.log(`🔍 Subnet status check for ${workflowId}:`, {
-					hasNonAuthFeedback,
-					hasAuthenticationPending,
+					hasUserInputRequired,
+					hasNotificationQuestion,
 					hasWaitingResponseWithoutData,
 					waitingResponseSubnets: statusData.subnets
 						?.filter((s: any) => s.status === "awaiting_response")
@@ -392,6 +392,7 @@ export class WorkflowExecutor {
 							toolName: s.toolName,
 							hasData: !!s.data,
 							dataLength: s.data?.length || 0,
+							questionType: s.question?.type,
 						})),
 				});
 
@@ -419,22 +420,21 @@ export class WorkflowExecutor {
 					return; // Exit the interval function
 				} else if (
 					statusData.workflowStatus === "awaiting_response" &&
-					hasNonAuthFeedback
+					hasUserInputRequired
 				) {
 					console.log(
-						`⏸️ Workflow ${workflowId} waiting for user feedback (non-auth), stopping polling temporarily`
+						`⏸️ Workflow ${workflowId} waiting for user input (auth/feedback), stopping polling temporarily`
 					);
 					this.stopPolling();
-					// Keep workflow ID and callback for resuming after feedback
+					// Keep workflow ID and callback for resuming after user input
 				} else if (
 					statusData.workflowStatus === "awaiting_response" &&
-					hasAuthenticationPending
+					hasNotificationQuestion
 				) {
 					console.log(
-						`🔐 Workflow ${workflowId} waiting for authentication, continuing polling at 10s intervals...`
+						`🔔 Workflow ${workflowId} has notification questions, continuing polling at 8s intervals...`
 					);
-					// For authentication, we might want to adjust the polling interval
-					// But we continue polling
+					// For notification questions, continue polling as they don't require user input
 				} else if (hasWaitingResponseWithoutData) {
 					console.log(
 						`⏳ Workflow ${workflowId} has subnets in waiting_response without data, continuing polling...`
@@ -754,10 +754,17 @@ export class WorkflowExecutor {
 					statusData.workflowStatus === "pending" ||
 					statusData.workflowStatus === "awaiting_response";
 
-				const hasAuthenticationPending = statusData.subnets?.some(
+				const hasUserInputRequired = statusData.subnets?.some(
 					(subnet: any) =>
 						subnet.status === "awaiting_response" &&
-						subnet.question?.type === "authentication"
+						subnet.question &&
+						subnet.question.type !== "notification"
+				);
+
+				const hasNotificationQuestion = statusData.subnets?.some(
+					(subnet: any) =>
+						subnet.status === "awaiting_response" &&
+						subnet.question?.type === "notification"
 				);
 
 				if (isActiveState) {
@@ -766,8 +773,12 @@ export class WorkflowExecutor {
 					);
 					shouldContinuePolling = true;
 
-					if (hasAuthenticationPending) {
-						startContinuousPolling(10000);
+					if (hasUserInputRequired) {
+						// Stop polling if user input is required
+						this.stopPolling();
+						shouldContinuePolling = false;
+					} else if (hasNotificationQuestion) {
+						startContinuousPolling(8000);
 					} else {
 						startContinuousPolling(8000);
 					}
@@ -858,17 +869,17 @@ export class WorkflowExecutor {
 						`📊 Workflow ${requestId} status: ${statusData.workflowStatus} - Polling continues...`
 					);
 
-					const hasNonAuthFeedback = statusData.subnets?.some(
+					const hasUserInputRequired = statusData.subnets?.some(
 						(subnet: any) =>
 							subnet.status === "awaiting_response" &&
 							subnet.question &&
-							subnet.question.type !== "authentication"
+							subnet.question.type !== "notification"
 					);
 
-					const hasAuthenticationPending = statusData.subnets?.some(
+					const hasNotificationQuestion = statusData.subnets?.some(
 						(subnet: any) =>
 							subnet.status === "awaiting_response" &&
-							subnet.question?.type === "authentication"
+							subnet.question?.type === "notification"
 					);
 
 					const hasWaitingResponseWithoutData =
@@ -879,8 +890,8 @@ export class WorkflowExecutor {
 						);
 
 					console.log(`🔍 Subnet status check for ${requestId}:`, {
-						hasNonAuthFeedback,
-						hasAuthenticationPending,
+						hasUserInputRequired,
+						hasNotificationQuestion,
 						hasWaitingResponseWithoutData,
 						waitingResponseSubnets: statusData.subnets
 							?.filter(
@@ -890,6 +901,7 @@ export class WorkflowExecutor {
 								toolName: s.toolName,
 								hasData: !!s.data,
 								dataLength: s.data?.length || 0,
+								questionType: s.question?.type,
 							})),
 					});
 
@@ -915,19 +927,19 @@ export class WorkflowExecutor {
 						return;
 					} else if (
 						statusData.workflowStatus === "awaiting_response" &&
-						hasNonAuthFeedback
+						hasUserInputRequired
 					) {
 						console.log(
-							`⏸️ Workflow ${requestId} waiting for user feedback (non-auth), stopping polling temporarily`
+							`⏸️ Workflow ${requestId} waiting for user input (auth/feedback), stopping polling temporarily`
 						);
 						this.stopPolling();
 
 					} else if (
 						statusData.workflowStatus === "awaiting_response" &&
-						hasAuthenticationPending
+						hasNotificationQuestion
 					) {
 						console.log(
-							`🔐 Workflow ${requestId} waiting for authentication, continuing polling...`
+							`🔔 Workflow ${requestId} has notification questions, continuing polling...`
 						);
 						
 					} else if (hasWaitingResponseWithoutData) {
