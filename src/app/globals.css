@@ -196,8 +196,9 @@ body {
 	pointer-events: none;
 }
 
-/* Show scrollbar only while actively scrolling (add .scrolling class via JS on scroll) */
-.scrollbar-thin.scrolling::-webkit-scrollbar {
+/* Show scrollbar only while actively scrolling */
+.scrollbar-thin:hover::-webkit-scrollbar,
+.scrollbar-thin::-webkit-scrollbar:hover {
 	opacity: 1;
 	pointer-events: auto;
 }

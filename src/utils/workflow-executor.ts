@@ -558,9 +558,9 @@ export class WorkflowExecutor {
 			itemID: subnet.itemID.toString(),
 			agentCollection: {
 				agentAddress: agentDetail.nft_address,
-				agentID: userAgentNFTId, // Use actual user's NFT ID from agent collection
+				agentID: userAgentNFTId,
 			},
-			feedback: subnet.feedback || false, // Include feedback if available
+			feedback: subnet.feedback || false, 
 		}));
 
 		return {
@@ -573,22 +573,18 @@ export class WorkflowExecutor {
 				message: authData.message,
 			},
 			accountNFT: {
-				collectionID: agentDetail.nft_address, // Agent's NFT collection address
-				nftID: userAgentNFTId, // User's specific NFT ID from this agent collection
+				collectionID: agentDetail.nft_address, 
+				nftID: userAgentNFTId, 
 			},
 		};
 	}
 
-	/**
-	 * Get user's NFT ID from the agent collection
-	 */
 	public async getUserNFTId(
 		agentDetail: AgentDetail,
 		userAddress: string,
 		skyBrowser: SkyMainBrowser
 	): Promise<string> {
 		try {
-			// Get the specific agent's NFT collection address
 			const agentAddress =
 				agentDetail.nft_address || agentDetail.collection_id;
 			if (!agentAddress) {
@@ -596,7 +592,6 @@ export class WorkflowExecutor {
 				return agentDetail.agentNFTId || "0";
 			}
 
-			// Use the utility function to get user's NFT IDs from this specific agent collection
 			const userAgentNFTIds = await getUserAgentNFTIds(
 				agentAddress,
 				userAddress,
@@ -604,11 +599,9 @@ export class WorkflowExecutor {
 			);
 
 			if (userAgentNFTIds && userAgentNFTIds.length > 0) {
-				// Return the first (lowest) NFT ID the user owns from this agent collection
 				return userAgentNFTIds[0];
 			}
 
-			// Fallback to using the agent's NFT ID if user doesn't own any
 			return agentDetail.agentNFTId || "0";
 		} catch (error) {
 			console.warn(
@@ -638,7 +631,6 @@ export class WorkflowExecutor {
 			return this.currentWorkflowId;
 		}
 
-		// Construct the payload automatically with authentication and NFT ID
 		const payload = await this.constructExecutionPayload(
 			agentDetail,
 			userPrompt,
@@ -646,7 +638,6 @@ export class WorkflowExecutor {
 			skyBrowser
 		);
 
-		// Execute the workflow
 		return this.executeWorkflow(
 			payload,
 			skyBrowser,
@@ -683,20 +674,16 @@ export class WorkflowExecutor {
 			"x-api-key": apiKey,
 		};
 
-		// Use full workflow endpoint
 		const endpoint = WORKFLOW_ENDPOINTS.FULL_WORKFLOW;
 
-		// Log the complete payload for debugging
 		console.log(
 			"🚀 Executing workflow with payload:",
 			JSON.stringify(payload, null, 2)
 		);
 
-		// Initiate workflow with HTTP POST
 		const response = await axios.post(endpoint, payload, { headers });
 		const requestId = response.data.requestId;
 
-		// Start polling for status updates
 		console.log(`🔄 Starting polling for workflow: ${requestId}`);
 		this.startPolling(requestId, apiKey, onStatusUpdate);
 
@@ -713,7 +700,6 @@ export class WorkflowExecutor {
 	): void {
 		console.log(`🔄 Starting polling for workflow: ${requestId}`);
 
-		// Always stop any existing polling before starting new one
 		this.stopPolling();
 
 		this.currentWorkflowId = requestId;
@@ -726,7 +712,6 @@ export class WorkflowExecutor {
 		let pollCount = 0;
 
 		const pollOnce = async () => {
-			// Check if the workflow ID has changed during the async operation
 			if (this.currentWorkflowId !== requestId) {
 				console.log(
 					`⚠️ Workflow ID changed during async operation: ${requestId} -> ${this.currentWorkflowId}, stopping polling`
@@ -747,7 +732,7 @@ export class WorkflowExecutor {
 
 				const statusData = statusResponse.data;
 
-				// Check again if the workflow ID has changed
+
 				if (this.currentWorkflowId !== requestId) {
 					console.log(
 						`⚠️ Workflow ID changed after API call: ${requestId} -> ${this.currentWorkflowId}, stopping polling`
@@ -769,7 +754,6 @@ export class WorkflowExecutor {
 					statusData.workflowStatus === "pending" ||
 					statusData.workflowStatus === "awaiting_response";
 
-				// Check if any subnet needs authentication (special case for continuous polling)
 				const hasAuthenticationPending = statusData.subnets?.some(
 					(subnet: any) =>
 						subnet.status === "awaiting_response" &&
@@ -782,7 +766,6 @@ export class WorkflowExecutor {
 					);
 					shouldContinuePolling = true;
 
-					// For authentication questions, poll every 10 seconds instead of 2 seconds
 					if (hasAuthenticationPending) {
 						startContinuousPolling(10000);
 					} else {
@@ -793,9 +776,8 @@ export class WorkflowExecutor {
 						`⏸️ Workflow ${requestId} is stopped, stopping all polling`
 					);
 					this.stopPolling();
-					// Keep the workflow ID for potential resume but ensure no more polling
 					shouldContinuePolling = false;
-					return; // Exit immediately
+					return; 
 				} else if (statusData.workflowStatus === "completed") {
 					console.log(
 						`🏁 Workflow ${requestId} completed successfully`
@@ -823,7 +805,6 @@ export class WorkflowExecutor {
 		};
 
 		const startContinuousPolling = (pollInterval: number = 8000) => {
-			// Ensure no duplicate intervals
 			if (this.currentPollingInterval) {
 				console.warn(
 					`⚠️ Polling already active for workflow: ${requestId}, clearing old interval`
@@ -836,7 +817,6 @@ export class WorkflowExecutor {
 				`🔄 Starting continuous polling for workflow: ${requestId} (interval: ${pollInterval}ms)`
 			);
 			this.currentPollingInterval = setInterval(async () => {
-				// Check if the workflow ID has changed
 				if (this.currentWorkflowId !== requestId) {
 					console.log(
 						`⚠️ Workflow ID changed during continuous polling: ${requestId} -> ${this.currentWorkflowId}, stopping polling`
@@ -862,7 +842,6 @@ export class WorkflowExecutor {
 
 					const statusData = statusResponse.data;
 
-					// Check again if the workflow ID has changed
 					if (this.currentWorkflowId !== requestId) {
 						console.log(
 							`⚠️ Workflow ID changed after continuous poll API call: ${requestId} -> ${this.currentWorkflowId}, stopping polling`
@@ -879,7 +858,6 @@ export class WorkflowExecutor {
 						`📊 Workflow ${requestId} status: ${statusData.workflowStatus} - Polling continues...`
 					);
 
-					// Check if any subnet needs non-authentication feedback
 					const hasNonAuthFeedback = statusData.subnets?.some(
 						(subnet: any) =>
 							subnet.status === "awaiting_response" &&
@@ -887,15 +865,12 @@ export class WorkflowExecutor {
 							subnet.question.type !== "authentication"
 					);
 
-					// Check if any subnet needs authentication
 					const hasAuthenticationPending = statusData.subnets?.some(
 						(subnet: any) =>
 							subnet.status === "awaiting_response" &&
 							subnet.question?.type === "authentication"
 					);
 
-					// Check if any subnet is in waiting_response status without data
-					// Continue polling until these subnets receive data
 					const hasWaitingResponseWithoutData =
 						statusData.subnets?.some(
 							(subnet: any) =>
@@ -933,12 +908,10 @@ export class WorkflowExecutor {
 						console.log(
 							`⏸️ Workflow ${requestId} stopped, stopping all polling immediately`
 						);
-						// Clear the interval immediately
 						if (this.currentPollingInterval) {
 							clearInterval(this.currentPollingInterval);
 							this.currentPollingInterval = null;
 						}
-						// Ensure no further polling
 						return;
 					} else if (
 						statusData.workflowStatus === "awaiting_response" &&
@@ -948,7 +921,7 @@ export class WorkflowExecutor {
 							`⏸️ Workflow ${requestId} waiting for user feedback (non-auth), stopping polling temporarily`
 						);
 						this.stopPolling();
-						// Keep workflow ID and callback for resuming after feedback
+
 					} else if (
 						statusData.workflowStatus === "awaiting_response" &&
 						hasAuthenticationPending
@@ -956,12 +929,12 @@ export class WorkflowExecutor {
 						console.log(
 							`🔐 Workflow ${requestId} waiting for authentication, continuing polling...`
 						);
-						// Continue polling for authentication
+						
 					} else if (hasWaitingResponseWithoutData) {
 						console.log(
 							`⏳ Workflow ${requestId} has subnets in waiting_response without data, continuing polling...`
 						);
-						// Continue polling until waiting_response subnets receive data
+									
 					}
 				} catch (error) {
 					console.error(

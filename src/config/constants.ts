@@ -63,6 +63,7 @@ export const APP_CONFIG = {
 // Local Storage Keys
 export const STORAGE_KEYS = {
 	SELECTED_HISTORIES_COUNT: "jarvis_selected_histories_count",
+	IS_PINNED: "jarvis_sidebar_is_pinned",
 } as const;
 
 // Feature Flags
