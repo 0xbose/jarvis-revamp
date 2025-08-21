@@ -66,7 +66,7 @@ interface ChatMessageProps {
 
 // Loading dots component for workflow in_progress status
 const LoadingDots = () => (
-	<div className="flex items-center space-x-1 mt-3">
+	<div className="flex items-center space-x-1 mt-3 ml-8.5">
 		<div
 			className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
 			style={{ animationDelay: "0ms" }}
@@ -349,8 +349,10 @@ export function ChatMessage({
 						</div>
 					)}
 				</div>
-				{/* Show loading dots below the message if this is the last message and workflow is in_progress */}
-				{isLast && workflowStatus === "in_progress" && <LoadingDots />}
+
+				{isLast && workflowStatus === "in_progress" && !isPendingNotification && (
+					<LoadingDots />
+				)}
 			</div>
 		);
 	}
@@ -791,7 +793,32 @@ export function ChatMessage({
 													placeholder="Type your feedback here..."
 													className="flex-1"
 												/>
-												<Button
+												
+											</div>
+											<div className="flex gap-2">
+											<Button
+												onClick={() => {
+													setShowFeedbackInput(false);
+													setFeedbackText("");
+													// Reset button states when canceling
+													setClickedButtonType(null);
+													setIsButtonPending(false);
+												}}
+												variant="outline"
+												size="sm"
+												disabled={
+													shouldDisableButtons() &&
+													clickedButtonType !==
+														"feedback-cancel"
+												}
+												className={getButtonClassName(
+													"text-gray-400 hover:text-gray-300 bg-gray-950/60 hover:bg-gray-950/70 border border-gray-800/50 hover:border-gray-800/70",
+													"feedback-cancel"
+												)}
+											>
+												Cancel
+											</Button>
+											<Button
 													onClick={async () => {
 														// Don't proceed if no feedback text
 														if (
@@ -884,28 +911,7 @@ export function ChatMessage({
 													Submit
 												</Button>
 											</div>
-											<Button
-												onClick={() => {
-													setShowFeedbackInput(false);
-													setFeedbackText("");
-													// Reset button states when canceling
-													setClickedButtonType(null);
-													setIsButtonPending(false);
-												}}
-												variant="outline"
-												size="sm"
-												disabled={
-													shouldDisableButtons() &&
-													clickedButtonType !==
-														"feedback-cancel"
-												}
-												className={getButtonClassName(
-													"text-gray-400 hover:text-gray-300 bg-gray-950/60 hover:bg-gray-950/70 border border-gray-800/50 hover:border-gray-800/70",
-													"feedback-cancel"
-												)}
-											>
-												Cancel
-											</Button>
+											
 										</div>
 									)}
 								</div>

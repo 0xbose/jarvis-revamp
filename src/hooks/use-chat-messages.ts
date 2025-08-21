@@ -335,6 +335,22 @@ export const useChatMessages = () => {
 					data.workflowStatus === "failed" ||
 					data.workflowStatus === "stopped";
 
+				// CRITICAL FIX: Check if any new messages contain feedback questions for specific subnets
+				// If so, we need to remove old workflow_subnet data messages for those subnets
+				const subnetsWithNewFeedbackQuestions = new Set<number>();
+				newMessages.forEach((msg) => {
+					if (
+						msg.type === "question" &&
+						msg.questionData?.type === "feedback" &&
+						msg.subnetIndex !== undefined
+					) {
+						subnetsWithNewFeedbackQuestions.add(msg.subnetIndex);
+						console.log(
+							`🔍 Detected new feedback question for subnet ${msg.subnetIndex}: "${msg.content?.slice(0, 50)}"`
+						);
+					}
+				});
+
 				const filteredMessages = prevMessages.filter((msg) => {
 					// DEBUG: Special logging for feedback messages in filtering
 					if (msg.sourceId?.includes("feedback")) {
@@ -344,6 +360,19 @@ export const useChatMessages = () => {
 							sourceId: msg.sourceId,
 							subnetIndex: msg.subnetIndex,
 						});
+					}
+
+					// CRITICAL FIX: Remove old workflow_subnet data messages when new feedback questions arrive
+					if (
+						msg.type === "workflow_subnet" &&
+						msg.subnetIndex !== undefined &&
+						subnetsWithNewFeedbackQuestions.has(msg.subnetIndex) &&
+						!msg.sourceId?.includes("feedback")
+					) {
+						console.log(
+							`🚫 Removing old workflow_subnet message for subnet ${msg.subnetIndex} - new feedback question detected: "${msg.content?.slice(0, 50)}"`
+						);
+						return false;
 					}
 
 					if (msg.type === "user" || msg.type === "response") {

@@ -359,12 +359,35 @@ export const useSubnetCache = () => {
 						`🔄 Reset message tracking for subnet ${index}, cleared ${subnetMessageKeys.length} keys`
 					);
 
+					// CRITICAL FIX: Sort feedback history by created_at to ensure chronological processing
+					// This ensures the latest feedback response is shown, not the first one in the array
+					const sortedFeedbackHistory = [...subnet.feedbackHistory].sort((a, b) => {
+						const timeA = new Date(a.created_at).getTime();
+						const timeB = new Date(b.created_at).getTime();
+						return timeA - timeB; // oldest first, so latest response overwrites earlier ones
+					});
+
+					// CRITICAL FIX: Show ALL feedback history items to preserve the complete conversation flow
+					// This ensures user answers and the progression of feedback are visible
+					const feedbackToProcess = sortedFeedbackHistory;
+
+					console.log(
+						`🔍 Processing all feedback history items: ${feedbackToProcess.length} items`,
+						feedbackToProcess.map((item) => ({
+							question: item.feedback_question?.slice(0, 30),
+							response: item.response?.message?.slice(0, 30),
+							userAnswer: item.user_answer,
+							createdAt: item.created_at,
+						}))
+					);
+
 					// DEBUG: Log all feedback history items to understand what's being processed
 					console.log(
-						`🔍 Processing ${subnet.feedbackHistory.length} feedback history items:`,
-						subnet.feedbackHistory.map(
+						`🔍 Processing ${feedbackToProcess.length} feedback history items (chronologically sorted):`,
+						feedbackToProcess.map(
 							(item: any, idx: number) => ({
 								index: idx,
+								id: item.id,
 								question: item.feedback_question?.slice(0, 50),
 								response: item.response?.message?.slice(0, 50),
 								userAnswer: item.user_answer,
@@ -385,13 +408,13 @@ export const useSubnetCache = () => {
 						`🚀 Starting feedback history processing for subnet ${index}:`,
 						{
 							feedbackHistoryLength:
-								subnet.feedbackHistory.length,
+								feedbackToProcess.length,
 							messageIdsSize: messageIds.size,
-							willProcessItems: subnet.feedbackHistory.length,
+							willProcessItems: feedbackToProcess.length,
 						}
 					);
 
-					subnet.feedbackHistory.forEach(
+					feedbackToProcess.forEach(
 						(feedbackItem: any, feedbackIndex: number) => {
 							const feedbackBaseKey = `feedback_${workflowId}_${index}_${feedbackIndex}`;
 
@@ -966,7 +989,7 @@ export const useSubnetCache = () => {
 							totalMessagesCreated:
 								dataMessages.length + questionMessages.length,
 							feedbackHistoryLength:
-								subnet.feedbackHistory.length,
+								feedbackToProcess.length,
 						}
 					);
 
@@ -1595,9 +1618,14 @@ export const useSubnetCache = () => {
 					let hasDirectQuestion = false;
 					let questionData = null;
 
+					// CRITICAL FIX: Always skip original subnet.data when feedbackHistory exists
+					// This prevents showing old/stale data for new feedback questions
 					let shouldSkipSubnetData = false;
-					if (hasFeedbackHistory && includeHistory) {
+					if (hasFeedbackHistory) {
 						shouldSkipSubnetData = true;
+						console.log(
+							`🚫 Skipping original subnet.data for subnet ${index} - feedback history exists (${subnet.feedbackHistory.length} items)`
+						);
 					}
 
 					if (subnet.data && !shouldSkipSubnetData) {

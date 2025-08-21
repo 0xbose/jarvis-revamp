@@ -807,11 +807,13 @@ export default function AgentChatPage() {
 						>
 							{chatMessages
 								.filter((message) => {
-									// Hide trivial confirmation echoes like "Yes, proceed"
+									// Hide trivial confirmation echoes like "Yes, proceed" but NOT for answer type messages
+									// Answer type messages should always be shown as they represent user feedback responses
 									if (
 										typeof message.content === "string" &&
 										message.content.trim().toLowerCase() ===
-											"yes, proceed"
+											"yes, proceed" &&
+										message.type !== "answer"
 									) {
 										return false;
 									}
