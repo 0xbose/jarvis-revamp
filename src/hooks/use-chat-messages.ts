@@ -214,13 +214,10 @@ export const useChatMessages = () => {
 						}
 					}
 
-					// CRITICAL FIX: Handle response message duplicates (especially from feedback history)
 					if (
 						newMsg.type === "response" &&
 						existingMsg.type === "response"
 					) {
-						// CRITICAL: For feedback history messages, we need to be more lenient
-						// Only consider them duplicates if they have EXACTLY the same sourceId
 						if (
 							newMsg.sourceId &&
 							existingMsg.sourceId &&
@@ -237,7 +234,6 @@ export const useChatMessages = () => {
 							return true;
 						}
 
-						// For non-feedback messages, check for content similarity
 						if (
 							!newMsg.sourceId?.includes("feedback") &&
 							!existingMsg.sourceId?.includes("feedback")
@@ -329,14 +325,11 @@ export const useChatMessages = () => {
 				}));
 				console.log(`📋 Current message types:`, messageTypes);
 
-				// Check if workflow is completed - if so, filter out all processing messages
 				const isWorkflowCompleted =
 					data.workflowStatus === "completed" ||
 					data.workflowStatus === "failed" ||
 					data.workflowStatus === "stopped";
 
-				// CRITICAL FIX: Check if any new messages contain feedback questions for specific subnets
-				// If so, we need to remove old workflow_subnet data messages for those subnets
 				const subnetsWithNewFeedbackQuestions = new Set<number>();
 				newMessages.forEach((msg) => {
 					if (
@@ -362,7 +355,6 @@ export const useChatMessages = () => {
 						});
 					}
 
-					// CRITICAL FIX: Remove old workflow_subnet data messages when new feedback questions arrive
 					if (
 						msg.type === "workflow_subnet" &&
 						msg.subnetIndex !== undefined &&
@@ -679,11 +671,9 @@ export const useChatMessages = () => {
 					);
 				}
 
-				// CRITICAL FIX: Ensure completion message always appears at the end
 				let messagesWithoutCompletion = filteredMessages;
 				let completionMessage = null;
 
-				// Extract completion message if it exists
 				const completionIndex = filteredMessages.findIndex(
 					(msg) => msg.content === "Workflow executed successfully"
 				);

@@ -60,6 +60,11 @@ export const APP_CONFIG = {
 	SUPPORTED_NETWORKS: ["SKYNET"],
 } as const;
 
+// Local Storage Keys
+export const STORAGE_KEYS = {
+	SELECTED_HISTORIES_COUNT: "jarvis_selected_histories_count",
+} as const;
+
 // Feature Flags
 export const FEATURE_FLAGS = {
 	ENABLE_NFT_MINTING: true,

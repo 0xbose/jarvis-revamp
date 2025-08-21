@@ -216,8 +216,7 @@ export default function AgentChatPage() {
 					isLoadingExistingWorkflow.current &&
 					!isShowingCachedMessages;
 
-				// Skip processing if we're showing cached messages and this is the first update
-				// This prevents duplication of already cached messages
+				
 				if (
 					isShowingCachedMessages &&
 					isLoadingExistingWorkflow.current
@@ -226,20 +225,17 @@ export default function AgentChatPage() {
 						`📋 Skipping subnet data processing - using cached messages for workflow: ${workflowId}`
 					);
 
-					// CRITICAL FIX: Initialize subnet cache with current data to prevent reprocessing
-					// This ensures that when subsequent API calls come in, subnets aren't treated as "new"
 					if (currentWorkflowData?.subnets) {
 						console.log(
 							`🔧 Initializing subnet cache with ${currentWorkflowData.subnets.length} subnets to prevent reprocessing`
 						);
-						// Process the subnet data once to initialize the cache, but don't generate messages
 						updateMessagesWithSubnetData(
 							currentWorkflowData,
 							lastQuestionRef,
 							{
-								includeHistory: false, // Don't include history to avoid message generation
-								isExistingWorkflow: true, // Mark as existing to avoid new message creation
-								initializeCacheOnly: true, // Add a flag to indicate we only want to initialize cache
+								includeHistory: false, 
+								isExistingWorkflow: true, 
+								initializeCacheOnly: true, 
 							}
 						);
 					}

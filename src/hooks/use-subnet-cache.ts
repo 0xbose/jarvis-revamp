@@ -192,29 +192,27 @@ export const useSubnetCache = () => {
 					subnet.status === "awaiting_response" ||
 					subnet.status === "pending";
 
-				// SIMPLE LOGIC:
-				// If feedbackHistory has items -> use ONLY feedbackHistory
-				// If feedbackHistory is empty -> use ONLY original data
+				
 				const hasFeedbackData =
 					hasFeedbackHistory && subnet.feedbackHistory.length > 0;
 
 				const shouldGenerateMessage =
-					!hasFeedbackData && // CRITICAL: Only generate original messages if NO feedback history exists
-					!isResumingWorkflow && // Prevent message generation during workflow resumption
-					((hasChanged && prevStatus) || // Status changed from a previous state
+					!hasFeedbackData && 
+					!isResumingWorkflow &&
+					((hasChanged && prevStatus) || 	
 						(subnet.status === "in_progress" &&
-							prevStatus === "pending") || // Start processing
-						(subnet.status === "done" && subnet.data) || // Completed with data
+							prevStatus === "pending") || 
+						(subnet.status === "done" && subnet.data) || 
 						(subnet.status === "awaiting_response" &&
 							subnet.data &&
-							(prevStatus || !includeHistory)) || // Has data and waiting for response - always show during real-time updates
-						(subnet.status === "pending" && hasSubstantialData) || // Pending with real data
+							(prevStatus || !includeHistory)) || 
+						(subnet.status === "pending" && hasSubstantialData) || 
 						(prevStatus === "in_progress" &&
-							subnet.status !== "in_progress") || // Transition away from processing
-						isQuestionArrivingLater); // Question arriving later should always generate message
+							subnet.status !== "in_progress") || 
+						isQuestionArrivingLater); 
 
 				if (shouldGenerateMessage) {
-					// Create messages for data and questions separately when both exist
+					
 					const {
 						dataMessages: subnetDataMessages,
 						questionMessages: subnetQuestionMessages,
@@ -232,7 +230,7 @@ export const useSubnetCache = () => {
 					// Process data messages
 					subnetDataMessages.forEach((message) => {
 						if (message) {
-							// Check if this message has already been generated
+							
 							let messageKey;
 							if (subnet.status === "pending" && subnet.data) {
 								messageKey = `${workflowId}_${index}_pending_with_data_${JSON.stringify(
@@ -242,7 +240,7 @@ export const useSubnetCache = () => {
 								message.type === "workflow_subnet" &&
 								message.subnetStatus === "awaiting_response"
 							) {
-								// Special handling for awaiting_response messages to prevent duplicates during resumption
+								
 								const dataHash = subnet.data
 									? JSON.stringify(subnet.data).slice(0, 100)
 									: "no-data";
@@ -273,10 +271,10 @@ export const useSubnetCache = () => {
 						}
 					});
 
-					// Process question messages
+					
 					subnetQuestionMessages.forEach((message) => {
 						if (message) {
-							// Check if this question message has already been generated
+							
 							let messageKey;
 							const questionData =
 								message.questionData || subnet.question;
@@ -292,10 +290,9 @@ export const useSubnetCache = () => {
 						}
 					});
 
-					// Questions are now handled within createSubnetMessages function
+					
 
-					// Handle notifications with deduplication
-					// Show notifications for pending subnets with data, or when there are status transitions
+					
 					const shouldShowNotification =
 						subnet.question?.type === "notification" &&
 						(hasChanged ||
@@ -320,7 +317,7 @@ export const useSubnetCache = () => {
 					}
 				}
 
-				// SIMPLE: If we have feedback history, use ONLY that
+				
 				if (hasFeedbackData) {
 					console.log(
 						`📊 Processing feedback history for subnet ${index}:`,
@@ -347,8 +344,8 @@ export const useSubnetCache = () => {
 						}
 					);
 
-					// CRITICAL FIX: Reset message tracking for this subnet when processing feedback history
-					// This ensures new feedback items are always processed
+					
+					
 					const subnetMessageKeys = Array.from(messageIds).filter(
 						(key) =>
 							key.startsWith(`feedback_${workflowId}_${index}_`)
@@ -359,16 +356,16 @@ export const useSubnetCache = () => {
 						`🔄 Reset message tracking for subnet ${index}, cleared ${subnetMessageKeys.length} keys`
 					);
 
-					// CRITICAL FIX: Sort feedback history by created_at to ensure chronological processing
-					// This ensures the latest feedback response is shown, not the first one in the array
+					
+					
 					const sortedFeedbackHistory = [...subnet.feedbackHistory].sort((a, b) => {
 						const timeA = new Date(a.created_at).getTime();
 						const timeB = new Date(b.created_at).getTime();
 						return timeA - timeB; // oldest first, so latest response overwrites earlier ones
 					});
 
-					// CRITICAL FIX: Show ALL feedback history items to preserve the complete conversation flow
-					// This ensures user answers and the progression of feedback are visible
+					
+					
 					const feedbackToProcess = sortedFeedbackHistory;
 
 					console.log(
@@ -381,7 +378,7 @@ export const useSubnetCache = () => {
 						}))
 					);
 
-					// DEBUG: Log all feedback history items to understand what's being processed
+					
 					console.log(
 						`🔍 Processing ${feedbackToProcess.length} feedback history items (chronologically sorted):`,
 						feedbackToProcess.map(
@@ -402,8 +399,8 @@ export const useSubnetCache = () => {
 						)
 					);
 
-					// Process feedback history to show refined responses and questions
-					// This replaces original subnet data with processed feedback responses
+
+					
 					console.log(
 						`🚀 Starting feedback history processing for subnet ${index}:`,
 						{
@@ -438,7 +435,7 @@ export const useSubnetCache = () => {
 											"" &&
 										feedbackItem.user_answer !== null
 									),
-									// CRITICAL DEBUG: Show full response structure
+									
 									fullResponse: feedbackItem.response,
 									hasResponse: !!feedbackItem.response,
 									hasResponseMessage:
@@ -450,13 +447,11 @@ export const useSubnetCache = () => {
 								}
 							);
 
-							// Create system response message from feedback history
-							// This is the processed/refined version that replaces subnet.data
-							// IMPORTANT: Response appears FIRST, then question follows
+							
 							const responseKey = `${feedbackBaseKey}_response`;
 							const sourceId = `subnet_${index}_feedback_response_${feedbackIndex}`;
 
-							// CRITICAL FIX: Check if message already exists in current messages, not just messageIds
+							
 							const messageAlreadyExists =
 								dataMessages.some(
 									(msg) => msg.sourceId === sourceId
@@ -484,10 +479,9 @@ export const useSubnetCache = () => {
 								}
 							);
 
-							// CRITICAL FIX: Always create feedback history responses, ignore messageIds check
-							// since we cleared the tracking for this subnet above
+							
 							if (!messageAlreadyExists) {
-								// CRITICAL CHECK: Ensure we have valid content before creating message
+								
 								if (
 									!feedbackItem.response?.message ||
 									feedbackItem.response.message.trim() === ""
@@ -510,7 +504,7 @@ export const useSubnetCache = () => {
 												feedbackItem.response?.message?.trim(),
 										}
 									);
-									return; // Skip this feedback item
+									return; 
 								}
 								console.log(
 									`📝 Creating feedback response message:`,
@@ -538,7 +532,7 @@ export const useSubnetCache = () => {
 									}
 								);
 
-								// CRITICAL DEBUG: Log the exact content being used
+								
 								console.log(
 									`🔍 Creating response message with content:`,
 									{
@@ -586,7 +580,7 @@ export const useSubnetCache = () => {
 								dataMessages.push(responseMessage);
 								messageIds.add(responseKey);
 
-								// CRITICAL DEBUG: Verify message was added
+								
 								console.log(
 									`🔍 After adding response message:`,
 									{
@@ -639,13 +633,11 @@ export const useSubnetCache = () => {
 								);
 							}
 
-							// Create question message from feedback history
-							// ALL questions in feedbackHistory should be type: "feedback"
-							// IMPORTANT: Question appears AFTER the response message to ensure proper chat flow
+							
 							const questionKey = `${feedbackBaseKey}_question`;
 							const questionSourceId = `subnet_${index}_feedback_question_${feedbackIndex}`;
 
-							// CRITICAL FIX: Check if question message already exists
+							
 							const questionAlreadyExists =
 								dataMessages.some(
 									(msg) => msg.sourceId === questionSourceId
@@ -654,16 +646,15 @@ export const useSubnetCache = () => {
 									(msg) => msg.sourceId === questionSourceId
 								);
 
-							// CRITICAL FIX: Always create feedback history questions, ignore messageIds check
-							// since we cleared the tracking for this subnet above
+							
 							if (!questionAlreadyExists) {
-								// Question should appear after response - add small offset to created_at
+								
 								const responseTimestamp = new Date(
 									feedbackItem.created_at
 								);
 								const questionTimestamp = new Date(
 									responseTimestamp.getTime() + 2000
-								); // 2 seconds after response to ensure proper ordering
+								); 
 
 								console.log(
 									`✅ Creating question message for feedback:`,
@@ -742,8 +733,7 @@ export const useSubnetCache = () => {
 								);
 							}
 
-							// Create answer message if user provided an answer
-							// IMPORTANT: Answer appears AFTER the question to complete the feedback flow
+
 							if (
 								feedbackItem.user_answer &&
 								feedbackItem.user_answer.trim() !== ""
@@ -751,7 +741,7 @@ export const useSubnetCache = () => {
 								const answerKey = `${feedbackBaseKey}_answer`;
 								const answerSourceId = `subnet_${index}_feedback_answer_${feedbackIndex}`;
 
-								// CRITICAL FIX: Check if answer message already exists
+								
 								const answerAlreadyExists =
 									dataMessages.some(
 										(msg) => msg.sourceId === answerSourceId
@@ -760,10 +750,9 @@ export const useSubnetCache = () => {
 										(msg) => msg.sourceId === answerSourceId
 									);
 
-								// CRITICAL FIX: Always create feedback history answers, ignore messageIds check
-								// since we cleared the tracking for this subnet above
+								
 								if (!answerAlreadyExists) {
-									// Answer appears after question - ensure proper chronological order
+									
 									const responseTimestamp = new Date(
 										feedbackItem.created_at
 									);
@@ -819,7 +808,7 @@ export const useSubnetCache = () => {
 						}
 					);
 
-					// DEBUG: Log what was created for this subnet
+					
 					console.log(
 						`📊 Feedback processing summary for subnet ${index}:`,
 						{
@@ -856,7 +845,7 @@ export const useSubnetCache = () => {
 						}
 					);
 
-					// CRITICAL DEBUG: Show message flow with timestamps
+					
 					const feedbackMessageFlow = [
 						...dataMessages.filter((msg) =>
 							msg.sourceId?.startsWith(
@@ -889,8 +878,7 @@ export const useSubnetCache = () => {
 						}))
 					);
 
-					// CRITICAL FIX: Always process subnet.question if it exists, regardless of feedback history
-					// The current active question from subnet.question should be shown even when feedback history exists
+					
 					if (subnet.question) {
 						console.log(
 							`🔍 Processing subnet.question (current active question):`,
@@ -904,8 +892,7 @@ export const useSubnetCache = () => {
 							}
 						);
 
-						// CRITICAL FIX: Only show current subnet.question if it's NOT already answered in feedback history
-						// This prevents showing old questions when new feedback history exists
+						
 						const isQuestionAlreadyAnswered =
 							subnet.feedbackHistory?.some(
 								(feedback: any) =>
@@ -917,7 +904,7 @@ export const useSubnetCache = () => {
 							);
 
 						if (!isQuestionAlreadyAnswered) {
-							// Always show current active subnet questions
+							
 							const currentQuestionKey = `current_question_${workflowId}_${index}`;
 							if (!messageIds.has(currentQuestionKey)) {
 								const baseTimestamp = subnet.updatedAt
@@ -965,7 +952,7 @@ export const useSubnetCache = () => {
 						}
 					}
 
-					// DEBUG: Log summary of created messages
+					
 					console.log(
 						`📊 Feedback history processing complete for subnet ${index}:`,
 						{
@@ -993,7 +980,7 @@ export const useSubnetCache = () => {
 						}
 					);
 
-					// CRITICAL DEBUG: Log all feedback messages that were created
+					
 					const feedbackMessages = [
 						...dataMessages.filter((msg) =>
 							msg.sourceId?.startsWith(
@@ -1018,7 +1005,7 @@ export const useSubnetCache = () => {
 						}))
 					);
 
-					// DEBUG: Log all created messages for this subnet
+					
 					const subnetDataMessages = dataMessages.filter(
 						(msg) =>
 							msg.subnetIndex === index &&
@@ -1065,7 +1052,7 @@ export const useSubnetCache = () => {
 					}
 				}
 
-				// Clean up processing state when done
+
 				if (currentStatus === "done" && processingMap.has(index)) {
 					processingMap.delete(index);
 					feedbackSet.delete(index);
@@ -1255,7 +1242,6 @@ export const useSubnetCache = () => {
 				return timeA - timeB;
 			});
 
-			// CRITICAL DEBUG: Show final message array before returning
 			console.log(`🔍 Final allMessages array before return:`, {
 				totalMessages: allMessages.length,
 				messageTypes: allMessages.map((msg, idx) => ({
@@ -1269,7 +1255,6 @@ export const useSubnetCache = () => {
 				})),
 			});
 
-			// CRITICAL DEBUG: Log what happened to feedback messages during safeguarding
 			const feedbackMessagesBeforeSafeguard = [
 				...dataMessages.filter((msg) =>
 					msg.sourceId?.includes("feedback")
@@ -1618,8 +1603,7 @@ export const useSubnetCache = () => {
 					let hasDirectQuestion = false;
 					let questionData = null;
 
-					// CRITICAL FIX: Always skip original subnet.data when feedbackHistory exists
-					// This prevents showing old/stale data for new feedback questions
+				
 					let shouldSkipSubnetData = false;
 					if (hasFeedbackHistory) {
 						shouldSkipSubnetData = true;

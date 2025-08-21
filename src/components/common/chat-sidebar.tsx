@@ -47,6 +47,7 @@ import { useExecutionStatusStore } from "@/stores/execution-status-store";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getHistory } from "@/controllers/requests";
 import { prefetchChatData } from "@/utils/chat-utils";
+import { STORAGE_KEYS } from "@/config/constants";
 
 const CHAT_OPTIONS = [1, 5, 10, 15, 20] as const;
 
@@ -176,7 +177,22 @@ const WorkflowItem = React.memo(
 WorkflowItem.displayName = "WorkflowItem";
 
 const ChatSidebar = React.memo(() => {
-	const [chatCount, setChatCount] = useState(5);
+	const [chatCount, setChatCount] = useState(() => {
+		if (typeof window !== 'undefined') {
+			try {
+				const stored = localStorage.getItem(STORAGE_KEYS.SELECTED_HISTORIES_COUNT);
+				if (stored) {
+					const parsedCount = Number(stored);	
+					if (CHAT_OPTIONS.includes(parsedCount as any)) {
+						return parsedCount;
+					}
+				}
+			} catch (error) {
+				console.warn('Failed to read chat count from local storage:', error);
+			}
+		}
+		return 5; 
+	});
 	const [isExpanded, setIsExpanded] = useState(false);
 	const [isSelectOpen, setIsSelectOpen] = useState(false);
 	const [isMenuSelectOpen, setIsMenuSelectOpen] = useState(false);
@@ -333,8 +349,40 @@ const ChatSidebar = React.memo(() => {
 	);
 
 	const handleChatCountChange = useCallback((value: string) => {
-		setChatCount(Number(value));
+		const newCount = Number(value);
+		// Validate the new count is a valid option
+		if (CHAT_OPTIONS.includes(newCount as any)) {
+			setChatCount(newCount);
+			if (typeof window !== 'undefined') {
+				try {
+					localStorage.setItem(STORAGE_KEYS.SELECTED_HISTORIES_COUNT, newCount.toString());
+				} catch (error) {
+					console.warn('Failed to save chat count to local storage:', error);
+				}
+			}
+		} else {
+			console.warn('Invalid chat count selected:', newCount);
+		}
 	}, []);
+
+	// Ensure chatCount is synchronized with local storage on mount
+	useEffect(() => {
+		if (typeof window !== 'undefined') {
+			try {
+				const stored = localStorage.getItem(STORAGE_KEYS.SELECTED_HISTORIES_COUNT);
+				if (stored) {
+					const storedCount = Number(stored);
+					// Only update if the stored value is different and valid
+					if (storedCount !== chatCount && CHAT_OPTIONS.includes(storedCount as any)) {
+						console.log('Restoring chat count from local storage:', storedCount);
+						setChatCount(storedCount);
+					}
+				}
+			} catch (error) {
+				console.warn('Failed to synchronize chat count with local storage:', error);
+			}
+		}
+	}, []); // Empty dependency array - only run on mount
 
 	const handleRefresh = useCallback(async () => {
 		if (!isRefetching) {
