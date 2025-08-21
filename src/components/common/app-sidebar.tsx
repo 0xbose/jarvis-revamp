@@ -40,7 +40,7 @@ const navItems = [
 	{
 		icon: <Wallet2Icon className="size-5" />,
 		title: "Manage Funds",
-		url: "/",
+		url: "/add-funds",
 	},
 ];
 

@@ -6,6 +6,7 @@ import { Web3AuthProvider } from "@/providers/Web3AuthProvider";
 import { Toaster } from "sonner";
 import { APP_CONFIG } from "@/config/constants";
 import QueryProviderWrapper from "@/providers/query.provider";
+import Web3ContextProvider from "@/providers/Web3ContextProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,10 +26,12 @@ export default function RootLayout({
 				<QueryProviderWrapper>
 
 				<Web3AuthProvider>
+				<Web3ContextProvider>
 					<div className="min-h-screen bg-background">
 						<main className="h-screen w-full">{children}</main>
 					</div>
 					<Toaster />
+				</Web3ContextProvider>	
 				</Web3AuthProvider>
 				</QueryProviderWrapper>
 			</body>

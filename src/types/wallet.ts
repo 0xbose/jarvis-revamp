@@ -1,3 +1,7 @@
+import { PublicKey } from "@decloudlabs/skynet/lib/types/types";
+import { Connection } from "@solana/web3.js";
+import { ethers } from "ethers";
+
 // Wallet Types
 export interface NFTResult {
 	success: boolean;
@@ -80,4 +84,24 @@ export interface ApiKeyData {
 	nftId: string;
 	timestamp: number;
 	expiresAt?: number; // Optional for backward compatibility
+}
+
+export interface WalletProvider {
+	connect(): Promise<void>;
+	disconnect(): Promise<void>;
+	getAddress(): Promise<string>;
+	getBalance(): Promise<string>;
+	signMessage(message: string): Promise<string>;
+	isConnected(): boolean;
+}
+
+export interface EVMWalletProvider extends WalletProvider {
+	getProvider(): ethers.BrowserProvider;
+	getSigner(): Promise<ethers.Signer>;
+}
+
+export interface SolanaWalletProvider extends WalletProvider {
+	getPublicKey(): Promise<PublicKey>;
+	getProvider(): any; // Solana wallet provider type
+	getConnection(): Connection; // Get the Solana connection
 }
