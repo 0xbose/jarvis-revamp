@@ -4,13 +4,15 @@ import React from "react";
 import BalanceCard from "@/components/settings/add-funds/balance-card";
 import { ethers } from "ethers";
 import { useContext, useEffect, useState } from "react";
-import { useWeb3Auth } from "@/providers/Web3AuthProvider";
+import { useWeb3AuthSafe } from "@/providers/Web3AuthProvider";
 import { isConnectedState, Web3Context } from "@/providers/Web3ContextProvider";
 
 import { web3AuthConfig } from "@/config/web3AuthConfig";
 
 export default function page() {
-	const { provider } = useWeb3Auth();
+	// Use the safe hook that handles SSR gracefully
+	const { provider } = useWeb3AuthSafe();
+	
 	const web3Context = useContext(Web3Context);
 	const [studioBalance, setStudioBalance] = useState("0");
 

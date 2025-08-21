@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Web3Context, isConnectedState } from "@/providers/Web3ContextProvider";
-import { useWeb3Auth } from "@web3auth/modal-react-hooks";
+import { useWeb3AuthSafe } from "@/providers/Web3AuthProvider";
 import { ethers } from "ethers";
 import { Wallet, Send, X } from "lucide-react";
 import FundsModal from "./funds-dialog";
@@ -44,7 +44,7 @@ const SendFundsModal = ({
 	const [amountError, setAmountError] = useState("");
 	const [transactionSuccess, setTransactionSuccess] = useState(false);
 	const [transactionHash, setTransactionHash] = useState("");
-	const { provider, web3Auth } = useWeb3Auth();
+	const { provider, web3Auth } = useWeb3AuthSafe();
 	const web3Context = useContext(Web3Context);
 
 	const handleMaxClick = () => {

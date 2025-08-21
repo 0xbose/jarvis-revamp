@@ -16,7 +16,7 @@ import {
 import { ethers } from "ethers";
 import { EVMWalletProvider, SolanaWalletProvider } from "@/types/wallet";
 import { toast } from "sonner";
-import { useWeb3Auth } from "@web3auth/modal-react-hooks";
+import { useWeb3AuthSafe } from "@/providers/Web3AuthProvider";
 import { Web3RPC } from "@/utils/rpc/web3RPC";
 import { isAmountInvalid } from "@/utils/funds/funds";
 import FundsWalletStep from "./funds-wallet-step";
@@ -127,7 +127,7 @@ const FundsModal: FC<FundsModalProps> = ({ isOpen, onClose }) => {
 	const [balance, setBalance] = useState<string | null>(null);
 	const [quote, setQuote] = useState<any>(null);
 	const [isLoadingQuote, setIsLoadingQuote] = useState(false);
-	const { provider: web3AuthProvider } = useWeb3Auth();
+	const { provider: web3AuthProvider } = useWeb3AuthSafe();
 	const [evmAddress, setEvmAddress] = useState<string | null>(null);
 	const [transactionSuccess, setTransactionSuccess] = useState(false);
 	const [quoteError, setQuoteError] = useState<string | null>(null);

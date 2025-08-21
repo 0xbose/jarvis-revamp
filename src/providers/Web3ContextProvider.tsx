@@ -2,7 +2,7 @@
 import { createContext, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Address } from "viem";
-import { useWeb3Auth } from "@/providers/Web3AuthProvider";
+import { useWeb3AuthSafe } from "@/providers/Web3AuthProvider";
 import { Web3RPC } from "@/utils/rpc/web3RPC";
 
 export interface IWeb3State {
@@ -71,7 +71,9 @@ export function isConnectedState(
 
 const Web3ContextProvider = ({ children }: { children: React.ReactNode }) => {
 	const router = useRouter();
-	const { provider, logout: web3Logout, connect: web3Login } = useWeb3Auth();
+	
+	// Use the safe hook that handles SSR gracefully
+	const { provider, logout: web3Logout, connect: web3Login } = useWeb3AuthSafe();
 
 	// Create a ref for the functions to avoid circular dependency
 	const loginRef = useRef(async () => {});

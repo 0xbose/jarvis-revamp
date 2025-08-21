@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { WalletType } from "@/providers/add-funds/WalletProvider";
-import { useWeb3Auth } from "@web3auth/modal-react-hooks";
+import { useWeb3AuthSafe } from "@/providers/Web3AuthProvider";
 import { Web3RPC } from "@/utils/rpc/web3RPC";
 import { ethers } from "ethers";
 import { executeFundsTransaction } from "./fund-transaction";
@@ -82,7 +82,7 @@ const FundsChainStep: React.FC<
 	const [stepStatuses, setStepStatuses] = React.useState<
 		("pending" | "processing" | "success" | "failed")[]
 	>(["pending", "pending", "pending"]);
-	const { provider: web3AuthProvider, web3Auth } = useWeb3Auth();
+	const { provider: web3AuthProvider, web3Auth } = useWeb3AuthSafe();
 
 	const minAmount = 0.001;
 	const minUSDValue = 5;

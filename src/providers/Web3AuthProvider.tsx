@@ -145,6 +145,27 @@ export const useWeb3Auth = () => {
 	return context as unknown as ReturnType<typeof useWeb3AuthModal>;
 };
 
+// Safe hook for SSR that doesn't throw errors
+export const useWeb3AuthSafe = () => {
+	try {
+		return useWeb3Auth();
+	} catch (error) {
+		// Return fallback values during SSR
+		return {
+			provider: null,
+			web3Auth: null,
+			connect: async () => {},
+			logout: async () => {},
+			login: async () => {},
+			isConnected: false,
+			user: null,
+			chainId: null,
+			address: null,
+			balance: null,
+		};
+	}
+};
+
 // Fallback provider for SSR
 function FallbackWeb3AuthProvider({ children }: { children: ReactNode }) {
 	const fallbackValue: Record<string, unknown> = {

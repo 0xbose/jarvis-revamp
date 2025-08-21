@@ -1,12 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useWeb3Auth } from "@/providers/Web3AuthProvider";
+import { useWeb3AuthSafe } from "@/providers/Web3AuthProvider";
 import { initializeSkynet } from "@/utils/skynetHelper";
 import { ethers } from "ethers";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
 
 export const useWallet = () => {
-	const { provider, isConnected, connect, logout } = useWeb3Auth();
+	const { provider, isConnected, connect, logout } = useWeb3AuthSafe();
 	const [skyBrowser, setSkyBrowser] = useState<SkyMainBrowser | null>(null);
 	const [address, setAddress] = useState<string | null>(null);
 	const [balance, setBalance] = useState<string | null>(null);
