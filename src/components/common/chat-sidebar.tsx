@@ -39,6 +39,8 @@ import {
 	MessageCircleX,
 	LoaderCircle,
 	ClockArrowUp,
+	Shield,
+	MessageCircle,
 } from "lucide-react";
 import {
 	Tooltip,
@@ -62,14 +64,25 @@ interface WorkflowItem {
 	agentId: string;
 	status: string;
 	userPrompt?: string;
+	questionType?: string; // Add questionType field for awaiting_response statuses
 }
 
-const getWorkflowIcon = (status: string) => {
+const getWorkflowIcon = (status: string, questionType?: string) => {
 	switch (status) {
 		case "completed":
 			return CheckCircle; 
 		case "awaiting_response":
-			return ShieldAlert; 
+			// Different icons for different question types
+			switch (questionType) {
+				case "notification":
+					return ShieldAlert; // Yellow shield for notifications
+				case "feedback":
+					return MessageCircle; // Blue message circle for feedback
+				case "authentication":
+					return Shield; // Blue shield for authentication
+				default:
+					return ShieldAlert; // Default to shield alert
+			}
 		case "stopped":
 			return CircleStop; 
 		case "failed":
@@ -85,18 +98,28 @@ const getWorkflowIcon = (status: string) => {
 	}
 };
 
-const getWorkflowIconColor = (status: string) => {
+const getWorkflowIconColor = (status: string, questionType?: string) => {
 	switch (status) {
 		case "completed":
 			return "text-green-700"; 
 		case "awaiting_response":
-			return "text-yellow-700"; 
+			// Different colors for different question types
+			switch (questionType) {
+				case "notification":
+					return "text-yellow-700"; // Yellow for notifications
+				case "feedback":
+					return "text-blue-700"; // Blue for feedback
+				case "authentication":
+					return "text-blue-700"; // Blue for authentication
+				default:
+					return "text-yellow-700"; // Default to yellow
+			}
 		case "stopped":
 			return "text-red-700"; 
 		case "failed":
 			return "text-red-700"; 
 		case "in_progress":
-				return "text-green-700"; 
+			return "text-green-700"; 
 		case "waiting":
 			return "text-green-700"; 
 		case "pending":
@@ -107,11 +130,22 @@ const getWorkflowIconColor = (status: string) => {
 };
 
 // Get animation classes for workflow status icons
-const getWorkflowIconAnimation = (status: string) => {
+const getWorkflowIconAnimation = (status: string, questionType?: string) => {
 	switch (status) {
 		case "in_progress":
 		case "waiting":
 			return "animate-spin"; 
+		case "awaiting_response":
+			// Different animations for different question types
+			switch (questionType) {
+				case "notification":
+					return ""; // No animation for notifications
+				case "feedback":
+				case "authentication":
+					return "animate-pulse"; // Pulse animation for user input needed
+				default:
+					return ""; // No animation for unknown types
+			}
 		default:
 			return ""; 
 	}
@@ -135,9 +169,9 @@ const WorkflowItem = React.memo(
 		isSelected: boolean;
 		isRunning: boolean;
 	}) => {
-		const Icon = getWorkflowIcon(workflow.status);
-		const iconColor = getWorkflowIconColor(workflow.status);
-		const iconAnimation = getWorkflowIconAnimation(workflow.status);
+		const Icon = getWorkflowIcon(workflow.status, workflow.questionType);
+		const iconColor = getWorkflowIconColor(workflow.status, workflow.questionType);
+		const iconAnimation = getWorkflowIconAnimation(workflow.status, workflow.questionType);
 
 		return (
 			<SidebarMenuItem
@@ -266,13 +300,23 @@ const ChatSidebar = React.memo(() => {
 
 	const hasActiveWorkflow = (workflows: WorkflowItem[]) => {
 		const hasActiveHistoryWorkflow = workflows.some(
-			(workflow) =>
-				workflow.status === "in_progress" ||
-				workflow.status === "waiting" ||
-				workflow.status === "pending"
+			(workflow) => {
+				// Always poll for these active server states
+				if (workflow.status === "in_progress" || 
+					workflow.status === "waiting" || 
+					workflow.status === "pending") {
+					return true;
+				}
+				
+				// For awaiting_response, only poll if it's a notification type
+				if (workflow.status === "awaiting_response") {
+					return workflow.questionType === "notification";
+				}
+				
+				return false;
+			}
 		);
 
-		
 		const isCurrentWorkflowRunning = isRunning;
 
 		return hasActiveHistoryWorkflow || isCurrentWorkflowRunning;
@@ -307,17 +351,25 @@ const ChatSidebar = React.memo(() => {
 			if (!workflows) return false;
 
 			if (hasActiveWorkflow(workflows)) {
-				const activeHistoryWorkflows = workflows.filter(w => 
-					w.status === "in_progress" || 
-					w.status === "waiting" || 
-					w.status === "pending"
-				);
+				const activeHistoryWorkflows = workflows.filter(w => {
+					if (w.status === "in_progress" || w.status === "waiting" || w.status === "pending") {
+						return true;
+					}
+					if (w.status === "awaiting_response") {
+						return w.questionType === "notification";
+					}
+					return false;
+				});
 				
 				console.log(`🔄 Polling active:`, {
 					activeHistoryWorkflows: activeHistoryWorkflows.length,
 					currentWorkflowRunning: isRunning,
 					reason: isRunning ? 'Current workflow running' : 'History workflows active',
-					activeWorkflows: activeHistoryWorkflows.map(w => ({ id: w.requestId, status: w.status }))
+					activeWorkflows: activeHistoryWorkflows.map(w => ({ 
+						id: w.requestId, 
+						status: w.status, 
+						questionType: w.questionType 
+					}))
 				});
 				
 				return 60000; 
@@ -609,7 +661,8 @@ const ChatSidebar = React.memo(() => {
 										const isRunning =
 											workflow.status === "in_progress" ||
 											workflow.status === "waiting" ||
-											workflow.status === "pending";
+											workflow.status === "pending" ||
+											(workflow.status === "awaiting_response" && workflow.questionType === "notification");
 
 										return (
 											<WorkflowItem
