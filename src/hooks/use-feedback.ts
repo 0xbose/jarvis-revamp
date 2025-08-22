@@ -16,6 +16,7 @@ interface UseFeedbackProps {
 	setIsExecuting: (executing: boolean) => void;
 	setIsInFeedbackMode: (inMode: boolean) => void;
 	resumePolling?: () => void;
+	refetchHistory?: () => void;
 }
 
 export const useFeedback = ({
@@ -29,6 +30,7 @@ export const useFeedback = ({
 	setIsExecuting,
 	setIsInFeedbackMode,
 	resumePolling,
+	refetchHistory,
 }: UseFeedbackProps) => {
 	const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 	const { updateSubnetStatus } = useSubnetCacheStore();
@@ -234,6 +236,12 @@ export const useFeedback = ({
 
 			setPrompt("");
 
+			// Refetch chat sidebar history after successful feedback submission
+			if (refetchHistory) {
+				console.log("🔄 Refetching chat sidebar history after successful feedback submission");
+				refetchHistory();
+			}
+
 			setWorkflowStatus("running");
 			setIsExecuting(true);
 			setIsInFeedbackMode(false);
@@ -422,6 +430,12 @@ export const useFeedback = ({
 
 			setPrompt("");
 
+			// Refetch chat sidebar history after successful feedback processing
+			if (refetchHistory) {
+				console.log("🔄 Refetching chat sidebar history after successful feedback processing");
+				refetchHistory();
+			}
+
 			setWorkflowStatus("running");
 			setIsExecuting(true);
 			setIsInFeedbackMode(false);
@@ -601,6 +615,12 @@ export const useFeedback = ({
 			});
 
 			setPrompt("");
+
+			// Refetch chat sidebar history after successful feedback response
+			if (refetchHistory) {
+				console.log("🔄 Refetching chat sidebar history after successful feedback response");
+				refetchHistory();
+			}
 
 			setWorkflowStatus("running");
 			setIsExecuting(true);

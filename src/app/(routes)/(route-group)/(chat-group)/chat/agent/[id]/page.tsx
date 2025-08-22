@@ -53,6 +53,12 @@ export default function AgentChatPage() {
 	const { skyBrowser, address } = useWallet();
 	const queryClient = useQueryClient();
 
+	// Function to refetch chat sidebar history data
+	const refetchHistory = () => {
+		console.log("🔄 Refetching chat sidebar history after feedback submission");
+		queryClient.invalidateQueries({ queryKey: ["history"] });
+	};
+
 	const { currentExecution } = useWorkflowExecutionStore();
 	const { updateExecutionStatus } = useExecutionStatusStore();
 
@@ -425,6 +431,7 @@ export default function AgentChatPage() {
 				);
 			}
 		},
+		refetchHistory,
 	});
 
 	useEffect(() => {
@@ -528,6 +535,8 @@ export default function AgentChatPage() {
 		setPendingNotifications((prev) =>
 			prev.filter((n) => n.id !== notification.id)
 		);
+		// Refetch sidebar history after notification response
+		refetchHistory();
 	};
 
 	const handleNotificationNo = async (notification: ChatMsg) => {
@@ -535,6 +544,8 @@ export default function AgentChatPage() {
 			prev.filter((n) => n.id !== notification.id)
 		);
 		await handleStopExecution();
+		// Refetch sidebar history after notification response
+		refetchHistory();
 	};
 
 	useEffect(() => {
@@ -726,8 +737,6 @@ export default function AgentChatPage() {
 						>
 							{chatMessages
 								.filter((message) => {
-									// Hide trivial confirmation echoes like "Yes, proceed" but NOT for answer type messages
-									// Answer type messages should always be shown as they represent user feedback responses
 									if (
 										typeof message.content === "string" &&
 										message.content.trim().toLowerCase() ===

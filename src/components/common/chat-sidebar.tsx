@@ -183,7 +183,7 @@ const WorkflowItem = React.memo(
 													</span>
 												</TooltipTrigger>
 												<TooltipContent>
-													<p className="max-w-xs">
+													<p className="max-w-xs text-ellipsis whitespace-nowrap overflow-hidden">
 														{workflow.userPrompt ||
 															workflow.requestId}
 													</p>
