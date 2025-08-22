@@ -41,6 +41,7 @@ import {
 	ClockArrowUp,
 	Shield,
 	MessageCircle,
+	CirclePause,
 } from "lucide-react";
 import {
 	Tooltip,
@@ -74,7 +75,7 @@ const getWorkflowIcon = (status: string, questionType?: string) => {
 		case "awaiting_response":
 			return ShieldAlert; 
 		case "stopped":
-			return CircleStop; 
+			return CirclePause; 
 		case "failed":
 			return MessageCircleX; 
 		case "in_progress":
@@ -95,41 +96,20 @@ const getWorkflowIconColor = (status: string, questionType?: string) => {
 		case "awaiting_response":
 			return "text-yellow-500"; 
 		case "stopped":
-			return "text-red-700"; 
+			return "text-gray-500"; 
 		case "failed":
 			return "text-red-700"; 
 		case "in_progress":
-			return "text-green-700"; 
+			return "text-blue-700"; 
 		case "waiting":
-			return "text-green-700"; 
+			return "text-blue-700"; 
 		case "pending":
-			return "text-green-700"; 
+			return "text-blue-700"; 
 		default:
 			return "text-gray-400"; 
 	}
 };
 
-// Get animation classes for workflow status icons
-const getWorkflowIconAnimation = (status: string, questionType?: string) => {
-	switch (status) {
-		case "in_progress":
-		case "waiting":
-			return "animate-spin"; 
-		case "awaiting_response":
-			// Different animations for different question types
-			switch (questionType) {
-				case "notification":
-					return ""; // No animation for notifications
-				case "feedback":
-				case "authentication":
-					return "animate-pulse"; // Pulse animation for user input needed
-				default:
-					return ""; // No animation for unknown types
-			}
-		default:
-			return ""; 
-	}
-};
 
 const WorkflowItem = React.memo(
 	({
@@ -151,7 +131,6 @@ const WorkflowItem = React.memo(
 	}) => {
 		const Icon = getWorkflowIcon(workflow.status, workflow.questionType);
 		const iconColor = getWorkflowIconColor(workflow.status, workflow.questionType);
-		const iconAnimation = getWorkflowIconAnimation(workflow.status, workflow.questionType);
 
 		return (
 			<SidebarMenuItem
@@ -180,7 +159,7 @@ const WorkflowItem = React.memo(
 								)
 							}
 						>
-							{Icon && <Icon className={`!size-[19px] ${iconColor} ${iconAnimation}`} />}
+							{Icon && <Icon className={`!size-[19px] ${iconColor}`} />}
 							{sidebarIsExpanded && (
 								<div className="flex items-center !w-full flex-1 min-w-0">
 									<div className="flex flex-col w-[140px] min-w-0">
