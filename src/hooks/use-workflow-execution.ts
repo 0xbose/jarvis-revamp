@@ -571,6 +571,15 @@ export const useWorkflowExecution = ({
 				console.log(
 					"⏰ Polling timeout detected, showing refresh UI message"
 				);
+				console.log("🔍 Debug: Timeout conditions", {
+					isTimedOut,
+					hasTimeoutMessage: hasTimeoutMessageRef.current,
+					shouldShowRefreshUI:
+						workflowExecutor.shouldShowRefreshUIWithStatus(),
+					workflowStatus: workflowExecutor.getCurrentWorkflowStatus(),
+					isPolling: workflowExecutor.isPolling(),
+					pollingDuration: workflowExecutor.getPollingDuration(),
+				});
 				hasTimeoutMessageRef.current = true;
 
 				const timeoutMessage: ChatMsg = {

@@ -155,19 +155,38 @@ export class WorkflowExecutor {
 	}
 
 	/**
-	 * Check if polling is currently active
+	 * Check if currently polling
 	 */
 	public isPolling(): boolean {
-		return this.currentPollingInterval !== null;
+		const result = this.currentPollingInterval !== null;
+		console.log("🔍 Debug: isPolling", {
+			currentPollingInterval: !!this.currentPollingInterval,
+			result,
+			currentWorkflowId: this.currentWorkflowId,
+		});
+		return result;
 	}
 
 	/**
 	 * Check if polling has been running for more than 5 minutes
 	 */
 	public isPollingTimedOut(): boolean {
-		if (!this.pollingStartTime) return false;
+		if (!this.pollingStartTime) {
+			console.log("🔍 Debug: isPollingTimedOut - no pollingStartTime");
+			return false;
+		}
 		const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
-		return Date.now() - this.pollingStartTime > fiveMinutes;
+		const elapsed = Date.now() - this.pollingStartTime;
+		const result = elapsed > fiveMinutes;
+
+		console.log("🔍 Debug: isPollingTimedOut", {
+			pollingStartTime: this.pollingStartTime,
+			elapsed,
+			fiveMinutes,
+			result,
+		});
+
+		return result;
 	}
 
 	/**
@@ -206,18 +225,40 @@ export class WorkflowExecutor {
 	 * Check if refresh UI should be shown considering current workflow status
 	 */
 	public shouldShowRefreshUIWithStatus(): boolean {
+		const isAwaitingResponse =
+			this.lastWorkflowStatus === "awaiting_response";
+		const isCurrentlyPolling = this.isPolling();
+		const hasTimedOut = this.isPollingTimedOut();
+
+		console.log("🔍 Debug: shouldShowRefreshUIWithStatus", {
+			lastWorkflowStatus: this.lastWorkflowStatus,
+			isAwaitingResponse,
+			isCurrentlyPolling,
+			hasTimedOut,
+			pollingStartTime: this.pollingStartTime,
+			currentPollingInterval: !!this.currentPollingInterval,
+		});
+
 		// Don't show refresh UI when status is awaiting_response
-		if (this.lastWorkflowStatus === "awaiting_response") {
+		if (isAwaitingResponse) {
+			console.log(
+				"🔍 Debug: Not showing refresh UI - status is awaiting_response"
+			);
 			return false;
 		}
-		
+
 		// Don't show refresh UI if not polling
-		if (!this.isPolling()) {
+		if (!isCurrentlyPolling) {
+			console.log(
+				"🔍 Debug: Not showing refresh UI - not currently polling"
+			);
 			return false;
 		}
-		
+
 		// Only show if polling has timed out
-		return this.isPollingTimedOut();
+		const result = hasTimedOut;
+		console.log("🔍 Debug: shouldShowRefreshUIWithStatus result:", result);
+		return result;
 	}
 
 	/**
@@ -236,30 +277,42 @@ export class WorkflowExecutor {
 	 */
 	public refreshPolling(): void {
 		if (this.currentWorkflowId && this.currentStatusCallback) {
-			console.log(`🔄 Refreshing polling for workflow: ${this.currentWorkflowId}`);
-			
+			console.log(
+				`🔄 Refreshing polling for workflow: ${this.currentWorkflowId}`
+			);
+
 			// Clear existing timeout
 			if (this.statusTimeoutId) {
 				console.log(`🧹 Clearing existing timeout`);
 				clearTimeout(this.statusTimeoutId);
 			}
-			
+
 			// Reset timers
 			this.pollingStartTime = Date.now();
 			this.lastStatusChangeTime = Date.now();
-			console.log(`⏰ Timers reset for workflow ${this.currentWorkflowId}`);
-			
+			console.log(
+				`⏰ Timers reset for workflow ${this.currentWorkflowId}`
+			);
+
 			// Set up new 5-minute timeout (just for logging, no callback notification)
 			this.statusTimeoutId = setTimeout(() => {
 				if (this.currentWorkflowId) {
-					console.log(`⏰ 5-minute timeout reached for workflow: ${this.currentWorkflowId}`);
-					console.log(`🔍 Timeout detected - refresh UI should be shown by the hook`);
+					console.log(
+						`⏰ 5-minute timeout reached for workflow: ${this.currentWorkflowId}`
+					);
+					console.log(
+						`🔍 Timeout detected - refresh UI should be shown by the hook`
+					);
 				}
 			}, 5 * 60 * 1000); // 5 minutes
-			
-			console.log(`⏰ New timeout set for workflow ${this.currentWorkflowId} - will trigger in 5 minutes`);
+
+			console.log(
+				`⏰ New timeout set for workflow ${this.currentWorkflowId} - will trigger in 5 minutes`
+			);
 		} else {
-			console.log(`⚠️ Cannot refresh polling - missing workflow ID or status callback`);
+			console.log(
+				`⚠️ Cannot refresh polling - missing workflow ID or status callback`
+			);
 		}
 	}
 
@@ -675,7 +728,7 @@ export class WorkflowExecutor {
 				agentAddress: agentDetail.nft_address,
 				agentID: userAgentNFTId,
 			},
-			feedback: subnet.feedback || false, 
+			feedback: subnet.feedback || false,
 		}));
 
 		return {
@@ -688,8 +741,8 @@ export class WorkflowExecutor {
 				message: authData.message,
 			},
 			accountNFT: {
-				collectionID: agentDetail.nft_address, 
-				nftID: userAgentNFTId, 
+				collectionID: agentDetail.nft_address,
+				nftID: userAgentNFTId,
 			},
 		};
 	}
@@ -855,7 +908,9 @@ export class WorkflowExecutor {
 				if (this.lastWorkflowStatus !== statusData.workflowStatus) {
 					this.lastWorkflowStatus = statusData.workflowStatus;
 					this.lastStatusChangeTime = Date.now();
-					console.log(`🔄 Status changed for workflow ${requestId}: ${statusData.workflowStatus}`);
+					console.log(
+						`🔄 Status changed for workflow ${requestId}: ${statusData.workflowStatus}`
+					);
 				}
 
 				if (this.currentWorkflowId !== requestId) {
@@ -909,7 +964,7 @@ export class WorkflowExecutor {
 					);
 					this.stopPolling();
 					shouldContinuePolling = false;
-					return; 
+					return;
 				} else if (statusData.workflowStatus === "completed") {
 					console.log(
 						`🏁 Workflow ${requestId} completed successfully`
@@ -978,9 +1033,10 @@ export class WorkflowExecutor {
 					if (this.lastWorkflowStatus !== statusData.workflowStatus) {
 						this.lastWorkflowStatus = statusData.workflowStatus;
 						this.lastStatusChangeTime = Date.now();
-						console.log(`🔄 Status changed for workflow ${requestId}: ${statusData.workflowStatus}`);
+						console.log(
+							`🔄 Status changed for workflow ${requestId}: ${statusData.workflowStatus}`
+						);
 					}
-
 
 					if (this.currentWorkflowId !== requestId) {
 						console.log(
@@ -1062,7 +1118,6 @@ export class WorkflowExecutor {
 							`⏸️ Workflow ${requestId} waiting for user input (auth/feedback), stopping polling temporarily`
 						);
 						this.stopPolling();
-
 					} else if (
 						statusData.workflowStatus === "awaiting_response" &&
 						hasNotificationQuestion
@@ -1070,12 +1125,10 @@ export class WorkflowExecutor {
 						console.log(
 							`🔔 Workflow ${requestId} has notification questions, continuing polling...`
 						);
-						
 					} else if (hasWaitingResponseWithoutData) {
 						console.log(
 							`⏳ Workflow ${requestId} has subnets in waiting_response without data, continuing polling...`
 						);
-									
 					}
 				} catch (error) {
 					console.error(

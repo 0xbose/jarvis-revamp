@@ -64,7 +64,6 @@ interface ChatMessageProps {
 	onRefreshPolling?: () => void;
 }
 
-
 export function ChatMessage({
 	message,
 	isLast = false,
@@ -100,22 +99,63 @@ export function ChatMessage({
 	const shouldShowRefreshUI = () => {
 		// Case 1: Show refresh UI for timeout messages
 		if (message.isTimeoutMessage && message.showRefreshButton) {
+			console.log(
+				"🔍 Debug: Should show refresh UI - Case 1: timeout message with showRefreshButton",
+				{
+					messageId: message.id,
+					isTimeoutMessage: message.isTimeoutMessage,
+					showRefreshButton: message.showRefreshButton,
+				}
+			);
 			return true;
 		}
 
 		// Case 2: Show refresh UI when polling has stopped for more than 5 minutes
-		if (!pollingStoppedAt || !onRefreshPolling) return false;
+		if (!pollingStoppedAt || !onRefreshPolling) {
+			console.log(
+				"🔍 Debug: Should show refresh UI - Case 2: missing requirements",
+				{
+					pollingStoppedAt: !!pollingStoppedAt,
+					onRefreshPolling: !!onRefreshPolling,
+				}
+			);
+			return false;
+		}
 
 		const timeSinceStoppedMs = Date.now() - pollingStoppedAt.getTime();
 		const fiveMinutesMs = 5 * 60 * 1000; // Updated to 5 minutes
 
-		return (
+		const shouldShow =
 			workflowStatus === "awaiting_response" &&
 			timeSinceStoppedMs > fiveMinutesMs &&
 			message.subnetStatus === "awaiting_response" &&
-			isLast
+			isLast;
+
+		console.log(
+			"🔍 Debug: Should show refresh UI - Case 2: calculated result",
+			{
+				workflowStatus,
+				timeSinceStoppedMs,
+				fiveMinutesMs,
+				messageSubnetStatus: message.subnetStatus,
+				isLast,
+				shouldShow,
+			}
 		);
+
+		return shouldShow;
 	};
+
+	// Debug logging for timeout messages
+	if (message.isTimeoutMessage) {
+		console.log("🔍 Debug: Processing timeout message", {
+			messageId: message.id,
+			isTimeoutMessage: message.isTimeoutMessage,
+			showRefreshButton: message.showRefreshButton,
+			messageType: message.type,
+			shouldShowRefreshUI: shouldShowRefreshUI(),
+		});
+	}
 
 	const isWorkflowActivelyExecuting = () => {
 		return (
@@ -341,8 +381,6 @@ export function ChatMessage({
 						</div>
 					)}
 				</div>
-
-				
 			</div>
 		);
 	}
@@ -488,7 +526,6 @@ export function ChatMessage({
 						</div> */}
 					</div>
 				</div>
-				
 			</div>
 		);
 	}
@@ -782,32 +819,37 @@ export function ChatMessage({
 													placeholder="Type your feedback here..."
 													className="flex-1"
 												/>
-												
 											</div>
 											<div className="flex gap-2">
-											<Button
-												onClick={() => {
-													setShowFeedbackInput(false);
-													setFeedbackText("");
-													// Reset button states when canceling
-													setClickedButtonType(null);
-													setIsButtonPending(false);
-												}}
-												variant="outline"
-												size="sm"
-												disabled={
-													shouldDisableButtons() &&
-													clickedButtonType !==
+												<Button
+													onClick={() => {
+														setShowFeedbackInput(
+															false
+														);
+														setFeedbackText("");
+														// Reset button states when canceling
+														setClickedButtonType(
+															null
+														);
+														setIsButtonPending(
+															false
+														);
+													}}
+													variant="outline"
+													size="sm"
+													disabled={
+														shouldDisableButtons() &&
+														clickedButtonType !==
+															"feedback-cancel"
+													}
+													className={getButtonClassName(
+														"text-gray-400 hover:text-gray-300 bg-gray-950/60 hover:bg-gray-950/70 border border-gray-800/50 hover:border-gray-800/70",
 														"feedback-cancel"
-												}
-												className={getButtonClassName(
-													"text-gray-400 hover:text-gray-300 bg-gray-950/60 hover:bg-gray-950/70 border border-gray-800/50 hover:border-gray-800/70",
-													"feedback-cancel"
-												)}
-											>
-												Cancel
-											</Button>
-											<Button
+													)}
+												>
+													Cancel
+												</Button>
+												<Button
 													onClick={async () => {
 														// Don't proceed if no feedback text
 														if (
@@ -900,7 +942,6 @@ export function ChatMessage({
 													Submit
 												</Button>
 											</div>
-											
 										</div>
 									)}
 								</div>
@@ -1017,7 +1058,6 @@ export function ChatMessage({
 						</div> */}
 					</div>
 				</div>
-				
 			</div>
 		);
 	}
@@ -1067,7 +1107,6 @@ export function ChatMessage({
 						)}
 					</div>
 				</div>
-				
 			</div>
 		);
 	}
@@ -1323,39 +1362,44 @@ export function ChatMessage({
 						)}
 
 						{/* Show timeout message with refresh button */}
-						{message.isTimeoutMessage && message.showRefreshButton && (
-						<div className="mt-4 p-3 border border-border rounded-lg bg-muted/20">
-								<div className="flex items-center justify-between">
-									<div className="flex  items-center gap-2 text-yellow-400">
-										<AlertTriangleIcon className="w-4 h-4 text-yellow-400" />
-										<span className="text-sm font-medium">
-											Polling Timeout
-										</span>
+						{message.isTimeoutMessage &&
+							message.showRefreshButton && (
+								<div className="mt-4 p-3 border border-border rounded-lg bg-muted/20">
+									<div className="flex items-center justify-between">
+										<div className="flex  items-center gap-2 text-yellow-400">
+											<AlertTriangleIcon className="w-4 h-4 text-yellow-400" />
+											<span className="text-sm font-medium">
+												Polling Timeout
+											</span>
+										</div>
+									</div>
+									<p className="text-xs text-orange-300/70 mt-2">
+										Polling has been running for more than 5
+										minutes. Click refresh to continue
+										monitoring the workflow.
+									</p>
+									<div className="mt-3 flex justify-end">
+										<Button
+											onClick={() => {
+												console.log(
+													"🔍 Debug: Refresh button clicked"
+												);
+												if (onRefreshPolling) {
+													onRefreshPolling();
+												}
+											}}
+											variant="outline"
+											size="sm"
+											className="flex items-center gap-2 text-gray-400 hover:text-gray-300 bg-muted/20 hover:bg-muted/30 border border-border/50 hover:border-border/70"
+										>
+											<RefreshCw className="w-4 h-4" />
+											Refresh
+										</Button>
 									</div>
 								</div>
-								<p className="text-xs text-orange-300/70 mt-2">
-									Polling has been running for more than 5 minutes. Click refresh to continue monitoring the workflow.
-								</p>
-								<div className="mt-3 flex justify-end">
-									<Button
-										onClick={() => {
-											if (onRefreshPolling) {
-												onRefreshPolling();
-											}
-										}}
-										variant="outline"
-										size="sm"
-										className="flex items-center gap-2 text-gray-400 hover:text-gray-300 bg-muted/20 hover:bg-muted/30 border border-border/50 hover:border-border/70"
-									>
-										<RefreshCw className="w-4 h-4" />
-										Refresh
-									</Button>
-								</div>
-							</div>
-						 )}
+							)}
 					</div>
 				</div>
-				
 			</div>
 		);
 	}
@@ -1453,7 +1497,6 @@ export function ChatMessage({
 					)}
 				</div>
 			</div>
-			
 		</div>
 	);
 }
