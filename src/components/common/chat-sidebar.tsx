@@ -110,6 +110,17 @@ const getWorkflowIconColor = (status: string, questionType?: string) => {
 	}
 };
 
+const getWorkflowIconAnimation = (status: string) => {
+	switch (status) {
+		case "in_progress":
+		case "waiting":
+			return "animate-spin"; 
+		default:
+			return ""; 
+	}
+};
+
+
 
 const WorkflowItem = React.memo(
 	({
@@ -131,7 +142,7 @@ const WorkflowItem = React.memo(
 	}) => {
 		const Icon = getWorkflowIcon(workflow.status, workflow.questionType);
 		const iconColor = getWorkflowIconColor(workflow.status, workflow.questionType);
-
+		const iconAnimation = getWorkflowIconAnimation(workflow.status);
 		return (
 			<SidebarMenuItem
 				key={workflow.requestId || workflow.id || index}
@@ -159,7 +170,7 @@ const WorkflowItem = React.memo(
 								)
 							}
 						>
-							{Icon && <Icon className={`!size-[19px] ${iconColor}`} />}
+							{Icon && <Icon className={`!size-[19px] ${iconColor} ${iconAnimation}`} />}
 							{sidebarIsExpanded && (
 								<div className="flex items-center !w-full flex-1 min-w-0">
 									<div className="flex flex-col w-[140px] min-w-0">
