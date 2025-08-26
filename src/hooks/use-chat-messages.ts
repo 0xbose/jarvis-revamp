@@ -141,6 +141,15 @@ export const useChatMessages = () => {
 				}
 
 				return existingMsgs.some((existingMsg) => {
+					// Special handling for image regeneration - if new message has different image data, it's not a duplicate
+					if (newMsg.imageData && existingMsg.imageData) {
+						if (newMsg.imageData !== existingMsg.imageData) {
+							console.log(
+								`🖼️ New image detected for subnet ${newMsg.subnetIndex} - not a duplicate`
+							);
+							return false;
+						}
+					}
 					// DEBUG: Log comparison details for feedback messages
 					if (newMsg.sourceId?.includes("feedback")) {
 						console.log(
@@ -177,6 +186,14 @@ export const useChatMessages = () => {
 									newMsg.content.slice(0, 100)
 								))
 						) {
+							// Check if this is an image regeneration case
+							if (newMsg.imageData && existingMsg.imageData && newMsg.imageData !== existingMsg.imageData) {
+								console.log(
+									`🖼️ Image regeneration detected for subnet ${newMsg.subnetIndex} - not a duplicate`
+								);
+								return false;
+							}
+							
 							console.log(
 								`🔍 Detected potential duplicate between ${newMsg.type} and ${existingMsg.type} for subnet ${newMsg.subnetIndex}`
 							);
@@ -248,6 +265,14 @@ export const useChatMessages = () => {
 								newMsg.toolName === existingMsg.toolName &&
 								newMsg.content === existingMsg.content
 							) {
+								// Check if this is an image regeneration case
+								if (newMsg.imageData && existingMsg.imageData && newMsg.imageData !== existingMsg.imageData) {
+									console.log(
+										`🖼️ Image regeneration detected for subnet ${newMsg.subnetIndex} - not a duplicate`
+									);
+									return false;
+								}
+								
 								console.log(
 									`🔍 Detected duplicate response for subnet ${
 										newMsg.subnetIndex
@@ -305,6 +330,14 @@ export const useChatMessages = () => {
 						newMsg.subnetStatus === existingMsg.subnetStatus &&
 						newMsg.content === existingMsg.content
 					) {
+						// Check if this is an image regeneration case
+						if (newMsg.imageData && existingMsg.imageData && newMsg.imageData !== existingMsg.imageData) {
+							console.log(
+								`🖼️ Image regeneration detected for subnet ${newMsg.subnetIndex} - not a duplicate`
+							);
+							return false;
+						}
+						
 						return true;
 					}
 
@@ -431,6 +464,23 @@ export const useChatMessages = () => {
 										newMsg.subnetStatus ===
 											"awaiting_response")
 							);
+
+							// Check if new message has different image data (image regeneration case)
+							const hasNewImageData = newMessages.some(
+								(newMsg) =>
+									newMsg.type === "workflow_subnet" &&
+									newMsg.subnetIndex === msg.subnetIndex &&
+									newMsg.imageData &&
+									msg.imageData &&
+									newMsg.imageData !== msg.imageData
+							);
+
+							if (hasNewImageData) {
+								console.log(
+									`🖼️ Removing old image message for subnet ${msg.subnetIndex} - new image data detected`
+								);
+								return false;
+							}
 
 							if (
 								msg.subnetStatus === "in_progress" &&

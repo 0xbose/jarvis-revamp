@@ -755,6 +755,8 @@ export default function AgentChatPage() {
 								onFeedbackSubmit={handleFeedbackSubmit}
 								onRefreshPolling={refreshPolling}
 								isShowingCachedMessages={isShowingCachedMessages}
+								selectedAgent={selectedAgent}
+
 							/>
 
 							{/* TEMP: Keep original for testing - remove this section after verification

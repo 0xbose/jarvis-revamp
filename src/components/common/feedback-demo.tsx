@@ -27,7 +27,8 @@ const demoFeedbackHistory = [
 ];
 
 export function FeedbackDemo() {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
+
   const [feedbackText, setFeedbackText] = useState("");
   const [showNewData, setShowNewData] = useState(false);
 
@@ -35,7 +36,8 @@ export function FeedbackDemo() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowNewData(true);
-      setIsOpen(true); // Auto-open when new data arrives
+      // Removed auto-open behavior - collapsible stays closed until manually clicked
+
     }, 3000);
 
     return () => clearTimeout(timer);

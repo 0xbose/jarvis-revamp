@@ -20,6 +20,8 @@ interface ChatMessagesGroupedProps {
   onFeedbackSubmit: (question: string, answer: string, feedback: string) => Promise<void>;
   onRefreshPolling: () => void;
   isShowingCachedMessages: boolean;
+  selectedAgent?: any;
+
 }
 
 export function ChatMessagesGrouped({
@@ -36,6 +38,7 @@ export function ChatMessagesGrouped({
   onFeedbackSubmit,
   onRefreshPolling,
   isShowingCachedMessages,
+  selectedAgent,
 }: ChatMessagesGroupedProps) {
   const { groupMessagesBySubnet } = useMessageGrouping();
   
@@ -73,6 +76,12 @@ export function ChatMessagesGrouped({
         (message.content === "Response" || 
          message.content === "Your answer" ||
          message.content === "Proceeding with current result")) {
+      return false;
+    }
+
+    // Filter out empty JSON responses
+    if (typeof message.content === "string" && 
+        message.content.trim() === "{}") {
       return false;
     }
 
@@ -184,6 +193,8 @@ export function ChatMessagesGrouped({
           key={`subnet-${group.subnetIndex}-${urlWorkflowId}`}
           group={group}
           isLast={index === subnetGroups.length - 1}
+          currentWorkflowData={currentWorkflowData}
+
           onNotificationYes={onNotificationYes}
           onNotificationNo={onNotificationNo}
           onFeedbackProceed={onFeedbackProceed}
@@ -191,6 +202,8 @@ export function ChatMessagesGrouped({
           workflowStatus={workflowStatus || currentWorkflowData?.workflowStatus}
           pollingStoppedAt={pollingStoppedAt}
           onRefreshPolling={onRefreshPolling}
+          selectedAgent={selectedAgent}
+
         />
       ))}
     </>

@@ -26,6 +26,7 @@ export type ChatMsg = {
 		text: string;
 		itemID: number;
 		expiresAt: string;
+		authUrl?: string;
 	};
 	sourceId?: string;
 	isRegenerated?: boolean;
@@ -35,6 +36,7 @@ export type ChatMsg = {
 	prompt?: string;
 	isTimeoutMessage?: boolean;
 	showRefreshButton?: boolean;
+	showLoadingDots?: boolean;
 };
 
 export type FeedbackHistoryItem = {

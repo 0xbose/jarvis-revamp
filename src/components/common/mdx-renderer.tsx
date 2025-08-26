@@ -337,7 +337,7 @@ export function MDXRenderer({ content, className = "" }: MDXRendererProps) {
 
 		return (
 			<div className={`text-gray-200 ${className}`}>
-				<div className="whitespace-pre-wrap">
+				<div className="whitespace-pre-wrap break-words overflow-hidden">
 					{convertUrlsToLinks(cleanedContent)}
 				</div>
 			</div>

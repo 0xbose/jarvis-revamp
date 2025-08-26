@@ -23,6 +23,7 @@ import { Input } from "../ui/input";
 import { MDXRenderer, isMarkdownContent } from "./mdx-renderer";
 import { ChatMsg } from "@/types/chat";
 import Link from "next/link";
+import { LoadingDots } from "../ui/loading-dots";
 
 function convertUrlsToLinks(text: string): React.ReactNode {
 	if (!text || typeof text !== "string") return text;
@@ -169,6 +170,8 @@ export function ChatMessage({
 	};
 
 	const shouldDisableButtons = () => {
+		// Only disable buttons if workflow is actively executing AND button is pending
+		// But allow authentication confirmation buttons to work even when other buttons are pending
 		return isWorkflowActivelyExecuting() && isButtonPending;
 	};
 
@@ -275,8 +278,8 @@ export function ChatMessage({
 	if (message.type === "user") {
 		return (
 			<div className="relative mb-0">
-				<div className="flex-1 min-w-0 pb-4">
-					<h2 className="text-2xl font-bold text-white leading-tight mb-2 capitalize">
+				<div className="flex-1 min-w-0 pb-4 overflow-hidden">
+					<h2 className="text-2xl font-bold text-white leading-tight mb-2 capitalize break-words">
 						{message.content}
 					</h2>
 					{message.imageData && (
@@ -390,123 +393,79 @@ export function ChatMessage({
 	if (message.type === "notification") {
 		return (
 			<div className="relative mb-0">
-			
-					<div className="flex-1 min-w-0 p-4">
-						<div className="text-sm font-medium mb-2 flex items-center gap-2 text-gray-400">
-							<Bell className="w-4 h-4" />
-							<span>Notification</span>
-							{/* {message.toolName && (
-								<>
-									<span className="text-gray-600">•</span>
-									<span className="italic">
-										{message.toolName
-											.charAt(0)
-											.toUpperCase() +
-											message.toolName.slice(1)}{" "}
-										Agent
-									</span>
-								</>
-							)} */}
-						</div>
-						<div>
-							<div className="text-foreground text-sm leading-relaxed">
-								{isMarkdownContent(message.content) ? (
-									<MDXRenderer content={message.content} />
-								) : (
-									convertUrlsToLinks(message.content)
-								)}
-							</div>
-							{/* Show Yes/No buttons if this is a pending notification and workflow is not in progress */}
-							{isPendingNotification &&
-								onNotificationYes &&
-								onNotificationNo &&
-								!shouldHideNotificationButtons() && (
-									<div className="flex gap-3 mt-4">
-										<Button
-											onClick={() => {
-												if (shouldDisableButtons())
-													return;
-
-												// Set button state for workflow execution
-												if (
-													isWorkflowActivelyExecuting()
-												) {
-													setClickedButtonType(
-														"notification-yes"
-													);
-													setIsButtonPending(true);
-												} else {
-													// Hide the notification buttons immediately when clicked (only for history/non-executing workflows)
-													setHideNotificationButtons(
-														true
-													);
-												}
-
-												onNotificationYes(message);
-											}}
-											variant="outline"
-											size="sm"
-											disabled={
-												shouldDisableButtons() &&
-												clickedButtonType !==
-													"notification-yes"
-											}
-											className={getButtonClassName(
-												"flex items-center gap-2 text-green-500 hover:text-green-400 bg-green-950/60 hover:bg-green-950/70 border border-green-800/50 hover:border-green-800/70",
-												"notification-yes"
-											)}
-										>
-											<Check className="w-4 h-4" />
-											Yes
-										</Button>
-										<Button
-											onClick={() => {
-												if (shouldDisableButtons())
-													return;
-
-												// Set button state for workflow execution
-												if (
-													isWorkflowActivelyExecuting()
-												) {
-													setClickedButtonType(
-														"notification-no"
-													);
-													setIsButtonPending(true);
-												} else {
-													// Hide the notification buttons immediately when clicked (only for history/non-executing workflows)
-													setHideNotificationButtons(
-														true
-													);
-												}
-
-												onNotificationNo(message);
-											}}
-											variant="outline"
-											size="sm"
-											disabled={
-												shouldDisableButtons() &&
-												clickedButtonType !==
-													"notification-no"
-											}
-											className={getButtonClassName(
-												"flex items-center gap-2 text-red-500 hover:text-red-400 bg-red-950/60 hover:bg-red-950/70 border border-red-800/50 hover:border-red-800/70",
-												"notification-no"
-											)}
-										>
-											<X className="w-4 h-4" />
-											No
-										</Button>
-									</div>
-								)}
-						</div>
-
-						{/* <div className="text-xs text-gray-500 mt-2">
-							{message.timestamp.toLocaleTimeString([], {
-								hour: "2-digit",
-								minute: "2-digit",
-							})}
-						</div> */}
+				<div className="flex-1 min-w-0 p-4">
+					<div className="text-sm font-medium mb-2 flex items-center gap-2 text-gray-400">
+						<Bell className="w-4 h-4" />
+						<span>Notification</span>
 					</div>
+					<div className="overflow-hidden">
+						<div className="text-foreground text-sm leading-relaxed break-words">
+							{isMarkdownContent(message.content) ? (
+								<MDXRenderer content={message.content} />
+							) : (
+								convertUrlsToLinks(message.content)
+							)}
+
+						</div>
+						
+						{/* Interactive Elements Section - Moved to Bottom */}
+						{isPendingNotification &&
+							onNotificationYes &&
+							onNotificationNo &&
+							!shouldHideNotificationButtons() && (
+								<div className="flex gap-3 mt-4">
+									<Button
+										onClick={() => {
+											if (shouldDisableButtons()) return;
+
+											if (isWorkflowActivelyExecuting()) {
+												setClickedButtonType("notification-yes");
+												setIsButtonPending(true);
+											} else {
+												setHideNotificationButtons(true);
+											}
+
+											onNotificationYes(message);
+										}}
+										variant="outline"
+										size="sm"
+										disabled={shouldDisableButtons() && clickedButtonType !== "notification-yes"}
+										className={getButtonClassName(
+											"flex items-center gap-2 text-green-500 hover:text-green-400 bg-green-950/60 hover:bg-green-950/70 border border-green-800/50 hover:border-green-800/70",
+											"notification-yes"
+										)}
+									>
+										<Check className="w-4 h-4" />
+										Yes
+									</Button>
+									<Button
+										onClick={() => {
+											if (shouldDisableButtons()) return;
+
+											if (isWorkflowActivelyExecuting()) {
+												setClickedButtonType("notification-no");
+												setIsButtonPending(true);
+											} else {
+												setHideNotificationButtons(true);
+											}
+
+											onNotificationNo(message);
+										}}
+										variant="outline"
+										size="sm"
+										disabled={shouldDisableButtons() && clickedButtonType !== "notification-no"}
+										className={getButtonClassName(
+											"flex items-center gap-2 text-red-500 hover:text-red-400 bg-red-950/60 hover:bg-red-950/70 border border-red-800/50 hover:border-red-800/70",
+											"notification-no"
+										)}
+									>
+										<X className="w-4 h-4" />
+										No
+									</Button>
+								</div>
+							)}
+				</div>
+			</div>
 			</div>
 		);
 	}
@@ -515,38 +474,20 @@ export function ChatMessage({
 		const isAuthentication =
 			message.questionData?.type === "authentication";
 		return (
-			<div className="relative mb-0">
-				
-					<div className="flex-1 min-w-0 p-4">
-						<div className="text-sm font-medium mb-2 flex items-center gap-2 text-gray-400">
+			<div className="relative mb-0 w-full flex justify-end">
+				<div className="flex-1 min-w-0 p-4 w-fit flex justify-start">
+					<div className="flex justify-center items-start gap-3 flex-row w-fit">
+						<div className="flex-shrink-0 size-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+
 							{isAuthentication ? (
-								<LucideCircleQuestionMark className="w-4 h-4" />
+								<LucideCircleQuestionMark className="size-5 text-primary" />
 							) : (
-								<AlertCircle className="size-4 " />
+								<AlertCircle className="size-5 text-primary" />
 							)}
-							<span>
-								{message.questionData?.type
-									? message.questionData.type
-											.charAt(0)
-											.toUpperCase() +
-									  message.questionData.type.slice(1)
-									: "Question"}
-							</span>
-							{/* {message.toolName && (
-								<>
-									<span className="text-gray-600">•</span>
-									<span className="italic">
-										{message.toolName
-											.charAt(0)
-											.toUpperCase() +
-											message.toolName.slice(1)}{" "}
-										Agent
-									</span>
-								</>
-							)} */}
+
 						</div>
-						<div>
-							<div className="text-foreground text-sm leading-relaxed overflow-hidden">
+						<div className="flex-1 min-w-0 bg-primary/5 rounded-lg p-3 border border-primary/10 w-fit">
+							<div className="text-foreground text-sm leading-relaxed">
 								{(() => {
 									const content =
 										message.questionData?.text ||
@@ -558,451 +499,266 @@ export function ChatMessage({
 									);
 								})()}
 							</div>
-							{isAuthentication && !shouldHideAuthButton() ? (
-								<div className="mt-3 space-y-2">
-									{message.questionData?.expiresAt && (
-										<p className="text-xs text-gray-400 mt-2">
-											Expires at{" "}
-											<span>
-												{new Date(
-													message.questionData.expiresAt
-												).toLocaleTimeString([], {
-													hour: "2-digit",
-													minute: "2-digit",
-												})}
-											</span>
-										</p>
-									)}
-									<Button
-										onClick={() => {
-											if (shouldDisableButtons()) return;
 
-											// Set button state for workflow execution
-											if (isWorkflowActivelyExecuting()) {
-												setClickedButtonType(
-													"authenticate"
-												);
-												setIsButtonPending(true);
-											}
-
-											const questionText =
-												message.questionData?.text ||
-												message.content;
-											console.log(
-												"Auth button clicked - questionText:",
-												questionText
-											);
-
-											const authUrlMatch =
-												questionText.match(
-													/Auth URL:\s*(https?:\/\/[^\s]+)/
-												);
-											console.log(
-												"Auth URL match result:",
-												authUrlMatch
-											);
-
-											if (authUrlMatch) {
-												const authUrl = authUrlMatch[1];
-												console.log(
-													"Opening auth URL:",
-													authUrl
-												);
-												window.open(
-													authUrl,
-													"_blank",
-													"noopener,noreferrer"
-												);
-											} else {
-												console.log(
-													"No Auth URL found in message content"
-												);
-												// Try alternative patterns
-												const altUrlMatch1 =
-													questionText.match(
-														/https?:\/\/[^\s]+/
-													);
-												const altUrlMatch2 =
-													questionText.match(
-														/URL:\s*(https?:\/\/[^\s]+)/
-													);
-												console.log(
-													"Alternative URL patterns:",
-													{
-														altUrlMatch1,
-														altUrlMatch2,
-													}
-												);
-
-												if (altUrlMatch1) {
-													console.log(
-														"Found URL with alternative pattern:",
-														altUrlMatch1[0]
-													);
-													window.open(
-														altUrlMatch1[0],
-														"_blank",
-														"noopener,noreferrer"
-													);
-												}
-											}
-
-											// Show authentication confirmation UI after opening the link
-											setShowAuthConfirmation(true);
-											if (
-												!isWorkflowActivelyExecuting()
-											) {
-												setHideAuthButton(true);
-											}
-										}}
-										variant="outline"
-										size="sm"
-										disabled={
-											shouldDisableButtons() &&
-											clickedButtonType !== "authenticate"
-										}
-										className={getButtonClassName(
-											"flex items-center gap-2 text-gray-300 hover:text-gray-400 bg-sidebar/30 hover:bg-sidebar/20 border border-border hover:border-border/70",
-											"authenticate"
-										)}
-									>
-										<ExternalLinkIcon className="w-4 h-4" />
-										Authenticate
-									</Button>
-								</div>
-							) : null}
-
-							{showFeedbackButtons &&
-							!shouldHideFeedbackButtons() ? (
-								<div className="mt-4 space-y-3">
-									{!showFeedbackInput ? (
-										<div className="flex gap-3">
-											<Button
-												onClick={async () => {
-													if (shouldDisableButtons())
-														return;
-
-													// Set button state for workflow execution
-													if (
-														isWorkflowActivelyExecuting()
-													) {
-														setClickedButtonType(
-															"feedback-proceed"
-														);
-														setIsButtonPending(
-															true
-														);
-													}
-
-													// Mark feedback as processed for this specific message
-													setFeedbackProcessed(true);
-
-													try {
-														if (
-															onFeedbackProceed &&
-															message.questionData
-																?.text
-														) {
-															await onFeedbackProceed(
-																message
-																	.questionData
-																	.text,
-																"Yes, proceed"
-															);
-														}
-													} catch (error) {
-														console.error(
-															"Error proceeding with feedback:",
-															error
-														);
-														// Show feedback buttons again if failed
-														setFeedbackProcessed(
-															false
-														);
-														// Reset button state
-														setClickedButtonType(
-															null
-														);
-														setIsButtonPending(
-															false
-														);
-													}
-												}}
-												variant="outline"
-												size="sm"
-												disabled={
-													shouldDisableButtons() &&
-													clickedButtonType !==
-														"feedback-proceed"
-												}
-												className={getButtonClassName(
-													"flex items-center gap-2 text-green-500 hover:text-green-400 bg-green-950/60 hover:bg-green-950/70 border border-green-800/50 hover:border-green-800/70",
-													"feedback-proceed"
-												)}
-											>
-												<Check className="w-4 h-4" />
-												Yes, proceed
-											</Button>
-											<Button
-												onClick={() => {
-													if (shouldDisableButtons())
-														return;
-
-													// Don't set button pending state for just showing the input
-													// The pending state should only be set when actually submitting
-													setShowFeedbackInput(true);
-												}}
-												variant="outline"
-												size="sm"
-												disabled={
-													shouldDisableButtons() &&
-													clickedButtonType !==
-														"feedback-input"
-												}
-												className={getButtonClassName(
-													"flex items-center gap-2 text-blue-500 hover:text-blue-400 bg-blue-950/60 hover:bg-blue-950/70 border border-blue-800/50 hover:border-blue-800/70",
-													"feedback-input"
-												)}
-											>
-												<MessageSquare className="w-4 h-4" />
-												Provide feedback
-											</Button>
-										</div>
-									) : (
-										<div className="space-y-3">
-											<div className="flex gap-2">
-												<Input
-													value={feedbackText}
-													onChange={(e) =>
-														setFeedbackText(
-															e.target.value
-														)
-													}
-													placeholder="Type your feedback here..."
-													className="flex-1"
-												/>
-											</div>
-											<div className="flex gap-2">
-												<Button
-													onClick={() => {
-														setShowFeedbackInput(
-															false
-														);
-														setFeedbackText("");
-														// Reset button states when canceling
-														setClickedButtonType(
-															null
-														);
-														setIsButtonPending(
-															false
-														);
-													}}
-													variant="outline"
-													size="sm"
-													disabled={
-														shouldDisableButtons() &&
-														clickedButtonType !==
-															"feedback-cancel"
-													}
-													className={getButtonClassName(
-														"text-gray-400 hover:text-gray-300 bg-gray-950/60 hover:bg-gray-950/70 border border-gray-800/50 hover:border-gray-800/70",
-														"feedback-cancel"
-													)}
-												>
-													Cancel
-												</Button>
+							{/* Interactive Elements Section - Moved to Bottom */}
+							<div className="mt-4 space-y-3">
+								{/* Feedback buttons */}
+								{showFeedbackButtons && !shouldHideFeedbackButtons() && (
+									<div className="p-3 border border-border bg-background/15 rounded-lg">
+										{!showFeedbackInput ? (
+											<div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
 												<Button
 													onClick={async () => {
-														// Don't proceed if no feedback text
-														if (
-															!feedbackText.trim()
-														) {
-															return;
+														if (shouldDisableButtons()) return;
+
+														if (isWorkflowActivelyExecuting()) {
+															setClickedButtonType("feedback-proceed");
+															setIsButtonPending(true);
 														}
 
-														// Don't proceed if button is disabled for other reasons
-														if (
-															isButtonPending &&
-															clickedButtonType !==
-																"feedback-submit"
-														) {
-															return;
-														}
+														setFeedbackProcessed(true);
 
 														try {
-															// Set button state for workflow execution
-															if (
-																isWorkflowActivelyExecuting()
-															) {
-																setClickedButtonType(
-																	"feedback-submit"
-																);
-																setIsButtonPending(
-																	true
-																);
-															}
-
-															// Mark feedback as processed for this specific message
-															setFeedbackProcessed(
-																true
-															);
-
-															if (
-																onFeedbackSubmit &&
-																message
-																	.questionData
-																	?.text
-															) {
-																await onFeedbackSubmit(
-																	message
-																		.questionData
-																		.text,
-																	"User feedback",
-																	feedbackText.trim()
-																);
-
-																setFeedbackText(
-																	""
-																);
-																setShowFeedbackInput(
-																	false
+															if (onFeedbackProceed && message.questionData?.text) {
+																await onFeedbackProceed(
+																	message.questionData.text,
+																	"Yes, proceed"
 																);
 															}
 														} catch (error) {
-															console.error(
-																"Error submitting feedback:",
-																error
-															);
-															// Show feedback buttons again if failed
-															setFeedbackProcessed(
-																false
-															);
-														} finally {
-															// Always reset button state
-															setClickedButtonType(
-																null
-															);
-															setIsButtonPending(
-																false
-															);
+															console.error("Error proceeding with feedback:", error);
+															setFeedbackProcessed(false);
+															setClickedButtonType(null);
+															setIsButtonPending(false);
 														}
 													}}
 													variant="outline"
 													size="sm"
-													disabled={
-														!feedbackText.trim() ||
-														(isButtonPending &&
-															clickedButtonType !==
-																"feedback-submit")
-													}
+													disabled={shouldDisableButtons() && clickedButtonType !== "feedback-proceed"}
 													className={getButtonClassName(
-														"flex items-center gap-2 text-blue-500 hover:text-blue-400 bg-blue-950/60 hover:bg-blue-950/70 border border-blue-800/50 hover:border-blue-800/70",
-														"feedback-submit"
+														"flex-1 sm:flex-initial flex items-center justify-center gap-2 h-9 px-4 text-green-400 hover:text-green-300 bg-green-950/40 hover:bg-green-950/60 border-green-800/40 hover:border-green-700/60 transition-all duration-200",
+														"feedback-proceed"
+													)}
+												>
+													<Check className="w-4 h-4" />
+													Yes, proceed
+												</Button>
+												<Button
+													onClick={() => {
+														if (shouldDisableButtons()) return;
+														setShowFeedbackInput(true);
+													}}
+													variant="outline"
+													size="sm"
+													disabled={shouldDisableButtons() && clickedButtonType !== "feedback-input"}
+													className={getButtonClassName(
+														"flex-1 sm:flex-initial flex items-center justify-center gap-2 h-9 px-4 text-blue-400 hover:text-blue-300 bg-blue-950/40 hover:bg-blue-950/60 border-blue-800/40 hover:border-blue-700/60 transition-all duration-200",
+														"feedback-input"
 													)}
 												>
 													<MessageSquare className="w-4 h-4" />
-													Submit
+													Provide feedback
 												</Button>
 											</div>
-										</div>
-									)}
-								</div>
-							) : null}
+										) : (
+											<div className="space-y-3">
+												<div>
+													<Input
+														value={feedbackText}
+														onChange={(e) => setFeedbackText(e.target.value)}
+														placeholder="Type your feedback here..."
+														className="w-full h-10 border border-border placeholder:text-muted-foreground text-muted-foreground"
+														onKeyDown={(e) => {
+															if (e.key === 'Enter' && !e.shiftKey && feedbackText.trim()) {
+																e.preventDefault();
+																const submitButton = e.currentTarget.parentElement?.nextElementSibling?.querySelector('button:last-child') as HTMLButtonElement;
+																submitButton?.click();
+															}
+														}}
+													/>
+												</div>
+												<div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+													<Button
+														onClick={() => {
+															setShowFeedbackInput(false);
+															setFeedbackText("");
+															setClickedButtonType(null);
+															setIsButtonPending(false);
+														}}
+														variant="outline"
+														size="sm"
+														disabled={shouldDisableButtons() && clickedButtonType !== "feedback-cancel"}
+														className={getButtonClassName(
+															"flex-1 sm:flex-initial h-9 px-4 text-muted-foreground hover:text-muted-foreground/80 bg-background/10 hover:bg-background/20 border border-border hover:border-border/70 transition-all duration-200",
+															"feedback-cancel"
+														)}
+													>
+														Cancel
+													</Button>
+													<Button
+														onClick={async () => {
+															if (!feedbackText.trim()) return;
+															if (isButtonPending && clickedButtonType !== "feedback-submit") return;
 
-							{/* Authentication Confirmation UI */}
-							{showAuthConfirmation &&
-								message.questionData?.type ===
-									"authentication" && (
-									<div className="mt-4 space-y-3">
-										<div className="flex items-center gap-2 text-blue-400 mb-2">
+															try {
+																if (isWorkflowActivelyExecuting()) {
+																	setClickedButtonType("feedback-submit");
+																	setIsButtonPending(true);
+																}
+
+																setFeedbackProcessed(true);
+
+																if (onFeedbackSubmit && message.questionData?.text) {
+																	await onFeedbackSubmit(
+																		message.questionData.text,
+																		"User feedback",
+																		feedbackText.trim()
+																	);
+
+																	setFeedbackText("");
+																	setShowFeedbackInput(false);
+																}
+															} catch (error) {
+																console.error("Error submitting feedback:", error);
+																setFeedbackProcessed(false);
+															} finally {
+																setClickedButtonType(null);
+																setIsButtonPending(false);
+															}
+														}}
+														variant="outline"
+														size="sm"
+														disabled={!feedbackText.trim() || (isButtonPending && clickedButtonType !== "feedback-submit")}
+														className={getButtonClassName(
+															"flex-1 sm:flex-initial flex items-center justify-center gap-2 h-9 px-4 text-blue-400 hover:text-blue-300 bg-blue-950/40 hover:bg-blue-950/60 border-blue-800/40 hover:border-blue-700/60 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200",
+															"feedback-submit"
+														)}
+													>
+														<MessageSquare className="w-4 h-4" />
+														Submit
+													</Button>
+												</div>
+											</div>
+										)}
+									</div>
+								)}
+
+								{/* Authentication button */}
+								{isAuthentication && !shouldHideAuthButton() && (
+									<div className="space-y-2">
+										<Button
+											onClick={() => {
+												if (shouldDisableButtons()) return;
+
+												if (isWorkflowActivelyExecuting()) {
+													setClickedButtonType("authenticate");
+													setIsButtonPending(true);
+												}
+
+												const authUrl = message.questionData?.authUrl;
+												
+												if (authUrl) {
+													console.log("Opening auth URL from questionData:", authUrl);
+													window.open(authUrl, "_blank", "noopener,noreferrer");
+												} else {
+													console.log("No authUrl in questionData, falling back to text parsing");
+													
+													const questionText = message.questionData?.text || message.content;
+													const urlMatch = questionText.match(/https?:\/\/[^\s]+/);
+													if (urlMatch) {
+														console.log("Found URL in text:", urlMatch[0]);
+														window.open(urlMatch[0], "_blank", "noopener,noreferrer");
+													} else {
+														console.log("No URL found in text content");
+													}
+												}
+
+												console.log("🔐 Setting showAuthConfirmation to true");
+												setShowAuthConfirmation(true);
+												if (!isWorkflowActivelyExecuting()) {
+													setHideAuthButton(true);
+												}
+											}}
+											variant="outline"
+											size="sm"
+											disabled={shouldDisableButtons() && clickedButtonType !== "authenticate"}
+											className={getButtonClassName(
+												"flex items-center gap-2 text-foreground hover:text-foreground/80 bg-background/10 hover:bg-background/20 border border-border hover:border-border/70",
+												"authenticate"
+											)}
+										>
+											<ExternalLinkIcon className="w-4 h-4" />
+											Authenticate
+										</Button>
+									</div>
+								)}
+
+								{/* Authentication Confirmation UI */}
+								{showAuthConfirmation && message.questionData?.type === "authentication" && (
+									<div className="space-y-3 p-3 border border-border/50 rounded-lg bg-background/30">
+										<div className="flex items-center gap-2 text-foreground mb-2">
 											<AlertCircle className="w-4 h-4" />
 											<span className="text-sm font-medium">
 												Authentication Required
 											</span>
 										</div>
 										<p className="text-gray-300 text-sm mb-3">
-											Have you completed the
-											authentication process in the new
-											tab?
+											Have you completed the authentication process in the new tab?
 										</p>
 										<div className="flex gap-3">
 											<Button
 												onClick={async () => {
-													if (shouldDisableButtons())
-														return;
-
-													// Set button state for workflow execution
-													if (
-														isWorkflowActivelyExecuting()
-													) {
-														setClickedButtonType(
-															"auth-confirm"
-														);
-														setIsButtonPending(
-															true
-														);
+													console.log("🔐 Yes, Authenticated button clicked!");
+													
+													if (isWorkflowActivelyExecuting()) {
+														console.log("🔐 Setting auth-confirm button state");
+														setClickedButtonType("auth-confirm");
+														setIsButtonPending(true);
 													}
 
-													setShowAuthConfirmation(
-														false
-													);
+													setShowAuthConfirmation(false);
 
-													if (
-														onFeedbackProceed &&
-														message.questionData
-															?.text
-													) {
+													if (onFeedbackProceed && message.questionData?.text) {
+														console.log("🔐 Calling onFeedbackProceed with:", {
+															question: message.questionData.text,
+															answer: "Yes, I have authenticated successfully"
+														});
+														
 														await onFeedbackProceed(
-															message.questionData
-																.text,
+															message.questionData.text,
 															"Yes, I have authenticated successfully"
 														);
 
-														// Mark feedback as processed for this specific message
-														setFeedbackProcessed(
-															true
-														);
+														setFeedbackProcessed(true);
+													} else {
+														console.log("🔐 onFeedbackProceed or questionData.text not available:", {
+															onFeedbackProceed: !!onFeedbackProceed,
+															questionData: message.questionData,
+															questionText: message.questionData?.text
+														});
 													}
 												}}
 												variant="outline"
 												size="sm"
-												disabled={
-													shouldDisableButtons() &&
-													clickedButtonType !==
-														"auth-confirm"
-												}
-												className={getButtonClassName(
-													"flex items-center gap-2 text-green-500 hover:text-green-400 bg-green-950/60 hover:bg-green-950/70 border border-green-800/50 hover:border-green-800/70",
-													"auth-confirm"
-												)}
+												disabled={false}
+												className="flex items-center gap-2 text-green-500 hover:text-green-400 bg-green-950/60 hover:bg-green-950/70 border border-green-800/50 hover:border-green-800/70"
 											>
 												<Check className="w-4 h-4" />
 												Yes, Authenticated
 											</Button>
 											<Button
 												onClick={() => {
-													if (shouldDisableButtons())
-														return;
-
-													setShowAuthConfirmation(
-														false
-													);
+													console.log("🔐 Cancel button clicked!");
+													
+													setShowAuthConfirmation(false);
 													setHideAuthButton(false);
-													// Reset button states when canceling
 													setClickedButtonType(null);
 													setIsButtonPending(false);
 												}}
 												variant="outline"
 												size="sm"
-												disabled={
-													shouldDisableButtons() &&
-													clickedButtonType !==
-														"auth-cancel"
-												}
-												className={getButtonClassName(
-													"text-gray-400 hover:text-gray-300 bg-gray-950/60 hover:bg-gray-950/70 border border-gray-800/50 hover:border-gray-800/70",
-													"auth-cancel"
-												)}
+												disabled={false}
+												className="text-gray-400 hover:text-gray-300 bg-gray-950/60 hover:bg-gray-950/70 border border-gray-800/50 hover:border-gray-800/70"
 											>
 												<X className="w-4 h-4" />
 												Cancel
@@ -1010,14 +766,8 @@ export function ChatMessage({
 										</div>
 									</div>
 								)}
+							</div>
 						</div>
-
-						{/* <div className="text-xs text-gray-500 mt-2">
-							{message.timestamp.toLocaleTimeString([], {
-								hour: "2-digit",
-								minute: "2-digit",
-							})}
-						</div> */}
 					</div>
 			</div>
 		);
@@ -1025,29 +775,24 @@ export function ChatMessage({
 
 	if (message.type === "answer") {
 		return (
-			<div className="relative mb-0">
-				
-					<div className="flex-1 min-w-0 p-4">
-						<div className="text-sm font-medium mb-1 flex items-center gap-2 text-gray-400">
-							<User className="size-4" />
-							<span className="">
-								Your answer
-								{/* {message.toolName &&
-									` for ${
-										message.toolName
-											.charAt(0)
-											.toUpperCase() +
-										message.toolName.slice(1)
-									} Agent`} */}
-							</span>
+			<div className="relative mb-0 w-full flex justify-end">
+				<div className="flex-1 min-w-0 p-4 w-fit flex justify-end">
+					<div className="flex justify-center items-start gap-3 flex-row-reverse w-fit">
+						<div className="flex-shrink-0 size-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+							<User className="size-5 text-primary" />
 						</div>
-						{isMarkdownContent(message.content) ? (
-							<div className="w-fit px-5 py-2 rounded-lg border border-border bg-sidebar/20 text-foreground text-sm leading-relaxed">
-								<MDXRenderer content={message.content} />
-							</div>
-						) : (
-							convertUrlsToLinks(message.content)
-						)}
+						<div className="flex-1 min-w-0 bg-primary/5 rounded-lg p-3 border border-primary/10 w-fit">
+							{isMarkdownContent(message.content) ? (
+								<div className="text-foreground text-sm leading-relaxed overflow-hidden">
+									<MDXRenderer content={message.content} />
+								</div>
+							) : (
+								<div className="text-foreground text-sm leading-relaxed break-words overflow-hidden">
+									{convertUrlsToLinks(message.content)}
+								</div>
+							)}
+
+						</div>
 					</div>
 				</div>
 		);
@@ -1055,7 +800,7 @@ export function ChatMessage({
 
 	// Workflow subnet message - shows status of individual workflow steps
 	if (message.type === "workflow_subnet") {
-	
+
 		const getStatusText = () => {
 			switch (message.subnetStatus) {
 				case "pending":
@@ -1075,17 +820,10 @@ export function ChatMessage({
 
 		return (
 			<div className="relative mb-0">
-				
 				<div className="relative flex items-start">
-				
-					<div
-						className={`flex-1 min-w-0 p-4 border rounded-lg ${
-							message.subnetStatus === "failed"
-								? "border-red-500/50 bg-red-950/20"
-								: "border-border"
-						}`}
-					>
-						{message.toolName && (
+					<div className="flex-1 min-w-0 p-4">
+						{/* {message.toolName && (
+
 							<div className="text-sm mb-1 flex items-center gap-2">
 								{/* <span
 									className={`italic ${
@@ -1117,18 +855,10 @@ export function ChatMessage({
 										</>
 									)}
 							</div>
-						)}
-						{message.prompt && (
-							<div className="mb-3 pb-6">
-								<div className="text-xs text-gray-400 mb-1 flex items-center gap-2">
-									<MessageSquare className="w-3 h-3" />
-									<span>Prompt</span>
-								</div>
-								<div className="text-sm text-gray-300 italic">
-									{convertUrlsToLinks(message.prompt)}
-								</div>
-							</div>
-						)}
+						)} */}
+
+
+
 						{message.content && (
 							<div
 								className={`text-sm leading-relaxed ${
@@ -1137,13 +867,18 @@ export function ChatMessage({
 										: "text-gray-200"
 								}`}
 							>
-								{isMarkdownContent(message.content) ? (
-									<MDXRenderer content={message.content} />
-								) : (
-									<div className="whitespace-pre-wrap">
-										{convertUrlsToLinks(message.content)}
-									</div>
-								)}
+								<div className="flex items-center gap-2">
+									{isMarkdownContent(message.content) ? (
+										<MDXRenderer content={message.content} />
+									) : (
+										<div className="whitespace-pre-wrap break-words overflow-hidden">
+											{convertUrlsToLinks(message.content)}
+										</div>
+									)}
+									{message.showLoadingDots && (
+										<LoadingDots className="ml-2" />
+									)}
+								</div>
 							</div>
 						)}
 						{/* Display file content if present */}
@@ -1226,43 +961,43 @@ export function ChatMessage({
 							</div>
 						)}
 
-						{/* Show refresh UI when polling has stopped for more than 5 minutes */}
-						{shouldShowRefreshUI() && (
-							<div className="mt-4 p-3 border border-yellow-500/30 rounded-lg bg-yellow-950/20">
-								<div className="flex items-center justify-between">
-									<div className="flex items-center gap-2 text-yellow-400">
-										<AlertCircle className="w-4 h-4" />
-										<span className="text-sm font-medium">
-											Checking for updates...
-										</span>
-									</div>
-									<Button
-										onClick={() => {
-											if (onRefreshPolling) {
-												onRefreshPolling();
-											}
-										}}
-										variant="outline"
-										size="sm"
-										className="flex items-center gap-2 text-yellow-400 hover:text-yellow-300 bg-yellow-950/60 hover:bg-yellow-950/70 border border-yellow-800/50 hover:border-yellow-800/70"
-									>
-										<RefreshCw className="w-4 h-4" />
-										Refresh
-									</Button>
-								</div>
-								<p className="text-xs text-yellow-300/70 mt-2">
-									Click refresh to check for the latest
-									updates.
-								</p>
-							</div>
-						)}
-
-						{/* Show timeout message with refresh button */}
-						{message.isTimeoutMessage &&
-							message.showRefreshButton && (
-								<div className="mt-4 p-3 border border-border rounded-lg bg-muted/20">
+						{/* Interactive Elements Section - Moved to Bottom */}
+						<div className="mt-4 space-y-3">
+							{/* Show refresh UI when polling has stopped for more than 5 minutes */}
+							{shouldShowRefreshUI() && (
+								<div className="p-3 border border-yellow-500/30 rounded-lg bg-yellow-950/20">
 									<div className="flex items-center justify-between">
-										<div className="flex  items-center gap-2 text-yellow-400">
+										<div className="flex items-center gap-2 text-yellow-400">
+											<AlertCircle className="w-4 h-4" />
+											<span className="text-sm font-medium">
+												Checking for updates...
+											</span>
+										</div>
+										<Button
+											onClick={() => {
+												if (onRefreshPolling) {
+													onRefreshPolling();
+												}
+											}}
+											variant="outline"
+											size="sm"
+											className="flex items-center gap-2 text-yellow-400 hover:text-yellow-300 bg-yellow-950/60 hover:bg-yellow-950/70 border border-yellow-800/50 hover:border-yellow-800/70"
+										>
+											<RefreshCw className="w-4 h-4" />
+											Refresh
+										</Button>
+									</div>
+									<p className="text-xs text-yellow-300/70 mt-2">
+										Click refresh to check for the latest updates.
+									</p>
+								</div>
+							)}
+
+							{/* Show timeout message with refresh button */}
+							{message.isTimeoutMessage && message.showRefreshButton && (
+								<div className="p-3 border border-border rounded-lg bg-muted/20">
+									<div className="flex items-center justify-between">
+										<div className="flex items-center gap-2 text-yellow-400">
 											<AlertTriangleIcon className="w-4 h-4 text-yellow-400" />
 											<span className="text-sm font-medium">
 												Polling Timeout
@@ -1270,16 +1005,12 @@ export function ChatMessage({
 										</div>
 									</div>
 									<p className="text-xs text-orange-300/70 mt-2">
-										Polling has been running for more than 5
-										minutes. Click refresh to continue
-										monitoring the workflow.
+										Polling has been running for more than 5 minutes. Click refresh to continue monitoring the workflow.
 									</p>
 									<div className="mt-3 flex justify-end">
 										<Button
 											onClick={() => {
-												console.log(
-													"🔍 Debug: Refresh button clicked"
-												);
+												console.log("🔍 Debug: Refresh button clicked");
 												if (onRefreshPolling) {
 													onRefreshPolling();
 												}
@@ -1294,6 +1025,7 @@ export function ChatMessage({
 									</div>
 								</div>
 							)}
+						</div>
 					</div>
 				</div>
 			</div>
@@ -1302,45 +1034,21 @@ export function ChatMessage({
 
 	return (
 		<div className="relative mb-0">
-			
 			<div className="relative flex items-start">
-				
-				<div className="flex-1 min-w-0 px-4 pb-4">
-					{/* {message.toolName && (
-						<div className="text-sm mb-1 flex items-center gap-2">
-							<span className="italic text-gray-400">
-								{message.toolName.charAt(0).toUpperCase() +
-									message.toolName.slice(1)}{" "}
-								Agent
-							</span>
-						</div>
-					)} */}
-					{message.prompt && (
-						<div className="mb-3 py-6">
-							<div className="text-sm font-medium text-gray-400 mb-1 flex items-center gap-2">
-								<MessageSquare className="size-3.5" />
-								<span>Prompt</span>
-							</div>
-							<div className="text-sm text-gray-300 italic">
-								{convertUrlsToLinks(message.prompt)}
-							</div>
-						</div>
-					)}
-					<div className="text-gray-200 text-sm leading-relaxed">
+				<div className="flex-1 min-w-0 px-4 pb-4 overflow-hidden">
+					<div className="text-gray-200 text-sm leading-relaxed overflow-hidden">
 						<div className="mb-2">
-						<div className="text-sm font-medium text-gray-400 mb-1 flex items-center gap-2">
-							<Check className="size-4" />
+							<div className="text-sm font-medium text-gray-400 mb-1 flex items-center gap-2">
+								<Check className="size-4" />
 								<span>Response</span>
 							</div>
 						</div>
 						<div className="flex items-start gap-2">
-							<div className="flex-1">
+							<div className="flex-1 min-w-0">
 								{isMarkdownContent(message.content) ? (
-									<>
-										<MDXRenderer content={message.content} />
-									</>
+									<MDXRenderer content={message.content} />
 								) : (
-									<div className="whitespace-pre-wrap">
+									<div className="whitespace-pre-wrap break-words overflow-hidden">
 										{convertUrlsToLinks(message.content)}
 									</div>
 								)}

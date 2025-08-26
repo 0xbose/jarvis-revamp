@@ -128,26 +128,8 @@ export const useFeedback = ({
 				);
 			}
 
-			// Create feedback message with subnet context
-			const feedbackMessage: ChatMsg = {
-				id: feedbackMessageId,
-				type: "answer",
-				content: feedback,
-				timestamp: new Date(),
-				subnetIndex: subnetWithQuestionIndex,
-				toolName:
-					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
-						?.toolName,
-				sourceId: `realtime_feedback_${subnetWithQuestionIndex}`,
-			};
-
-			// Always append feedback message to the end for natural chat flow
-			setChatMessages((prev) => {
-				const newMessages = [...prev];
-				// Always append to end to maintain chronological chat order
-				newMessages.push(feedbackMessage);
-				return newMessages;
-			});
+			// Don't create feedback message immediately - let polling handle the answer display
+			// This prevents showing the answer before the system processes it
 
 			// Use the subnet we already found instead of searching again
 			const subnetWithQuestion = currentWorkflowData?.subnets?.[subnetWithQuestionIndex];
@@ -164,60 +146,18 @@ export const useFeedback = ({
 				if (!fallbackSubnet?.question?.text) {
 					throw new Error("No question found to answer");
 				}
-				
-				// Don't add submitting message - it clutters the subnet history
-				// const submittingMessage: ChatMsg = {
-				// 	id: submittingMessageId,
-				// 	type: "response",
-				// 	content: "Submitting feedback...",
-				// 	timestamp: new Date(),
-				// 	subnetIndex: subnetWithQuestionIndex,
-				// 	toolName:
-				// 		currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
-				// 			?.toolName,
-				// };
-
-				// Always append submitting message to end
-				// setChatMessages((prev) => {
-				// 	const newMessages = [...prev];
-				// 	newMessages.push(submittingMessage);
-				// 	return newMessages;
-				// });
-
+			
 				await submitFeedbackToAPI(
 					fallbackSubnet.question.text,
 					feedback
 				);
 			} else {
 				// Use the original subnet's question
-				const submittingMessage: ChatMsg = {
-					id: submittingMessageId,
-					type: "response",
-					content: "Submitting feedback...",
-					timestamp: new Date(),
-					subnetIndex: subnetWithQuestionIndex,
-					toolName:
-						currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
-							?.toolName,
-				};
-
-				// Always append submitting message to end
-				setChatMessages((prev) => {
-					const newMessages = [...prev];
-					newMessages.push(submittingMessage);
-					return newMessages;
-				});
-
 				await submitFeedbackToAPI(
 					subnetWithQuestion.question.text,
 					feedback
 				);
 			}
-
-			// Remove the submitting message
-			setChatMessages((prev) =>
-				prev.filter((msg) => msg.id !== submittingMessageId)
-			);
 
 			// Don't add success message - it clutters the subnet history
 			// const successMessage: ChatMsg = {
@@ -269,15 +209,7 @@ export const useFeedback = ({
 				)
 			);
 
-			const errorMessage: ChatMsg = {
-				id: errorMessageId,
-				type: "response",
-				content: `Error submitting feedback: ${
-					error instanceof Error ? error.message : "Unknown error"
-				}`,
-				timestamp: new Date(),
-			};
-			setChatMessages((prev) => [...prev, errorMessage]);
+			
 		} finally {
 			setIsSubmittingFeedback(false);
 		}
@@ -409,10 +341,6 @@ export const useFeedback = ({
 				await submitFeedbackToAPI(question, "Yes, proceed");
 			}
 
-			// Remove the submitting message
-			setChatMessages((prev) =>
-				prev.filter((msg) => msg.id !== submittingMessageId)
-			);
 
 			// Don't add success message - it clutters the subnet history
 			// const successMessage: ChatMsg = {
@@ -464,15 +392,6 @@ export const useFeedback = ({
 				)
 			);
 
-			const errorMessage: ChatMsg = {
-				id: errorMessageId,
-				type: "response",
-				content: `Error processing feedback: ${
-					error instanceof Error ? error.message : "Unknown error"
-				}`,
-				timestamp: new Date(),
-			};
-			setChatMessages((prev) => [...prev, errorMessage]);
 		} finally {
 			setIsSubmittingFeedback(false);
 		}
@@ -511,25 +430,8 @@ export const useFeedback = ({
 				);
 			}
 
-			// Create feedback message with subnet context
-			const feedbackMessage: ChatMsg = {
-				id: feedbackMessageId,
-				type: "answer",
-				content: feedback,
-				timestamp: new Date(),
-				subnetIndex: subnetWithQuestionIndex,
-				toolName:
-					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
-						?.toolName,
-				sourceId: `realtime_feedback_${subnetWithQuestionIndex}`,
-			};
-
-			// Always append feedback message to the end for natural chat flow
-			setChatMessages((prev) => {
-				const newMessages = [...prev];
-				newMessages.push(feedbackMessage);
-				return newMessages;
-			});
+			// Don't create feedback message immediately - let polling handle the answer display
+			// This prevents showing the answer before the system processes it
 
 			// Use the subnet we already found instead of searching again
 			const subnetWithQuestion = currentWorkflowData?.subnets?.[subnetWithQuestionIndex];
@@ -572,34 +474,12 @@ export const useFeedback = ({
 				);
 			} else {
 				// Use the original subnet's question
-				const submittingMessage: ChatMsg = {
-					id: submittingMessageId,
-					type: "response",
-					content: "Submitting feedback...",
-					timestamp: new Date(),
-					subnetIndex: subnetWithQuestionIndex,
-					toolName:
-						currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
-							?.toolName,
-				};
-
-				// Always append submitting message to end
-				setChatMessages((prev) => {
-					const newMessages = [...prev];
-					newMessages.push(submittingMessage);
-					return newMessages;
-				});
-
 				await submitFeedbackToAPI(
 					subnetWithQuestion.question.text,
 					feedback
 				);
 			}
 
-			// Remove the submitting message
-			setChatMessages((prev) =>
-				prev.filter((msg) => msg.id !== submittingMessageId)
-			);
 
 			// Don't add success message - it clutters the subnet history
 			// const successMessage: ChatMsg = {
@@ -651,15 +531,6 @@ export const useFeedback = ({
 				)
 			);
 
-			const errorMessage: ChatMsg = {
-				id: errorMessageId,
-				type: "response",
-				content: `Error submitting feedback: ${
-					error instanceof Error ? error.message : "Unknown error"
-				}`,
-				timestamp: new Date(),
-			};
-			setChatMessages((prev) => [...prev, errorMessage]);
 		} finally {
 			setIsSubmittingFeedback(false);
 		}

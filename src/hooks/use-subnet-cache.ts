@@ -278,6 +278,89 @@ export const useSubnetCache = () => {
 				const hasFeedbackHistory =
 					subnet.feedbackHistory && subnet.feedbackHistory.length > 0;
 
+				// ALWAYS process current subnet question first, regardless of feedback history
+				if (subnet.question) {
+					const isAuthenticationQuestion = subnet.question.type === "authentication";
+					const isQuestionAlreadyAnswered =
+						subnet.feedbackHistory?.some(
+							(feedback: any) =>
+								feedback.feedback_question === subnet.question.text &&
+								feedback.user_answer &&
+								feedback.user_answer.trim() !== "" &&
+								feedback.user_answer !== null
+						);
+
+					// Always show authentication questions, even if we have feedback history
+					const shouldShowQuestion = !isQuestionAlreadyAnswered || isAuthenticationQuestion;
+
+					if (shouldShowQuestion) {
+						const currentQuestionKey = `current_question_${workflowId}_${index}`;
+						
+						// Determine the correct feedback index for the current question
+						let currentFeedbackIndex = 0;
+						if (subnet.feedbackHistory && subnet.feedbackHistory.length > 0) {
+							// Find the feedback item that matches this current question
+							const matchingFeedbackIndex = subnet.feedbackHistory.findIndex(
+								(feedback: any) => feedback.feedback_question === subnet.question.text
+							);
+							if (matchingFeedbackIndex !== -1) {
+								currentFeedbackIndex = matchingFeedbackIndex;
+							} else {
+								// If no exact match, use the highest index + 1 (for new questions)
+								currentFeedbackIndex = subnet.feedbackHistory.length - 1;
+							}
+						}
+						
+						// Check if a question with this sourceId already exists (from feedback history processing)
+						const proposedSourceId = `subnet_${index}_feedback_question_${currentFeedbackIndex}`;
+						const questionAlreadyExists = dataMessages.some(
+							(msg) => msg.sourceId === proposedSourceId
+						) || questionMessages.some(
+							(msg) => msg.sourceId === proposedSourceId
+						);
+						
+						if (!messageIds.has(currentQuestionKey) && !questionAlreadyExists) {
+							const baseTimestamp = subnet.updatedAt
+								? new Date(subnet.updatedAt)
+								: new Date();
+							const questionTimestamp = new Date(baseTimestamp.getTime() + 1000);
+
+							// For authentication questions, try to get authUrl from feedback history
+							let authUrl = undefined;
+							if (isAuthenticationQuestion && subnet.feedbackHistory?.length > 0) {
+								const authFeedback = subnet.feedbackHistory.find(
+									(feedback: any) => feedback.response?.type === "authentication"
+								);
+								if (authFeedback) {
+									authUrl = authFeedback.response?.authUrl;
+								}
+							}
+
+
+
+							const currentQuestionMessage: ChatMsg = {
+								id: `current_question_${index}_${Date.now()}`,
+								type: "question",
+								content: subnet.question.text,
+								timestamp: questionTimestamp,
+								subnetStatus: subnet.status,
+								toolName: subnet.toolName,
+								subnetIndex: index,
+								questionData: {
+									...subnet.question,
+									// Include authUrl for authentication questions
+									authUrl: authUrl || subnet.question.authUrl,
+								},
+								// Use feedback sourceId to ensure proper grouping with feedback threads
+								sourceId: proposedSourceId,
+							};
+							questionMessages.push(currentQuestionMessage);
+							messageIds.add(currentQuestionKey);
+							console.log(`✅ Current question message generated for subnet ${index} (type: ${subnet.question.type}) - feedbackIndex: ${currentFeedbackIndex} - sourceId: ${proposedSourceId}`);
+						}
+					}
+				}
+
 				// Check for potential data duplication
 				const duplicationCheck = detectDataDuplication(subnet);
 				if (duplicationCheck.hasDuplication && includeHistory) {
@@ -355,41 +438,50 @@ export const useSubnetCache = () => {
 								console.log(`✅ Created feedback response message for subnet ${index}, feedback ${feedbackIndex}`);
 							}
 
-							// Always create question message (feedback_question)
-							const questionKey = `${feedbackBaseKey}_question`;
-							const questionSourceId = `subnet_${index}_feedback_question_${feedbackIndex}`;
+							// Check if this is an authentication question
+							const isAuthenticationQuestion = feedbackItem.response?.type === "authentication";
+							
+							// For authentication questions, don't create a separate feedback question message
+							// since we're already creating the current subnet question message
+							if (!isAuthenticationQuestion) {
+								// Always create question message (feedback_question) for non-authentication questions
+								const questionKey = `${feedbackBaseKey}_question`;
+								const questionSourceId = `subnet_${index}_feedback_question_${feedbackIndex}`;
 
-							const questionAlreadyExists =
-								dataMessages.some(
-									(msg) => msg.sourceId === questionSourceId
-								) ||
-								questionMessages.some(
-									(msg) => msg.sourceId === questionSourceId
-								);
+								const questionAlreadyExists =
+									dataMessages.some(
+										(msg) => msg.sourceId === questionSourceId
+									) ||
+									questionMessages.some(
+										(msg) => msg.sourceId === questionSourceId
+									);
 
-							if (!questionAlreadyExists) {
-								const responseTimestamp = new Date(feedbackItem.created_at);
-								const questionTimestamp = new Date(responseTimestamp.getTime() + 1000);
+								if (!questionAlreadyExists) {
+									const responseTimestamp = new Date(feedbackItem.created_at);
+									const questionTimestamp = new Date(responseTimestamp.getTime() + 1000);
 
-								const questionMessage: ChatMsg = {
-									id: `feedback_question_${index}_${feedbackIndex}_${Date.now()}`,
-									type: "question",
-									content: feedbackItem.feedback_question,
-									timestamp: questionTimestamp,
-									toolName: subnet.toolName,
-									subnetIndex: index,
-									subnetStatus: subnet.status,
-									questionData: {
-										type: "feedback", // ALWAYS feedback type for questions in feedbackHistory
-										text: feedbackItem.feedback_question,
-										itemID: feedbackItem.item_id,
-										expiresAt: feedbackItem.updated_at,
-									},
-									sourceId: questionSourceId,
-								};
-								questionMessages.push(questionMessage);
-								messageIds.add(questionKey);
-								console.log(`✅ Created feedback question message for subnet ${index}, feedback ${feedbackIndex}`);
+									const questionMessage: ChatMsg = {
+										id: `feedback_question_${index}_${feedbackIndex}_${Date.now()}`,
+										type: "question",
+										content: feedbackItem.feedback_question,
+										timestamp: questionTimestamp,
+										toolName: subnet.toolName,
+										subnetIndex: index,
+										subnetStatus: subnet.status,
+										questionData: {
+											type: "feedback", // Always feedback type for non-authentication questions
+											text: feedbackItem.feedback_question,
+											itemID: feedbackItem.item_id,
+											expiresAt: feedbackItem.updated_at,
+										},
+										sourceId: questionSourceId,
+									};
+									questionMessages.push(questionMessage);
+									messageIds.add(questionKey);
+									console.log(`✅ Created feedback question message for subnet ${index}, feedback ${feedbackIndex}`);
+								}
+							} else {
+								console.log(`⏭️ Skipping feedback question message for authentication - using current subnet question instead`);
 							}
 
 							// Create answer message if user has answered
@@ -433,46 +525,7 @@ export const useSubnetCache = () => {
 						}
 					);
 
-					// Check if current subnet has a question that needs to be shown
-					if (subnet.question) {
-						const isQuestionAlreadyAnswered =
-							subnet.feedbackHistory?.some(
-								(feedback: any) =>
-									feedback.feedback_question === subnet.question.text &&
-									feedback.user_answer &&
-									feedback.user_answer.trim() !== "" &&
-									feedback.user_answer !== null
-							);
-
-						if (!isQuestionAlreadyAnswered) {
-							const currentQuestionKey = `current_question_${workflowId}_${index}`;
-							if (!messageIds.has(currentQuestionKey)) {
-								const baseTimestamp = subnet.updatedAt
-									? new Date(subnet.updatedAt)
-									: new Date();
-								const questionTimestamp = new Date(baseTimestamp.getTime() + 1000);
-
-								const currentQuestionMessage: ChatMsg = {
-									id: `current_question_${index}_${Date.now()}`,
-									type: "question",
-									content: subnet.question.text,
-									timestamp: questionTimestamp,
-									subnetStatus: subnet.status,
-									toolName: subnet.toolName,
-									subnetIndex: index,
-									questionData: subnet.question,
-									sourceId: `subnet_${index}_current_question`,
-								};
-								questionMessages.push(currentQuestionMessage);
-								messageIds.add(currentQuestionKey);
-								console.log(`✅ Current question message generated for subnet ${index}`);
-							}
-						} else {
-							console.log(`⏭️ Skipping current subnet question - already answered in feedback history`);
-						}
-					}
-
-					// Skip subnet data processing when we have feedback history
+										// Skip subnet data processing when we have feedback history
 					console.log(`⏭️ Skipping subnet data processing - using feedback history for subnet ${index}`);
 				} else {
 					// Only process subnet data when no feedback history exists
@@ -896,13 +949,14 @@ export const useSubnetCache = () => {
 						dataMessages.push({
 							id: `subnet_${index}_processing_after_feedback_${Date.now()}`,
 							type: "workflow_subnet",
-							content: "Processing with your feedback...",
+							content: `Processing with your feedback...`,
 							timestamp: new Date(),
 							subnetStatus: "in_progress",
 							toolName: subnet.toolName,
 							subnetIndex: index,
 							sourceId: `${sourceId}_processing_after_feedback`,
 							isRegenerated: true,
+							showLoadingDots: true,
 						});
 					} else {
 						const hasNoData =
@@ -913,15 +967,27 @@ export const useSubnetCache = () => {
 							subnet.data === "undefined";
 
 						if (hasNoData && !hasFeedbackHistory) {
+							// Check if we have a prompt to determine the state
+							const hasPrompt = subnet.prompt && subnet.prompt.trim() !== "";
+							const agentName = subnet.toolName || "agent";
+							
+							let content = "";
+							if (hasPrompt) {
+								content = `Sending prompt to ${agentName}`;
+							} else {
+								content = `Contacting ${agentName}`;
+							}
+
 							dataMessages.push({
 								id: `subnet_${index}_processing_${Date.now()}`,
 								type: "workflow_subnet",
-								content: `Contacting ${subnet.toolName} agent...`,
+								content: content,
 								timestamp: new Date(),
 								subnetStatus: "in_progress",
 								toolName: subnet.toolName,
 								subnetIndex: index,
 								sourceId: `${sourceId}_processing`,
+								showLoadingDots: true,
 							});
 						}
 					}

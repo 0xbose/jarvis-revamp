@@ -165,7 +165,8 @@ export const useMessageGrouping = () => {
       }
     });
 
-    // Sort feedback threads by timestamp within each subnet
+    // Sort feedback threads by timestamp within each subnet (oldest first)
+
     subnetGroups.forEach((group) => {
       group.feedbackThreads.sort((a, b) => 
         new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
@@ -206,9 +207,40 @@ export const useMessageGrouping = () => {
     return `Feedback ${thread.feedbackIndex + 1}`;
   };
 
-  const getSubnetTitle = (group: SubnetGroup): string => {
-    // Only show the agent name, nothing else
-    return group.toolName || `Subnet ${group.subnetIndex}`;
+  const getSubnetTitle = (group: SubnetGroup, currentWorkflowData?: any, selectedAgent?: any): string => {
+    const subnetName = group.toolName || `Subnet ${group.subnetIndex}`;
+    
+    // Get dynamic status message based on subnet state
+    const getStatusMessage = () => {
+      if (!currentWorkflowData?.subnets) return "contacting agent...";
+      
+      const subnet = currentWorkflowData.subnets[group.subnetIndex];
+      if (!subnet) return "contacting agent...";
+      
+      switch (subnet.status) {
+        case "pending":
+          // Check if we have a prompt to determine if we're sending it
+          if (subnet.prompt && subnet.prompt.trim() !== "") {
+            return "sending prompt...";
+          }
+          return "contacting agent...";
+        case "in_progress":
+          return "processing...";
+        case "awaiting_response":
+          return "waiting for input...";
+        case "completed":
+        case "done":
+          return "";
+        case "failed":
+          return "failed";
+        default:
+          return "";
+      }
+    };
+    
+    const statusMessage = getStatusMessage();
+    return `${subnetName} agent ${statusMessage}`;
+
   };
 
   const getSubnetStatusIcon = (status: string) => {

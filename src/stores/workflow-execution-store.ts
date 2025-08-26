@@ -18,6 +18,7 @@ export interface SubnetStatus {
 		text: string;
 		itemID: number;
 		expiresAt: string;
+		authUrl?: string;
 	};
 }
 
