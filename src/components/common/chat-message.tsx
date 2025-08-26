@@ -442,6 +442,7 @@ export function ChatMessage({
 										onClick={() => {
 											if (shouldDisableButtons()) return;
 
+
 											if (isWorkflowActivelyExecuting()) {
 												setClickedButtonType("notification-no");
 												setIsButtonPending(true);
@@ -484,7 +485,6 @@ export function ChatMessage({
 							) : (
 								<AlertCircle className="size-5 text-primary" />
 							)}
-
 						</div>
 						<div className="flex-1 min-w-0 bg-primary/5 rounded-lg p-3 border border-primary/10 w-fit">
 							<div className="text-foreground text-sm leading-relaxed">
@@ -769,6 +769,7 @@ export function ChatMessage({
 							</div>
 						</div>
 					</div>
+				</div>
 			</div>
 		);
 	}
@@ -791,10 +792,10 @@ export function ChatMessage({
 									{convertUrlsToLinks(message.content)}
 								</div>
 							)}
-
 						</div>
 					</div>
 				</div>
+			</div>
 		);
 	}
 
@@ -825,7 +826,7 @@ export function ChatMessage({
 						{/* {message.toolName && (
 
 							<div className="text-sm mb-1 flex items-center gap-2">
-								{/* <span
+								<span
 									className={`italic ${
 										message.subnetStatus === "failed"
 											? "text-red-300"
@@ -835,7 +836,7 @@ export function ChatMessage({
 									{message.toolName.charAt(0).toUpperCase() +
 										message.toolName.slice(1)}{" "}
 									Agent
-								</span> */}
+								</span>
 								{getStatusText() &&
 									message.subnetStatus !== "done" && (
 										<>
@@ -856,7 +857,6 @@ export function ChatMessage({
 									)}
 							</div>
 						)} */}
-
 
 
 						{message.content && (
