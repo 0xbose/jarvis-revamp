@@ -16,6 +16,7 @@ import {
 	AlertCircle,
 	MessageSquare,
 	RefreshCw,
+	User,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -389,31 +390,12 @@ export function ChatMessage({
 	if (message.type === "notification") {
 		return (
 			<div className="relative mb-0">
-				{!isLast && (
-					<div
-						className="absolute left-2 top-0 w-px h-full z-0 overflow-hidden"
-						style={{ height: "calc(100% + 1.5rem)" }}
-					>
-						<div className="absolute inset-0 bg-gray-600"></div>
-						<div
-							className="absolute w-full bg-gradient-to-b from-transparent via-blue-400 to-transparent opacity-60"
-							style={{
-								height: "60px",
-								animation: "flowDown 2s ease-in-out infinite",
-								animationDelay: "0.5s",
-							}}
-						></div>
-					</div>
-				)}
-				<div className="relative flex items-start">
-					<div className="relative Z-0 flex-shrink-0 ml-0.5 mr-4 pt-1">
-						<div className="size-3 rounded-full border-2 border-gray-700 bg-gray-500"></div>
-					</div>
-					<div className="flex-1 min-w-0 p-4 border border-border/50 rounded-lg">
+			
+					<div className="flex-1 min-w-0 p-4">
 						<div className="text-sm font-medium mb-2 flex items-center gap-2 text-gray-400">
 							<Bell className="w-4 h-4" />
 							<span>Notification</span>
-							{message.toolName && (
+							{/* {message.toolName && (
 								<>
 									<span className="text-gray-600">•</span>
 									<span className="italic">
@@ -424,7 +406,7 @@ export function ChatMessage({
 										Agent
 									</span>
 								</>
-							)}
+							)} */}
 						</div>
 						<div>
 							<div className="text-foreground text-sm leading-relaxed">
@@ -525,7 +507,6 @@ export function ChatMessage({
 							})}
 						</div> */}
 					</div>
-				</div>
 			</div>
 		);
 	}
@@ -535,27 +516,8 @@ export function ChatMessage({
 			message.questionData?.type === "authentication";
 		return (
 			<div className="relative mb-0">
-				{!isLast && (
-					<div
-						className="absolute left-2 top-0 w-px h-full z-0 overflow-hidden"
-						style={{ height: "calc(100% + 1.5rem)" }}
-					>
-						<div className="absolute inset-0 bg-gray-600"></div>
-						<div
-							className="absolute w-full bg-gradient-to-b from-transparent via-blue-400 to-transparent opacity-60"
-							style={{
-								height: "60px",
-								animation: "flowDown 2s ease-in-out infinite",
-								animationDelay: "1s",
-							}}
-						></div>
-					</div>
-				)}
-				<div className="relative flex items-start">
-					<div className="relative Z-0 flex-shrink-0 ml-0.5 mr-4 pt-1">
-						<div className="size-3 rounded-full border-2 border-gray-700 bg-gray-500"></div>
-					</div>
-					<div className="flex-1 min-w-0 p-4 border border-border/50 rounded-lg">
+				
+					<div className="flex-1 min-w-0 p-4">
 						<div className="text-sm font-medium mb-2 flex items-center gap-2 text-gray-400">
 							{isAuthentication ? (
 								<LucideCircleQuestionMark className="w-4 h-4" />
@@ -570,7 +532,7 @@ export function ChatMessage({
 									  message.questionData.type.slice(1)
 									: "Question"}
 							</span>
-							{message.toolName && (
+							{/* {message.toolName && (
 								<>
 									<span className="text-gray-600">•</span>
 									<span className="italic">
@@ -581,7 +543,7 @@ export function ChatMessage({
 										Agent
 									</span>
 								</>
-							)}
+							)} */}
 						</div>
 						<div>
 							<div className="text-foreground text-sm leading-relaxed overflow-hidden">
@@ -1057,7 +1019,6 @@ export function ChatMessage({
 							})}
 						</div> */}
 					</div>
-				</div>
 			</div>
 		);
 	}
@@ -1065,37 +1026,19 @@ export function ChatMessage({
 	if (message.type === "answer") {
 		return (
 			<div className="relative mb-0">
-				{!isLast && (
-					<div
-						className="absolute left-2 top-0 w-px h-full z-0 overflow-hidden"
-						style={{ height: "calc(100% + 1.5rem)" }}
-					>
-						<div className="absolute inset-0 bg-gray-600"></div>
-						<div
-							className="absolute w-full bg-gradient-to-b from-transparent via-blue-400 to-transparent opacity-60"
-							style={{
-								height: "60px",
-								animation: "flowDown 2s ease-in-out infinite",
-								animationDelay: "1.5s",
-							}}
-						></div>
-					</div>
-				)}
-				<div className="relative flex items-start">
-					<div className="relative Z-0 flex-shrink-0 ml-0.5 mr-4 pt-1">
-						<div className="size-3 rounded-full border-2 border-gray-700 bg-gray-500"></div>
-					</div>
-					<div className="flex-1 min-w-0 p-4 border border-border/50 rounded-lg">
-						<div className="text-sm mb-1 flex items-center gap-2">
-							<span className="italic text-gray-400">
+				
+					<div className="flex-1 min-w-0 p-4">
+						<div className="text-sm font-medium mb-1 flex items-center gap-2 text-gray-400">
+							<User className="size-4" />
+							<span className="">
 								Your answer
-								{message.toolName &&
+								{/* {message.toolName &&
 									` for ${
 										message.toolName
 											.charAt(0)
 											.toUpperCase() +
 										message.toolName.slice(1)
-									} Agent`}
+									} Agent`} */}
 							</span>
 						</div>
 						{isMarkdownContent(message.content) ? (
@@ -1107,42 +1050,12 @@ export function ChatMessage({
 						)}
 					</div>
 				</div>
-			</div>
 		);
 	}
 
 	// Workflow subnet message - shows status of individual workflow steps
 	if (message.type === "workflow_subnet") {
-		const getStatusIcon = () => {
-			switch (message.subnetStatus) {
-				case "in_progress":
-				case "awaiting_response":
-					return (
-						<span className="relative flex size-3">
-							<span className="absolute h-full w-full animate-ping rounded-full bg-accent opacity-75"></span>
-							<span className="relative size-3 inline-flex rounded-full bg-accent"></span>
-						</span>
-					);
-				case "failed":
-					return (
-						<div className="size-3 rounded-full border-2 border-red-600 bg-red-500 flex items-center justify-center">
-							<X className="size-2 text-white" />
-						</div>
-					);
-				case "done":
-					return (
-						<div className="size-3 rounded-full border-2 border-gray-700 bg-gray-500 flex items-center justify-center">
-							{/* <Check className="size-2 text-white" /> */}
-						</div>
-					);
-				default:
-					// All other statuses: gray, same size and style
-					return (
-						<div className="size-3 rounded-full border-2 border-gray-700 bg-gray-500"></div>
-					);
-			}
-		};
-
+	
 		const getStatusText = () => {
 			switch (message.subnetStatus) {
 				case "pending":
@@ -1162,26 +1075,9 @@ export function ChatMessage({
 
 		return (
 			<div className="relative mb-0">
-				{!isLast && (
-					<div
-						className="absolute left-2 top-0 w-px h-full z-0 overflow-hidden"
-						style={{ height: "calc(100% + 1.5rem)" }}
-					>
-						<div className="absolute inset-0 bg-gray-600"></div>
-						<div
-							className="absolute w-full bg-gradient-to-b from-transparent via-blue-400 to-transparent opacity-60"
-							style={{
-								height: "60px",
-								animation: "flowDown 2s ease-in-out infinite",
-								animationDelay: "2s",
-							}}
-						></div>
-					</div>
-				)}
+				
 				<div className="relative flex items-start">
-					<div className="relative Z-0 flex-shrink-0 ml-0.5 mr-4 pt-1">
-						{getStatusIcon()}
-					</div>
+				
 					<div
 						className={`flex-1 min-w-0 p-4 border rounded-lg ${
 							message.subnetStatus === "failed"
@@ -1191,7 +1087,7 @@ export function ChatMessage({
 					>
 						{message.toolName && (
 							<div className="text-sm mb-1 flex items-center gap-2">
-								<span
+								{/* <span
 									className={`italic ${
 										message.subnetStatus === "failed"
 											? "text-red-300"
@@ -1201,7 +1097,7 @@ export function ChatMessage({
 									{message.toolName.charAt(0).toUpperCase() +
 										message.toolName.slice(1)}{" "}
 									Agent
-								</span>
+								</span> */}
 								{getStatusText() &&
 									message.subnetStatus !== "done" && (
 										<>
@@ -1223,7 +1119,7 @@ export function ChatMessage({
 							</div>
 						)}
 						{message.prompt && (
-							<div className="mb-3 py-6">
+							<div className="mb-3 pb-6">
 								<div className="text-xs text-gray-400 mb-1 flex items-center gap-2">
 									<MessageSquare className="w-3 h-3" />
 									<span>Prompt</span>
@@ -1406,33 +1302,11 @@ export function ChatMessage({
 
 	return (
 		<div className="relative mb-0">
-			{!isLast &&
-				message.content !== "Workflow executed successfully" && (
-					<div
-						className="absolute left-2 top-0 w-px h-full z-0 overflow-hidden"
-						style={{ height: "calc(100% + 1.5rem)" }}
-					>
-						<div className="absolute inset-0 bg-gray-600"></div>
-						<div
-							className="absolute w-full bg-gradient-to-b from-transparent via-blue-400 to-transparent opacity-60"
-							style={{
-								height: "60px",
-								animation: "flowDown 2s ease-in-out infinite",
-								animationDelay: "2.5s",
-							}}
-						></div>
-					</div>
-				)}
+			
 			<div className="relative flex items-start">
-				<div className="relative Z-0 flex-shrink-0 ml-0.5 mr-4 pt-1">
-					{message.content === "Workflow executed successfully" ? (
-						<div className="size-3 rounded-full border-2 border-green-600 bg-green-500 flex items-center justify-center"></div>
-					) : (
-						<div className="size-3 rounded-full border-2 border-gray-700 bg-gray-500"></div>
-					)}
-				</div>
-				<div className="flex-1 min-w-0 p-4 border border-border/50 rounded-lg">
-					{message.toolName && (
+				
+				<div className="flex-1 min-w-0 px-4 pb-4">
+					{/* {message.toolName && (
 						<div className="text-sm mb-1 flex items-center gap-2">
 							<span className="italic text-gray-400">
 								{message.toolName.charAt(0).toUpperCase() +
@@ -1440,11 +1314,11 @@ export function ChatMessage({
 								Agent
 							</span>
 						</div>
-					)}
+					)} */}
 					{message.prompt && (
 						<div className="mb-3 py-6">
-							<div className="text-xs text-gray-400 mb-1 flex items-center gap-2">
-								<MessageSquare className="w-3 h-3" />
+							<div className="text-sm font-medium text-gray-400 mb-1 flex items-center gap-2">
+								<MessageSquare className="size-3.5" />
 								<span>Prompt</span>
 							</div>
 							<div className="text-sm text-gray-300 italic">
@@ -1453,13 +1327,25 @@ export function ChatMessage({
 						</div>
 					)}
 					<div className="text-gray-200 text-sm leading-relaxed">
-						{isMarkdownContent(message.content) ? (
-							<MDXRenderer content={message.content} />
-						) : (
-							<div className="whitespace-pre-wrap">
-								{convertUrlsToLinks(message.content)}
+						<div className="mb-2">
+						<div className="text-sm font-medium text-gray-400 mb-1 flex items-center gap-2">
+							<Check className="size-4" />
+								<span>Response</span>
 							</div>
-						)}
+						</div>
+						<div className="flex items-start gap-2">
+							<div className="flex-1">
+								{isMarkdownContent(message.content) ? (
+									<>
+										<MDXRenderer content={message.content} />
+									</>
+								) : (
+									<div className="whitespace-pre-wrap">
+										{convertUrlsToLinks(message.content)}
+									</div>
+								)}
+							</div>
+						</div>
 					</div>
 					{message.imageData && message.isImage && (
 						<div className="mt-3">

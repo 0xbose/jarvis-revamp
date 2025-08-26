@@ -3,7 +3,8 @@ import { ChatMsg, WorkflowStatus } from "@/types/chat";
 import { workflowExecutor } from "@/utils/workflow-executor";
 import { useWorkflowExecutionStore } from "@/stores/workflow-execution-store";
 import { useWorkflowExecutor } from "@/hooks/use-workflow-executor";
-import { useSubnetCacheStore } from "@/stores/subnet-cache-store";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSubnetCache } from "./use-subnet-cache";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
 import { Web3Context } from "@/types/wallet";
 import { AgentDetail } from "@/types";
@@ -52,7 +53,10 @@ export const useWorkflowExecution = ({
 		setPollingTimers,
 	} = useWorkflowExecutionStore();
 	const { executeAgentWorkflow } = useWorkflowExecutor();
-	const { clearWorkflowCache } = useSubnetCacheStore();
+	const queryClient = useQueryClient();
+	
+	// Use the subnet cache hook for subnet operations
+	const { clearWorkflowCache, clearWorkflowTracking } = useSubnetCache();
 
 	const createStatusUpdateHandler = useCallback(
 		(isNewWorkflow = false, isExistingWorkflow = false) => {
@@ -158,13 +162,15 @@ export const useWorkflowExecution = ({
 									  )
 									: Date.now();
 
-							const completionMessage: ChatMsg = {
-								id: `completion_${Date.now()}`,
-								type: "response",
-								content: "Workflow executed successfully",
-								timestamp: new Date(latestTimestamp + 1000), // 1 second after the latest message
-							};
-							return [...prev, completionMessage];
+							// Don't add completion message - it clutters the subnet history
+							// const completionMessage: ChatMsg = {
+							// 	id: `completion_${Date.now()}`,
+							// 	type: "response",
+							// 	content: "Workflow executed successfully",
+							// 	timestamp: new Date(latestTimestamp + 1000), // 1 second after the latest message
+							// };
+							// return [...prev, completionMessage];
+							return prev;
 						}
 						return prev;
 					});
@@ -490,6 +496,7 @@ export const useWorkflowExecution = ({
 	const clearWorkflow = useCallback(() => {
 		if (currentWorkflowId) {
 			clearWorkflowCache(currentWorkflowId);
+			clearWorkflowTracking(currentWorkflowId);
 		}
 
 		if (currentWorkflowId) {
@@ -509,7 +516,7 @@ export const useWorkflowExecution = ({
 		setIsInFeedbackMode,
 		resetFeedbackState,
 		currentWorkflowId,
-		clearWorkflowCache,
+		queryClient,
 	]);
 
 	const refreshPolling = useCallback(() => {

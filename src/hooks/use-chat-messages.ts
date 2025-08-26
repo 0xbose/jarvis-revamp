@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { ChatMsg } from "@/types/chat";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSubnetCache } from "./use-subnet-cache";
 
 export const useChatMessages = () => {
@@ -8,14 +9,17 @@ export const useChatMessages = () => {
 		[]
 	);
 
+	const queryClient = useQueryClient();
+	const currentWorkflowId = useRef<string | null>(null);
+	const lastQuestionRef = useRef<string | null>(null);
+	
+	// Use the subnet cache hook as the brain for subnet processing
 	const {
 		processSubnetData,
 		clearWorkflowCache,
 		clearWorkflowTracking,
 		getCachedSubnets,
 	} = useSubnetCache();
-
-	const currentWorkflowId = useRef<string | null>(null);
 
 	const safeSetChatMessages = useCallback(
 		(messages: ChatMsg[] | ((prev: ChatMsg[]) => ChatMsg[])) => {
@@ -67,11 +71,11 @@ export const useChatMessages = () => {
 				currentWorkflowId.current &&
 				currentWorkflowId.current !== workflowId
 			) {
-				console.log(
-					`🔄 Switching workflows: ${currentWorkflowId.current} -> ${workflowId}`
-				);
-				clearWorkflowTracking(currentWorkflowId.current);
-				clearWorkflowCache(currentWorkflowId.current);
+							console.log(
+				`🔄 Switching workflows: ${currentWorkflowId.current} -> ${workflowId}`
+			);
+			clearWorkflowCache(currentWorkflowId.current);
+			clearWorkflowTracking(currentWorkflowId.current);
 			}
 
 			currentWorkflowId.current = workflowId;
@@ -808,7 +812,7 @@ export const useChatMessages = () => {
 				]);
 			}
 		},
-		[processSubnetData, clearWorkflowCache, clearWorkflowTracking]
+		[queryClient]
 	);
 
 	const clearMessages = useCallback(() => {
@@ -822,16 +826,16 @@ export const useChatMessages = () => {
 			console.log(
 				`🗑️ Clearing workflow tracking and cache for: ${currentWorkflowId.current}`
 			);
-			clearWorkflowTracking(currentWorkflowId.current);
 			clearWorkflowCache(currentWorkflowId.current);
+			clearWorkflowTracking(currentWorkflowId.current);
 
 			import("@/utils/chat-utils").then(({ clearChatCache }) => {
-				clearChatCache(currentWorkflowId.current!);
+				clearChatCache(currentWorkflowId.current!, queryClient);
 			});
 
 			currentWorkflowId.current = null;
 		}
-	}, [clearWorkflowTracking, clearWorkflowCache, chatMessages.length]);
+	}, [queryClient, chatMessages.length]);
 
 	const resetFeedbackState = useCallback(() => {
 		console.log("🔄 Resetting feedback state");
@@ -841,7 +845,7 @@ export const useChatMessages = () => {
 
 	const getCurrentWorkflowSubnets = useCallback(() => {
 		if (!currentWorkflowId.current) return new Map();
-		return getCachedSubnets(currentWorkflowId.current);
+		return getCachedSubnets(currentWorkflowId.current) || new Map();
 	}, [getCachedSubnets]);
 
 	const setWorkflowId = useCallback(
@@ -857,14 +861,14 @@ export const useChatMessages = () => {
 				console.log(
 					`🔄 Clearing previous workflow: ${currentWorkflowId.current}`
 				);
-				clearWorkflowTracking(currentWorkflowId.current);
 				clearWorkflowCache(currentWorkflowId.current);
+				clearWorkflowTracking(currentWorkflowId.current);
 			}
 
 			currentWorkflowId.current = workflowId;
 			console.log(`✅ Workflow ID set to: ${workflowId}`);
 		},
-		[clearWorkflowTracking, clearWorkflowCache]
+		[queryClient]
 	);
 
 	return {

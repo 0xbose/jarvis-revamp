@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { ChatMsg } from "@/types/chat";
 import { apiKeyManager } from "@/utils/api-key-manager";
-import { useSubnetCacheStore } from "@/stores/subnet-cache-store";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSubnetCache } from "./use-subnet-cache";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
 import { Web3Context } from "@/types/wallet";
 
@@ -33,7 +34,10 @@ export const useFeedback = ({
 	refetchHistory,
 }: UseFeedbackProps) => {
 	const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
-	const { updateSubnetStatus } = useSubnetCacheStore();
+	const queryClient = useQueryClient();
+	
+	// Use the subnet cache hook for subnet operations
+	const { updateSubnetStatus } = useSubnetCache();
 
 	const submitFeedbackToAPI = async (question: string, answer: string) => {
 		if (!currentWorkflowId || !skyBrowser || !address) {
@@ -161,24 +165,24 @@ export const useFeedback = ({
 					throw new Error("No question found to answer");
 				}
 				
-				// Use the fallback subnet's question
-				const submittingMessage: ChatMsg = {
-					id: submittingMessageId,
-					type: "response",
-					content: "Submitting feedback...",
-					timestamp: new Date(),
-					subnetIndex: subnetWithQuestionIndex,
-					toolName:
-						currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
-							?.toolName,
-				};
+				// Don't add submitting message - it clutters the subnet history
+				// const submittingMessage: ChatMsg = {
+				// 	id: submittingMessageId,
+				// 	type: "response",
+				// 	content: "Submitting feedback...",
+				// 	timestamp: new Date(),
+				// 	subnetIndex: subnetWithQuestionIndex,
+				// 	toolName:
+				// 		currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+				// 			?.toolName,
+				// };
 
 				// Always append submitting message to end
-				setChatMessages((prev) => {
-					const newMessages = [...prev];
-					newMessages.push(submittingMessage);
-					return newMessages;
-				});
+				// setChatMessages((prev) => {
+				// 	const newMessages = [...prev];
+				// 	newMessages.push(submittingMessage);
+				// 	return newMessages;
+				// });
 
 				await submitFeedbackToAPI(
 					fallbackSubnet.question.text,
@@ -215,24 +219,25 @@ export const useFeedback = ({
 				prev.filter((msg) => msg.id !== submittingMessageId)
 			);
 
-			const successMessage: ChatMsg = {
-				id: successMessageId,
-				type: "response",
-				content:
-					"Feedback submitted successfully. Resuming workflow...",
-				timestamp: new Date(),
-				subnetIndex: subnetWithQuestionIndex,
-				toolName:
-					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
-						?.toolName,
-			};
+			// Don't add success message - it clutters the subnet history
+			// const successMessage: ChatMsg = {
+			// 	id: successMessageId,
+			// 	type: "response",
+			// 	content:
+			// 		"Feedback submitted successfully. Resuming workflow...",
+			// 	timestamp: new Date(),
+			// 	subnetIndex: subnetWithQuestionIndex,
+			// 	toolName:
+			// 		currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+			// 			?.toolName,
+			// };
 
 			// Always append success message to end
-			setChatMessages((prev) => {
-				const newMessages = [...prev];
-				newMessages.push(successMessage);
-				return newMessages;
-			});
+			// setChatMessages((prev) => {
+			// 	const newMessages = [...prev];
+			// 	newMessages.push(successMessage);
+			// 	return newMessages;
+			// });
 
 			setPrompt("");
 
@@ -324,26 +329,26 @@ export const useFeedback = ({
 				);
 			}
 
-			// Create proceed message with subnet context
-			const proceedMessage: ChatMsg = {
-				id: proceedMessageId,
-				type: "answer",
-				content: "Proceeding with current result",
-				timestamp: new Date(),
-				subnetIndex: subnetWithQuestionIndex, // Link to specific subnet
-				toolName:
-					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
-						?.toolName,
-				sourceId: `realtime_proceed_${subnetWithQuestionIndex}`,
-			};
+			// Don't add proceed message - it clutters the subnet history
+			// const proceedMessage: ChatMsg = {
+			// 	id: proceedMessageId,
+			// 	type: "answer",
+			// 	content: "Proceeding with current result",
+			// 	timestamp: new Date(),
+			// 	subnetIndex: subnetWithQuestionIndex, // Link to specific subnet
+			// 	toolName:
+			// 		currentWorkflowData?.subnets?.[subnetQuestionIndex]
+			// 			?.toolName,
+			// 	sourceId: `realtime_proceed_${subnetWithQuestionIndex}`,
+			// };
 
 			// Always append proceed message to the end for natural chat flow
-			setChatMessages((prev) => {
-				const newMessages = [...prev];
-				// Always append to end to maintain chronological chat order
-				newMessages.push(proceedMessage);
-				return newMessages;
-			});
+			// setChatMessages((prev) => {
+			// 	const newMessages = [...prev];
+			// 	// Always append to end to maintain chronological chat order
+			// 	newMessages.push(proceedMessage);
+			// 	return newMessages;
+			// });
 
 			// Use the subnet we already found instead of searching again
 			const subnetWithQuestion = currentWorkflowData?.subnets?.[subnetWithQuestionIndex];
@@ -361,45 +366,45 @@ export const useFeedback = ({
 					throw new Error("No question found to answer");
 				}
 				
-				// Use the fallback subnet's question
-				const submittingMessage: ChatMsg = {
-					id: submittingMessageId,
-					type: "response",
-					content: "Processing feedback...",
-					timestamp: new Date(),
-					subnetIndex: subnetWithQuestionIndex,
-					toolName:
-						currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
-							?.toolName,
-				};
+				// Don't add processing message - it clutters the subnet history
+				// const submittingMessage: ChatMsg = {
+				// 	id: submittingMessageId,
+				// 	type: "response",
+				// 	content: "Processing feedback...",
+				// 	timestamp: new Date(),
+				// 	subnetIndex: subnetWithQuestionIndex,
+				// 	toolName:
+				// 		currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+				// 			?.toolName,
+				// };
 
 				// Always append submitting message to end
-				setChatMessages((prev) => {
-					const newMessages = [...prev];
-					newMessages.push(submittingMessage);
-					return newMessages;
-				});
+				// setChatMessages((prev) => {
+				// 	const newMessages = [...prev];
+				// 	newMessages.push(submittingMessage);
+				// 	return newMessages;
+				// });
 
 				await submitFeedbackToAPI(question, "Yes, proceed");
 			} else {
-				// Use the original subnet's question
-				const submittingMessage: ChatMsg = {
-					id: submittingMessageId,
-					type: "response",
-					content: "Processing feedback...",
-					timestamp: new Date(),
-					subnetIndex: subnetWithQuestionIndex,
-					toolName:
-						currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
-							?.toolName,
-				};
+				// Don't add processing message - it clutters the subnet history
+				// const submittingMessage: ChatMsg = {
+				// 	id: submittingMessageId,
+				// 	type: "response",
+				// 	content: "Processing feedback...",
+				// 	timestamp: new Date(),
+				// 	subnetIndex: subnetWithQuestionIndex,
+				// 	toolName:
+				// 		currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+				// 			?.toolName,
+				// };
 
 				// Always append submitting message to end
-				setChatMessages((prev) => {
-					const newMessages = [...prev];
-					newMessages.push(submittingMessage);
-					return newMessages;
-				});
+				// setChatMessages((prev) => {
+				// 	const newMessages = [...prev];
+				// 	newMessages.push(submittingMessage);
+				// 	return newMessages;
+				// });
 
 				await submitFeedbackToAPI(question, "Yes, proceed");
 			}
@@ -409,24 +414,25 @@ export const useFeedback = ({
 				prev.filter((msg) => msg.id !== submittingMessageId)
 			);
 
-			const successMessage: ChatMsg = {
-				id: successMessageId,
-				type: "response",
-				content:
-					"Feedback processed successfully. Resuming workflow...",
-				timestamp: new Date(),
-				subnetIndex: subnetWithQuestionIndex,
-				toolName:
-					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
-						?.toolName,
-			};
+			// Don't add success message - it clutters the subnet history
+			// const successMessage: ChatMsg = {
+			// 	id: successMessageId,
+			// 	type: "response",
+			// 	content:
+			// 		"Feedback processed successfully. Resuming workflow...",
+			// 	timestamp: new Date(),
+			// 	subnetIndex: subnetWithQuestionIndex,
+			// 	toolName:
+			// 		currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+			// 			?.toolName,
+			// };
 
 			// Always append success message to end
-			setChatMessages((prev) => {
-				const newMessages = [...prev];
-				newMessages.push(successMessage);
-				return newMessages;
-			});
+			// setChatMessages((prev) => {
+			// 	const newMessages = [...prev];
+			// 	newMessages.push(successMessage);
+			// 	return newMessages;
+			// });
 
 			setPrompt("");
 
@@ -541,24 +547,24 @@ export const useFeedback = ({
 					throw new Error("No question found to answer");
 				}
 				
-				// Use the fallback subnet's question
-				const submittingMessage: ChatMsg = {
-					id: submittingMessageId,
-					type: "response",
-					content: "Submitting feedback...",
-					timestamp: new Date(),
-					subnetIndex: subnetWithQuestionIndex,
-					toolName:
-						currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
-							?.toolName,
-				};
+				// Don't add submitting message - it clutters the subnet history
+				// const submittingMessage: ChatMsg = {
+				// 	id: submittingMessageId,
+				// 	type: "response",
+				// 	content: "Submitting feedback...",
+				// 	timestamp: new Date(),
+				// 	subnetIndex: subnetWithQuestionIndex,
+				// 	toolName:
+				// 		currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+				// 			?.toolName,
+				// };
 
 				// Always append submitting message to end
-				setChatMessages((prev) => {
-					const newMessages = [...prev];
-					newMessages.push(submittingMessage);
-					return newMessages;
-				});
+				// setChatMessages((prev) => {
+				// 	const newMessages = [...prev];
+				// 	newMessages.push(submittingMessage);
+				// 	return newMessages;
+				// });
 
 				await submitFeedbackToAPI(
 					fallbackSubnet.question.text,
@@ -595,24 +601,25 @@ export const useFeedback = ({
 				prev.filter((msg) => msg.id !== submittingMessageId)
 			);
 
-			const successMessage: ChatMsg = {
-				id: successMessageId,
-				type: "response",
-				content:
-					"Feedback submitted successfully. Resuming workflow...",
-				timestamp: new Date(),
-				subnetIndex: subnetWithQuestionIndex,
-				toolName:
-					currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
-						?.toolName,
-			};
+			// Don't add success message - it clutters the subnet history
+			// const successMessage: ChatMsg = {
+			// 	id: successMessageId,
+			// 	type: "response",
+			// 	content:
+			// 		"Feedback submitted successfully. Resuming workflow...",
+			// 	timestamp: new Date(),
+			// 	subnetIndex: subnetWithQuestionIndex,
+			// 	toolName:
+			// 		currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+			// 			?.toolName,
+			// };
 
 			// Always append success message to end
-			setChatMessages((prev) => {
-				const newMessages = [...prev];
-				newMessages.push(successMessage);
-				return newMessages;
-			});
+			// setChatMessages((prev) => {
+			// 	const newMessages = [...prev];
+			// 	newMessages.push(successMessage);
+			// 	return newMessages;
+			// });
 
 			setPrompt("");
 

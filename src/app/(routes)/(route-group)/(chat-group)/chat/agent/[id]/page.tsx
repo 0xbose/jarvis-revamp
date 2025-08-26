@@ -1,6 +1,7 @@
 "use client";
 import ChatInput from "@/components/common/chat-input";
 import { ChatMessage } from "@/components/common/chat-message";
+import { SubnetGroup } from "@/components/common/subnet-group";
 import React, { useEffect, useState, useRef } from "react";
 import { useGlobalStore } from "@/stores/global-store";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -27,6 +28,8 @@ import { useChatMessages } from "@/hooks/use-chat-messages";
 import { useChatScroll } from "@/hooks/use-chat-scroll";
 import { useWorkflowExecution } from "@/hooks/use-workflow-execution";
 import { useFeedback } from "@/hooks/use-feedback";
+import { useMessageGrouping } from "@/hooks/use-message-grouping";
+import { ChatMessagesGrouped } from "@/components/common/chat-messages-grouped";
 
 export default function AgentChatPage() {
 	const {
@@ -50,6 +53,7 @@ export default function AgentChatPage() {
 		useState(false);
 	const [hasCachedMessagesLoaded, setHasCachedMessagesLoaded] =
 		useState(false);
+	const [completedFeedback, setCompletedFeedback] = useState<Set<number>>(new Set());
 	const { skyBrowser, address } = useWallet();
 	const queryClient = useQueryClient();
 
@@ -75,11 +79,13 @@ export default function AgentChatPage() {
 		setWorkflowId,
 	} = useChatMessages();
 
+	const { groupMessagesBySubnet } = useMessageGrouping();
+
 
 
 	useEffect(() => {
-		if (urlWorkflowId) {
-			const cachedMessages = getCachedChatMessages(urlWorkflowId);
+		if (urlWorkflowId && queryClient) {
+			const cachedMessages = getCachedChatMessages(urlWorkflowId, queryClient);
 			if (cachedMessages && cachedMessages.length > 0) {
 				console.log(
 					`📋 Loading cached messages for workflow: ${urlWorkflowId}`
@@ -122,7 +128,7 @@ export default function AgentChatPage() {
 				setIsShowingCachedMessages(false);
 				setHasCachedMessagesLoaded(false);
 			}
-		}}, [urlWorkflowId, setWorkflowId]);
+		}}, [urlWorkflowId, setWorkflowId, queryClient]);
 
 	const {
 		messagesEndRef,
@@ -176,8 +182,7 @@ export default function AgentChatPage() {
 				console.log(
 					`💾 Caching messages for workflow: ${urlWorkflowId}`
 				);
-				setCachedChatMessages(urlWorkflowId, chatMessages);
-				queryClient.setQueryData(["chat", urlWorkflowId], chatMessages);
+				setCachedChatMessages(urlWorkflowId, chatMessages, queryClient);
 			} else {
 				console.log(
 					`⚠️ Not caching messages - workflow mismatch: ${currentWorkflowIdFromData} vs ${urlWorkflowId}`
@@ -316,7 +321,7 @@ export default function AgentChatPage() {
 
 	// Consolidated workflow initialization effect - prevents multiple API calls
 	useEffect(() => {
-		if (isLoading || !skyBrowser || !address) return;
+		if (isLoading || !skyBrowser || !address || !queryClient) return;
 
 		if (urlWorkflowId && urlWorkflowId.trim().length > 0) {
 			// Prevent duplicate initialization
@@ -334,7 +339,7 @@ export default function AgentChatPage() {
 			}
 
 			// Check for cached messages first
-			const cachedMessages = getCachedChatMessages(urlWorkflowId);
+			const cachedMessages = getCachedChatMessages(urlWorkflowId, queryClient);
 			if (cachedMessages && cachedMessages.length > 0) {
 				console.log(`📋 Loading cached messages for workflow: ${urlWorkflowId}`);
 
@@ -382,6 +387,7 @@ export default function AgentChatPage() {
 		clearMessages,
 		resetFeedbackState,
 		startPollingExistingWorkflow,
+		queryClient,
 	]);
 
 	useEffect(() => {
@@ -735,6 +741,23 @@ export default function AgentChatPage() {
 							className=" flex flex-col gap-4 w-10/12 max-w-7xl mx-auto"
 							onScroll={handleScroll}
 						>
+							<ChatMessagesGrouped
+								messages={chatMessages}
+								urlWorkflowId={urlWorkflowId}
+								currentWorkflowData={currentWorkflowData}
+								workflowStatus={workflowStatus}
+								completedFeedback={completedFeedback}
+								pendingNotifications={pendingNotifications}
+								pollingStoppedAt={pollingStoppedAt}
+								onNotificationYes={handleNotificationYes}
+								onNotificationNo={handleNotificationNo}
+								onFeedbackProceed={handleFeedbackProceed}
+								onFeedbackSubmit={handleFeedbackSubmit}
+								onRefreshPolling={refreshPolling}
+								isShowingCachedMessages={isShowingCachedMessages}
+							/>
+
+							{/* TEMP: Keep original for testing - remove this section after verification
 							{chatMessages
 								.filter((message) => {
 									if (
@@ -1070,7 +1093,7 @@ export default function AgentChatPage() {
 										workflowStatus={workflowStatus}
 										pollingStoppedAt={pollingStoppedAt}
 									/>
-								))}
+								))} */}
 
 							{shouldShowSkeleton() && (
 								<div className="space-y-2">

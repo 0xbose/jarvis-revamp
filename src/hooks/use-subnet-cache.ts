@@ -1,7 +1,32 @@
 import { useCallback, useRef } from "react";
-import { useSubnetCacheStore } from "@/stores";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChatMsg } from "@/types/chat";
 import { parseAgentResponse, createContentHash } from "@/utils/message-parser";
+
+// Query keys for subnet caching with TanStack Query
+export const subnetQueryKeys = {
+	subnets: (workflowId: string) => ["subnets", workflowId] as const,
+	subnetData: (workflowId: string, subnetIndex: number) => 
+		["subnets", workflowId, "data", subnetIndex] as const,
+	subnetStatus: (workflowId: string) => ["subnets", workflowId, "status"] as const,
+};
+
+// Subnet data interface for caching
+export interface CachedSubnetData {
+	itemID: number;
+	toolName: string;
+	status: "pending" | "in_progress" | "done" | "failed" | "awaiting_response";
+	data: any;
+	prompt: string | null;
+	question?: {
+		type: string;
+		text: string;
+		itemID: number;
+		expiresAt: string;
+	};
+	feedbackHistory?: any[];
+	timestamp: number;
+}
 
 const detectDataDuplication = (
 	subnet: any
@@ -42,13 +67,7 @@ const detectDataDuplication = (
 };
 
 export const useSubnetCache = () => {
-	const {
-		cacheSubnetData,
-		getCachedSubnetData,
-		hasSubnetChanged,
-		clearWorkflowCache,
-		updateSubnetStatus,
-	} = useSubnetCacheStore();
+	const queryClient = useQueryClient();
 
 	const subnetPreviousStatus = useRef<Map<string, Map<number, string>>>(
 		new Map()
@@ -58,6 +77,86 @@ export const useSubnetCache = () => {
 		new Map()
 	);
 	const generatedMessageIds = useRef<Map<string, Set<string>>>(new Map());
+
+	// TanStack Query-based subnet caching functions
+	const cacheSubnetData = useCallback((workflowId: string, subnetIndex: number, subnetData: any) => {
+		const cachedData: CachedSubnetData = {
+			itemID: subnetData.itemID || subnetIndex,
+			toolName: subnetData.toolName,
+			status: subnetData.status,
+			data: subnetData.data,
+			prompt: subnetData.prompt,
+			question: subnetData.question,
+			feedbackHistory: subnetData.feedbackHistory,
+			timestamp: Date.now(),
+		};
+
+		// Store individual subnet data
+		queryClient.setQueryData(
+			subnetQueryKeys.subnetData(workflowId, subnetIndex),
+			cachedData
+		);
+
+		// Update the full subnets map
+		queryClient.setQueryData(
+			subnetQueryKeys.subnets(workflowId),
+			(oldSubnets: Map<number, CachedSubnetData> = new Map()) => {
+				const newSubnets = new Map(oldSubnets);
+				newSubnets.set(subnetIndex, cachedData);
+				return newSubnets;
+			}
+		);
+	}, [queryClient]);
+
+	const getCachedSubnetData = useCallback((workflowId: string, subnetIndex: number): CachedSubnetData | undefined => {
+		return queryClient.getQueryData(subnetQueryKeys.subnetData(workflowId, subnetIndex));
+	}, [queryClient]);
+
+	const hasSubnetChanged = useCallback((workflowId: string, subnetIndex: number, newData: any): boolean => {
+		const cached = getCachedSubnetData(workflowId, subnetIndex);
+		
+		if (!cached) {
+			return true; // New subnet, consider it changed
+		}
+
+		// Simple comparison based on status and data
+		return (
+			cached.status !== newData.status ||
+			JSON.stringify(cached.data) !== JSON.stringify(newData.data) ||
+			JSON.stringify(cached.question) !== JSON.stringify(newData.question)
+		);
+	}, [getCachedSubnetData]);
+
+	const clearWorkflowCache = useCallback((workflowId: string) => {
+		queryClient.removeQueries({ queryKey: subnetQueryKeys.subnets(workflowId) });
+		queryClient.removeQueries({ 
+			predicate: (query) => 
+				Array.isArray(query.queryKey) && 
+				query.queryKey[0] === "subnets" && 
+				query.queryKey[1] === workflowId
+		});
+	}, [queryClient]);
+
+	const getCachedSubnets = useCallback((workflowId: string): Map<number, CachedSubnetData> | undefined => {
+		return queryClient.getQueryData(subnetQueryKeys.subnets(workflowId));
+	}, [queryClient]);
+
+	const updateSubnetStatus = useCallback((workflowId: string, subnetIndex: number, status: string, data: any = null) => {
+		const cached = getCachedSubnetData(workflowId, subnetIndex);
+		if (cached) {
+			const updatedData = {
+				...cached,
+				status: status as CachedSubnetData['status'],
+				data: data || cached.data,
+				timestamp: Date.now(),
+			};
+			
+			queryClient.setQueryData(
+				subnetQueryKeys.subnetData(workflowId, subnetIndex),
+				updatedData
+			);
+		}
+	}, [getCachedSubnetData, queryClient]);
 
 	const getWorkflowMaps = useCallback((workflowId: string) => {
 		if (!subnetPreviousStatus.current.has(workflowId)) {
@@ -194,23 +293,205 @@ export const useSubnetCache = () => {
 				const hasFeedbackData =
 					hasFeedbackHistory && subnet.feedbackHistory.length > 0;
 
-				const shouldGenerateMessage =
-					!hasFeedbackData &&
-					!isResumingWorkflow &&
-					((hasChanged && prevStatus) ||
-						(subnet.status === "in_progress" &&
-							prevStatus === "pending") ||
-						(subnet.status === "done" && subnet.data) ||
-						(subnet.status === "awaiting_response" &&
-							subnet.data &&
-							(prevStatus || !includeHistory)) ||
-						(subnet.status === "pending" && hasSubstantialData) ||
-						(prevStatus === "in_progress" &&
-							subnet.status !== "in_progress") ||
-						isQuestionArrivingLater);
+				if (hasFeedbackData) {
+					// Clear any existing feedback messages for this subnet to avoid duplicates
+					const subnetMessageKeys = Array.from(messageIds).filter(
+						(key) =>
+							key.startsWith(`feedback_${workflowId}_${index}_`)
+					);
+					subnetMessageKeys.forEach((key) => messageIds.delete(key));
 
-				if (shouldGenerateMessage) {
-					const {
+					// Sort feedback history by creation time (oldest first for proper flow)
+					const sortedFeedbackHistory = [
+						...subnet.feedbackHistory,
+					].sort((a, b) => {
+						const timeA = new Date(a.created_at).getTime();
+						const timeB = new Date(b.created_at).getTime();
+						return timeA - timeB; // oldest first for proper chronological flow
+					});
+
+					console.log(`🔍 Processing ${sortedFeedbackHistory.length} feedback history items for subnet ${index}`);
+
+					// Process each feedback history item
+					sortedFeedbackHistory.forEach(
+						(feedbackItem: any, feedbackIndex: number) => {
+							const feedbackBaseKey = `feedback_${workflowId}_${index}_${feedbackIndex}`;
+
+							// Always create response message first (prompt + data/message)
+							const responseKey = `${feedbackBaseKey}_response`;
+							const responseSourceId = `subnet_${index}_feedback_response_${feedbackIndex}`;
+
+							const responseAlreadyExists =
+								dataMessages.some(
+									(msg) => msg.sourceId === responseSourceId
+								) ||
+								questionMessages.some(
+									(msg) => msg.sourceId === responseSourceId
+								);
+
+							if (!responseAlreadyExists) {
+								// Create response message with prompt and data
+								const responseMessage: ChatMsg = {
+									id: `feedback_response_${index}_${feedbackIndex}_${Date.now()}`,
+									type: "workflow_subnet", // Use workflow_subnet type for collapsible display
+									content: feedbackItem.response?.message || subnet.data || "No response data available",
+									timestamp: new Date(feedbackItem.created_at),
+									toolName: subnet.toolName,
+									subnetIndex: index,
+									subnetStatus: subnet.status,
+									sourceId: responseSourceId,
+									prompt: subnet.prompt || feedbackItem.response?.prompt,
+									// Include image data if present
+									imageData: feedbackItem.response?.fileData,
+									isImage:
+										!!feedbackItem.response?.fileData &&
+										feedbackItem.response?.contentType?.startsWith(
+											"image/"
+										),
+									contentType: feedbackItem.response?.contentType,
+								};
+								dataMessages.push(responseMessage);
+								messageIds.add(responseKey);
+								console.log(`✅ Created feedback response message for subnet ${index}, feedback ${feedbackIndex}`);
+							}
+
+							// Always create question message (feedback_question)
+							const questionKey = `${feedbackBaseKey}_question`;
+							const questionSourceId = `subnet_${index}_feedback_question_${feedbackIndex}`;
+
+							const questionAlreadyExists =
+								dataMessages.some(
+									(msg) => msg.sourceId === questionSourceId
+								) ||
+								questionMessages.some(
+									(msg) => msg.sourceId === questionSourceId
+								);
+
+							if (!questionAlreadyExists) {
+								const responseTimestamp = new Date(feedbackItem.created_at);
+								const questionTimestamp = new Date(responseTimestamp.getTime() + 1000);
+
+								const questionMessage: ChatMsg = {
+									id: `feedback_question_${index}_${feedbackIndex}_${Date.now()}`,
+									type: "question",
+									content: feedbackItem.feedback_question,
+									timestamp: questionTimestamp,
+									toolName: subnet.toolName,
+									subnetIndex: index,
+									subnetStatus: subnet.status,
+									questionData: {
+										type: "feedback", // ALWAYS feedback type for questions in feedbackHistory
+										text: feedbackItem.feedback_question,
+										itemID: feedbackItem.item_id,
+										expiresAt: feedbackItem.updated_at,
+									},
+									sourceId: questionSourceId,
+								};
+								questionMessages.push(questionMessage);
+								messageIds.add(questionKey);
+								console.log(`✅ Created feedback question message for subnet ${index}, feedback ${feedbackIndex}`);
+							}
+
+							// Create answer message if user has answered
+							if (
+								feedbackItem.user_answer &&
+								feedbackItem.user_answer.trim() !== ""
+							) {
+								const answerKey = `${feedbackBaseKey}_answer`;
+								const answerSourceId = `subnet_${index}_feedback_answer_${feedbackIndex}`;
+
+								const answerAlreadyExists =
+									dataMessages.some(
+										(msg) => msg.sourceId === answerSourceId
+									) ||
+									questionMessages.some(
+										(msg) => msg.sourceId === answerSourceId
+									);
+
+								if (!answerAlreadyExists) {
+									const responseTimestamp = new Date(feedbackItem.created_at);
+									const questionTimestamp = new Date(responseTimestamp.getTime() + 1000);
+									const answerTimestamp = new Date(
+										feedbackItem.updated_at ||
+											new Date(questionTimestamp.getTime() + 1000)
+									);
+
+									const answerMessage: ChatMsg = {
+										id: `feedback_answer_${index}_${feedbackIndex}_${Date.now()}`,
+										type: "answer",
+										content: feedbackItem.user_answer,
+										timestamp: answerTimestamp,
+										toolName: subnet.toolName,
+										subnetIndex: index,
+										sourceId: answerSourceId,
+									};
+									questionMessages.push(answerMessage);
+									messageIds.add(answerKey);
+									console.log(`✅ Created feedback answer message for subnet ${index}, feedback ${feedbackIndex}`);
+								}
+							}
+						}
+					);
+
+					// Check if current subnet has a question that needs to be shown
+					if (subnet.question) {
+						const isQuestionAlreadyAnswered =
+							subnet.feedbackHistory?.some(
+								(feedback: any) =>
+									feedback.feedback_question === subnet.question.text &&
+									feedback.user_answer &&
+									feedback.user_answer.trim() !== "" &&
+									feedback.user_answer !== null
+							);
+
+						if (!isQuestionAlreadyAnswered) {
+							const currentQuestionKey = `current_question_${workflowId}_${index}`;
+							if (!messageIds.has(currentQuestionKey)) {
+								const baseTimestamp = subnet.updatedAt
+									? new Date(subnet.updatedAt)
+									: new Date();
+								const questionTimestamp = new Date(baseTimestamp.getTime() + 1000);
+
+								const currentQuestionMessage: ChatMsg = {
+									id: `current_question_${index}_${Date.now()}`,
+									type: "question",
+									content: subnet.question.text,
+									timestamp: questionTimestamp,
+									subnetStatus: subnet.status,
+									toolName: subnet.toolName,
+									subnetIndex: index,
+									questionData: subnet.question,
+									sourceId: `subnet_${index}_current_question`,
+								};
+								questionMessages.push(currentQuestionMessage);
+								messageIds.add(currentQuestionKey);
+								console.log(`✅ Current question message generated for subnet ${index}`);
+							}
+						} else {
+							console.log(`⏭️ Skipping current subnet question - already answered in feedback history`);
+						}
+					}
+
+					// Skip subnet data processing when we have feedback history
+					console.log(`⏭️ Skipping subnet data processing - using feedback history for subnet ${index}`);
+				} else {
+					// Only process subnet data when no feedback history exists
+					const shouldGenerateMessage =
+						!isResumingWorkflow &&
+						((hasChanged && prevStatus) ||
+							(subnet.status === "in_progress" &&
+								prevStatus === "pending") ||
+							(subnet.status === "done" && subnet.data) ||
+							(subnet.status === "awaiting_response" &&
+								subnet.data &&
+								(prevStatus || !includeHistory)) ||
+							(subnet.status === "pending" && hasSubstantialData) ||
+							(prevStatus === "in_progress" &&
+								subnet.status !== "in_progress") ||
+							isQuestionArrivingLater);
+
+					if (shouldGenerateMessage) {
+						const {
 						dataMessages: subnetDataMessages,
 						questionMessages: subnetQuestionMessages,
 					} = createSubnetMessages(workflowId, index, subnet, {
@@ -224,8 +505,8 @@ export const useSubnetCache = () => {
 						includeHistory,
 					});
 
-					// Process data messages
-					subnetDataMessages.forEach((message) => {
+						// Process data messages
+						subnetDataMessages.forEach((message) => {
 						if (message) {
 							let messageKey;
 							if (subnet.status === "pending" && subnet.data) {
@@ -266,7 +547,7 @@ export const useSubnetCache = () => {
 						}
 					});
 
-					subnetQuestionMessages.forEach((message) => {
+						subnetQuestionMessages.forEach((message) => {
 						if (message) {
 							let messageKey;
 							const questionData =
@@ -283,314 +564,29 @@ export const useSubnetCache = () => {
 						}
 					});
 
-					const shouldShowNotification =
+						const shouldShowNotification =
 						subnet.question?.type === "notification" &&
 						(hasChanged ||
 							isShowingQuestion ||
 							(subnet.status === "pending" && subnet.data));
 
-					if (shouldShowNotification) {
-						const notificationKey = `notification_${workflowId}_${index}_${subnet.question.text}`;
+						if (shouldShowNotification) {
+							const notificationKey = `notification_${workflowId}_${index}_${subnet.question.text}`;
 
-						if (!messageIds.has(notificationKey)) {
-							const notificationMessage =
+							if (!messageIds.has(notificationKey)) {
+								const notificationMessage =
 								createNotificationMessage(subnet, index);
-							if (notificationMessage) {
-								dataMessages.push(notificationMessage);
-								messageIds.add(notificationKey);
+								if (notificationMessage) {
+									dataMessages.push(notificationMessage);
+									messageIds.add(notificationKey);
+								}
+							} else {
+								console.log(
+									`⏭️ Skipping duplicate notification for subnet ${index}`
+								);
 							}
-						} else {
-							console.log(
-								`⏭️ Skipping duplicate notification for subnet ${index}`
-							);
 						}
 					}
-				}
-
-				if (hasFeedbackData) {
-					const subnetMessageKeys = Array.from(messageIds).filter(
-						(key) =>
-							key.startsWith(`feedback_${workflowId}_${index}_`)
-					);
-					subnetMessageKeys.forEach((key) => messageIds.delete(key));
-
-					const sortedFeedbackHistory = [
-						...subnet.feedbackHistory,
-					].sort((a, b) => {
-						const timeA = new Date(a.created_at).getTime();
-						const timeB = new Date(b.created_at).getTime();
-						return timeA - timeB; // oldest first, so latest response overwrites earlier ones
-					});
-
-					const feedbackToProcess = sortedFeedbackHistory;
-
-					feedbackToProcess.forEach(
-						(feedbackItem: any, feedbackIndex: number) => {
-							const feedbackBaseKey = `feedback_${workflowId}_${index}_${feedbackIndex}`;
-
-							const responseKey = `${feedbackBaseKey}_response`;
-							const sourceId = `subnet_${index}_feedback_response_${feedbackIndex}`;
-
-							const messageAlreadyExists =
-								dataMessages.some(
-									(msg) => msg.sourceId === sourceId
-								) ||
-								questionMessages.some(
-									(msg) => msg.sourceId === sourceId
-								);
-
-							if (!messageAlreadyExists) {
-								if (
-									!feedbackItem.response?.message ||
-									feedbackItem.response.message.trim() === ""
-								) {
-									return;
-								}
-
-								const responseMessage: ChatMsg = {
-									id: `feedback_response_${index}_${feedbackIndex}_${Date.now()}`,
-									type: "response",
-									content: feedbackItem.response.message,
-									timestamp: new Date(
-										feedbackItem.created_at
-									),
-									toolName: subnet.toolName,
-									subnetIndex: index,
-									sourceId: sourceId,
-									prompt: subnet.prompt,
-									// Include image data if present
-									imageData: feedbackItem.response.fileData,
-									isImage:
-										!!feedbackItem.response.fileData &&
-										feedbackItem.response.contentType?.startsWith(
-											"image/"
-										),
-									contentType:
-										feedbackItem.response.contentType,
-								};
-								dataMessages.push(responseMessage);
-								messageIds.add(responseKey);
-							} else {
-								console.log(
-									`⏭️ SKIPPING duplicate feedback response for subnet ${index}, feedback ${feedbackIndex} - messageIds: ${messageIds.has(
-										responseKey
-									)}, messageExists: ${messageAlreadyExists}`
-								);
-							}
-
-							const questionKey = `${feedbackBaseKey}_question`;
-							const questionSourceId = `subnet_${index}_feedback_question_${feedbackIndex}`;
-
-							const questionAlreadyExists =
-								dataMessages.some(
-									(msg) => msg.sourceId === questionSourceId
-								) ||
-								questionMessages.some(
-									(msg) => msg.sourceId === questionSourceId
-								);
-
-							if (!questionAlreadyExists) {
-								const responseTimestamp = new Date(
-									feedbackItem.created_at
-								);
-								const questionTimestamp = new Date(
-									responseTimestamp.getTime() + 2000
-								);
-
-								const questionMessage: ChatMsg = {
-									id: `feedback_question_${index}_${feedbackIndex}_${Date.now()}`,
-									type: "question",
-									content: feedbackItem.feedback_question,
-									timestamp: questionTimestamp,
-									toolName: subnet.toolName,
-									subnetIndex: index,
-									subnetStatus: subnet.status, // Add subnet status for feedback button logic
-									questionData: {
-										type: "feedback", // ALWAYS feedback type for questions in feedbackHistory
-										text: feedbackItem.feedback_question,
-										itemID: feedbackItem.item_id,
-										expiresAt: feedbackItem.updated_at,
-									},
-									sourceId: questionSourceId,
-								};
-								questionMessages.push(questionMessage);
-								messageIds.add(questionKey);
-							} else {
-								console.log(
-									`⏭️ Skipping duplicate question for feedback:`,
-									{
-										feedbackIndex,
-										questionText:
-											feedbackItem.feedback_question?.slice(
-												0,
-												50
-											),
-										userAnswer:
-											feedbackItem.user_answer?.slice(
-												0,
-												30
-											),
-									}
-								);
-							}
-
-							if (
-								feedbackItem.user_answer &&
-								feedbackItem.user_answer.trim() !== ""
-							) {
-								const answerKey = `${feedbackBaseKey}_answer`;
-								const answerSourceId = `subnet_${index}_feedback_answer_${feedbackIndex}`;
-
-								const answerAlreadyExists =
-									dataMessages.some(
-										(msg) => msg.sourceId === answerSourceId
-									) ||
-									questionMessages.some(
-										(msg) => msg.sourceId === answerSourceId
-									);
-
-								if (!answerAlreadyExists) {
-									const responseTimestamp = new Date(
-										feedbackItem.created_at
-									);
-									const questionTimestamp = new Date(
-										responseTimestamp.getTime() + 2000
-									);
-									const answerTimestamp = new Date(
-										feedbackItem.updated_at ||
-											new Date(
-												questionTimestamp.getTime() +
-													1000
-											)
-									);
-
-									const answerMessage: ChatMsg = {
-										id: `feedback_answer_${index}_${feedbackIndex}_${Date.now()}`,
-										type: "answer",
-										content: feedbackItem.user_answer,
-										timestamp: answerTimestamp,
-										toolName: subnet.toolName,
-										subnetIndex: index,
-										sourceId: answerSourceId,
-									};
-									questionMessages.push(answerMessage);
-									messageIds.add(answerKey);
-								}
-							}
-						}
-					);
-
-					const feedbackMessageFlow = [
-						...dataMessages.filter((msg) =>
-							msg.sourceId?.startsWith(
-								`subnet_${index}_feedback_`
-							)
-						),
-						...questionMessages.filter((msg) =>
-							msg.sourceId?.startsWith(
-								`subnet_${index}_feedback_`
-							)
-						),
-					].sort((a, b) => {
-						const timeA = a.timestamp
-							? new Date(a.timestamp).getTime()
-							: 0;
-						const timeB = b.timestamp
-							? new Date(b.timestamp).getTime()
-							: 0;
-						return timeA - timeB;
-					});
-
-					if (subnet.question) {
-						const isQuestionAlreadyAnswered =
-							subnet.feedbackHistory?.some(
-								(feedback: any) =>
-									feedback.feedback_question ===
-										subnet.question.text &&
-									feedback.user_answer &&
-									feedback.user_answer.trim() !== "" &&
-									feedback.user_answer !== null
-							);
-
-						if (!isQuestionAlreadyAnswered) {
-							const currentQuestionKey = `current_question_${workflowId}_${index}`;
-							if (!messageIds.has(currentQuestionKey)) {
-								const baseTimestamp = subnet.updatedAt
-									? new Date(subnet.updatedAt)
-									: new Date();
-								const questionTimestamp = new Date(
-									baseTimestamp.getTime() + 1000
-								);
-
-								const currentQuestionMessage: ChatMsg = {
-									id: `current_question_${index}_${Date.now()}`,
-									type: "question",
-									content: subnet.question.text,
-									timestamp: questionTimestamp,
-									subnetStatus: subnet.status,
-									toolName: subnet.toolName,
-									subnetIndex: index,
-									questionData: subnet.question,
-									sourceId: `subnet_${index}_current_question`,
-								};
-								questionMessages.push(currentQuestionMessage);
-								messageIds.add(currentQuestionKey);
-								console.log(
-									`✅ Current question message generated for subnet ${index}`,
-									{
-										questionText:
-											subnet.question.text?.slice(0, 50),
-										timestamp:
-											currentQuestionMessage.timestamp,
-										subnetStatus: subnet.status,
-									}
-								);
-							} else {
-								console.log(
-									`⚠️ Question message already exists for subnet ${index}, key: ${currentQuestionKey}`
-								);
-							}
-						} else {
-							console.log(
-								`⏭️ Skipping current subnet question - already answered in feedback history: "${subnet.question.text?.slice(
-									0,
-									50
-								)}"`
-							);
-						}
-					}
-
-					const feedbackMessages = [
-						...dataMessages.filter((msg) =>
-							msg.sourceId?.startsWith(
-								`subnet_${index}_feedback_`
-							)
-						),
-						...questionMessages.filter((msg) =>
-							msg.sourceId?.startsWith(
-								`subnet_${index}_feedback_`
-							)
-						),
-					];
-
-					const subnetDataMessages = dataMessages.filter(
-						(msg) =>
-							msg.subnetIndex === index &&
-							msg.sourceId?.startsWith(
-								`subnet_${index}_feedback_`
-							)
-					);
-					const subnetQuestionMessages = questionMessages.filter(
-						(msg) =>
-							msg.subnetIndex === index &&
-							msg.sourceId?.startsWith(
-								`subnet_${index}_feedback_`
-							)
-					);
-				} else {
-					console.log(
-						`⏭️ Skipping subnet ${index} - no changes detected`
-					);
 				}
 
 				if (currentStatus === "done" && processingMap.has(index)) {
@@ -599,7 +595,42 @@ export const useSubnetCache = () => {
 				}
 			});
 
-			const safeguardedDataMessages = dataMessages.filter((msg) => {
+			// Filter out unwanted system messages and feedback processing messages
+			const filteredDataMessages = dataMessages.filter((msg) => {
+				// Filter out workflow execution success messages
+				if (msg.content === "Workflow executed successfully") {
+					return false;
+				}
+
+				// Filter out feedback processing messages
+				if (msg.content?.includes("Feedback submitted successfully") ||
+					msg.content?.includes("Feedback processed successfully") ||
+					msg.content?.includes("Resuming workflow")) {
+					return false;
+				}
+
+				// Filter out generic "Response" messages without meaningful content
+				if (msg.type === "response" && 
+					(msg.content === "Response" || 
+					 msg.content === "Your answer" ||
+					 msg.content === "Proceeding with current result")) {
+					return false;
+				}
+
+				return true;
+			});
+
+			const filteredQuestionMessages = questionMessages.filter((msg) => {
+				// Filter out unwanted question messages
+				if (msg.content?.includes("Feedback submitted successfully") ||
+					msg.content?.includes("Feedback processed successfully")) {
+					return false;
+				}
+
+				return true;
+			});
+
+			const safeguardedDataMessages = filteredDataMessages.filter((msg) => {
 				if (
 					msg.type === "workflow_subnet" &&
 					msg.subnetIndex !== undefined
@@ -631,7 +662,7 @@ export const useSubnetCache = () => {
 			});
 
 			// Apply the same safeguard to question messages
-			const safeguardedQuestionMessages = questionMessages.filter(
+			const safeguardedQuestionMessages = filteredQuestionMessages.filter(
 				(msg) => {
 					if (msg.subnetIndex !== undefined) {
 						const subnetIndex = msg.subnetIndex;
@@ -1194,9 +1225,7 @@ export const useSubnetCache = () => {
 		[]
 	);
 
-	const getCachedSubnets = useCallback((workflowId: string) => {
-		return useSubnetCacheStore.getState().getWorkflowSubnets(workflowId);
-	}, []);
+
 
 	const hasSubnetData = useCallback(
 		(workflowId: string, subnetIndex: number) => {
