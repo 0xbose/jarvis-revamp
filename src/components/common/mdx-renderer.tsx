@@ -17,7 +17,7 @@ function convertUrlsToLinks(text: string): React.ReactNode {
 
 	// URL regex pattern to match http/https URLs
 	// Matches URLs that start with http:// or https:// and continue until whitespace or end of string
-	const urlRegex = /(https?:\/\/[^\s]+)/g;
+	const urlRegex = /(https?:\/\/[^\s"',}]+)/g;
 	const parts = text.split(urlRegex);
 
 	return parts.map((part, index) => {
