@@ -1131,24 +1131,7 @@ export default function AgentChatPage() {
 								</div>
 							)}
 
-							{ !shouldShowSkeleton() && 
-								(workflowStatus === "in_progress" || workflowStatus === "waiting") && 
-								!(currentWorkflowData?.workflowStatus === "completed" || currentWorkflowData?.workflowStatus === "failed" || currentWorkflowData?.workflowStatus === "stopped") && (
-								<div className="flex items-center space-x-1 mt-6 ml-8.5">
-									<div
-										className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-										style={{ animationDelay: "0ms" }}
-									></div>
-									<div
-										className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-										style={{ animationDelay: "150ms" }}
-									></div>
-									<div
-										className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-										style={{ animationDelay: "300ms" }}
-									></div>
-								</div>
-							)}
+							{/* Outer loading dots removed - loading states now shown inside chat message boxes */}
 
 							<div ref={messagesEndRef} />
 						</div>

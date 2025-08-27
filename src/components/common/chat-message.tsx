@@ -923,7 +923,7 @@ export function ChatMessage({
 									)}
 									{message.showLoadingDots && !message.content && message.subnetStatus !== "done" && (
 										<div className="flex items-center gap-2 w-full">
-											<Skeleton className="w-1/2 h-8 animate-pulse bg-[#303333]" />
+											<LoadingDots className="p-2" dotClassName="bg-gray-400 dark:bg-gray-300" />
 										</div>
 									)}
 								</div>
