@@ -30,6 +30,7 @@ import { useWorkflowExecution } from "@/hooks/use-workflow-execution";
 import { useFeedback } from "@/hooks/use-feedback";
 import { useMessageGrouping } from "@/hooks/use-message-grouping";
 import { ChatMessagesGrouped } from "@/components/common/chat-messages-grouped";
+import { ComparisonView } from "@/components/common/comparison-view";
 
 export default function AgentChatPage() {
 	const {
@@ -45,6 +46,8 @@ export default function AgentChatPage() {
 	const searchParams = useSearchParams();
 	const agentId = params.id as string;
 	const urlWorkflowId = searchParams.get("workflowId");
+	const compareWorkflowId = searchParams.get("compare");
+	const isComparisonMode = !!compareWorkflowId;
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [isInFeedbackMode, setIsInFeedbackMode] = useState(false);
@@ -128,7 +131,22 @@ export default function AgentChatPage() {
 				setIsShowingCachedMessages(false);
 				setHasCachedMessagesLoaded(false);
 			}
-		}}, [urlWorkflowId, setWorkflowId, queryClient]);
+		}
+		
+		// Also preload cached messages for comparison workflow if in comparison mode
+		if (compareWorkflowId && queryClient && isComparisonMode) {
+			const compareMessages = getCachedChatMessages(compareWorkflowId, queryClient);
+			if (compareMessages && compareMessages.length > 0) {
+				console.log(
+					`📋 Preloading cached messages for comparison workflow: ${compareWorkflowId}`
+				);
+			} else {
+				console.log(
+					`📋 No cached messages found for comparison workflow: ${compareWorkflowId}`
+				);
+			}
+		}
+	}, [urlWorkflowId, compareWorkflowId, isComparisonMode, setWorkflowId, queryClient]);
 
 	const {
 		messagesEndRef,
@@ -737,6 +755,18 @@ export default function AgentChatPage() {
 
 		return hasOnlyUserMessage && !hasWorkflowActivity;
 	};
+
+	// Show comparison view if compare parameter is present
+	if (isComparisonMode && compareWorkflowId && urlWorkflowId) {
+		return (
+			<ComparisonView
+				agentId={agentId}
+				primaryWorkflowId={urlWorkflowId}
+				compareWorkflowId={compareWorkflowId}
+				selectedAgent={selectedAgent}
+			/>
+		);
+	}
 
 	return (
 		<div className="relative w-full h-full flex flex-col">

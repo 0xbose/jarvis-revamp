@@ -182,11 +182,7 @@ export function AgentGroup({
 
   return (
     <div className="space-y-4">
-      <div className={`border rounded-lg transition-all duration-300 overflow-hidden ${
-        group.isRecent 
-          ? 'border-blue-300 bg-blue-50/50 dark:bg-blue-950/20 shadow-sm' 
-          : 'border-border bg-card'
-      }`}>
+      <div className={`border rounded-lg transition-all duration-300 overflow-hidden border-border bg-card`}>
         
         {shouldShowHistory ? (
           <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>

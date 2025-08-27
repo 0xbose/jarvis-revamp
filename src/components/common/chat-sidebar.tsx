@@ -6,7 +6,7 @@ import React, {
 	useEffect,
 	useMemo,
 } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import {
 	Sidebar,
 	SidebarMenuButton,
@@ -131,6 +131,8 @@ const WorkflowItem = React.memo(
 		onPrefetch,
 		isSelected,
 		isRunning,
+		currentAgentId,
+		currentWorkflowId,
 	}: {
 		workflow: WorkflowItem;
 		index: number;
@@ -139,10 +141,35 @@ const WorkflowItem = React.memo(
 		onPrefetch: (workflowId: string) => void;
 		isSelected: boolean;
 		isRunning: boolean;
+		currentAgentId?: string;
+		currentWorkflowId?: string | null;
 	}) => {
+		const router = useRouter();
 		const Icon = getWorkflowIcon(workflow.status, workflow.questionType);
 		const iconColor = getWorkflowIconColor(workflow.status, workflow.questionType);
 		const iconAnimation = getWorkflowIconAnimation(workflow.status);
+		
+		const isCompleted = workflow.status === "completed";
+		
+		const handleMenuSelect = (value: string) => {
+			const workflowId = workflow.requestId || workflow.id || "";
+			const agentId = workflow.agentId;
+			
+			switch (value) {
+				case "Left":
+					// Navigate to single workflow view
+					router.push(`/chat/agent/${agentId}?workflowId=${workflowId}`);
+					break;
+				case "Compare":
+					// Add as comparison to current workflow
+					if (currentWorkflowId && currentAgentId) {
+						router.push(`/chat/agent/${currentAgentId}?workflowId=${currentWorkflowId}&compare=${workflowId}`);
+					}
+					break;
+				default:
+					break;
+			}
+		};
 		return (
 			<SidebarMenuItem
 				key={workflow.requestId || workflow.id || index}
@@ -198,17 +225,20 @@ const WorkflowItem = React.memo(
 						{sidebarIsExpanded && (
 							<Select
 								onOpenChange={handleMenuSelectOpenChange}
-								defaultValue="Left"
+								onValueChange={handleMenuSelect}
 							>
 								<SelectTrigger className="!border-none">
 									<MoreVerticalIcon className="!size-4 flex-shrink-0" />
 								</SelectTrigger>
 								<SelectContent>
-									{["Left", "Right"].map((side) => (
-										<SelectItem key={side} value={side}>
-											{side}
+									<SelectItem value="Left">
+										View
+									</SelectItem>
+									{isCompleted && currentWorkflowId && currentWorkflowId !== (workflow.requestId || workflow.id) && (
+										<SelectItem value="Compare">
+											Compare
 										</SelectItem>
-									))}
+									)}
 								</SelectContent>
 							</Select>
 						)}
@@ -654,6 +684,8 @@ const ChatSidebar = React.memo(() => {
 												}
 												isSelected={isSelected}
 												isRunning={isRunning}
+												currentAgentId={currentAgentId}
+												currentWorkflowId={currentWorkflowId}
 											/>
 										);
 									}

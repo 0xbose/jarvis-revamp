@@ -21,7 +21,7 @@ interface ChatMessagesGroupedProps {
   onRefreshPolling: () => void;
   isShowingCachedMessages: boolean;
   selectedAgent?: any;
-
+  isReadOnly?: boolean;
 }
 
 export function ChatMessagesGrouped({
@@ -39,6 +39,7 @@ export function ChatMessagesGrouped({
   onRefreshPolling,
   isShowingCachedMessages,
   selectedAgent,
+  isReadOnly = false,
 }: ChatMessagesGroupedProps) {
   const { groupMessagesBySubnet } = useMessageGrouping();
   
@@ -117,6 +118,9 @@ export function ChatMessagesGrouped({
 
   // Helper function to determine if feedback buttons should be shown
   const shouldShowFeedbackButtons = (message: ChatMsg): boolean => {
+    // Don't show feedback buttons in read-only mode
+    if (isReadOnly) return false;
+    
     if (message.type !== "question") return false;
     if (message.questionData?.type !== "feedback") return false;
 
