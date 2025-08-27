@@ -88,20 +88,59 @@ export function AgentGroup({
       if (subnetIndex !== undefined && currentWorkflowData.subnets[subnetIndex]) {
         const subnet = currentWorkflowData.subnets[subnetIndex];
         if (subnet.feedbackHistory) {
-          const hasAnswer = subnet.feedbackHistory.some(
-            (feedback: any) =>
-              feedback.feedback_question === message.questionData?.text &&
-              feedback.user_answer &&
-              feedback.user_answer.trim() !== ""
-          );
-          if (hasAnswer) {
-            return false; // Don't show feedback buttons if already answered
+          // Extract feedback index from sourceId to match the correct feedback item
+          const feedbackMatch = message.sourceId.match(/feedback_question_(\d+)/);
+          const feedbackIndex = feedbackMatch ? parseInt(feedbackMatch[1]) : null;
+          
+          if (feedbackIndex !== null && subnet.feedbackHistory) {
+            // Sort feedback history the same way as in use-subnet-cache.ts (oldest first)
+            const sortedFeedbackHistory = [...subnet.feedbackHistory].sort((a, b) => {
+              const timeA = new Date(a.created_at).getTime();
+              const timeB = new Date(b.created_at).getTime();
+              return timeA - timeB; // oldest first for proper chronological flow
+            });
+            
+            if (sortedFeedbackHistory[feedbackIndex]) {
+              const feedbackItem = sortedFeedbackHistory[feedbackIndex];
+              // Check if this specific feedback item has a user answer
+              const hasAnswer = feedbackItem.user_answer && feedbackItem.user_answer.trim() !== "";
+              if (hasAnswer) {
+                return false; // Don't show feedback buttons if already answered
+              }
+            }
           }
         }
       }
     }
 
-    return true;
+    // Check if waiting for response (same logic as chat-messages-grouped.tsx)
+    const currentSubnetStatus =
+      message.subnetIndex !== undefined
+        ? currentWorkflowData?.subnets?.[message.subnetIndex]?.status
+        : null;
+
+    const isWaitingForResponse =
+      message.subnetStatus === "awaiting_response" ||
+      currentSubnetStatus === "awaiting_response" ||
+      currentWorkflowData?.workflowStatus === "awaiting_response" ||
+      workflowStatus === "awaiting_response";
+
+    console.log(`🔍 shouldShowFeedbackButtons debug for recent question:`, {
+      messageType: message.type,
+      questionType: message.questionData?.type,
+      questionText: message.questionData?.text?.slice(0, 50),
+      sourceId: message.sourceId,
+      subnetIndex: message.subnetIndex,
+      feedbackIndex: message.feedbackIndex,
+      isWorkflowComplete,
+      currentSubnetStatus,
+      workflowStatus: workflowStatus,
+      currentWorkflowStatus: currentWorkflowData?.workflowStatus,
+      isWaitingForResponse,
+      finalResult: isWaitingForResponse
+    });
+
+    return isWaitingForResponse;
   };
   
   // Logic for Recent Data:
@@ -115,6 +154,23 @@ export function AgentGroup({
   
   // Also include mainMessages in recent data if they exist
   const hasRecentData = recentThread || group.mainMessages.length > 0;
+
+  console.log(`🔍 Recent thread debug:`, {
+    totalThreads: group.feedbackThreads.length,
+    recentThreadExists: !!recentThread,
+    recentThreadHasQuestion: !!recentThread?.question,
+    recentThreadQuestionText: recentThread?.question?.content?.slice(0, 50),
+    recentThreadQuestionSourceId: recentThread?.question?.sourceId,
+    recentThreadIsRecent: recentThread?.isRecent,
+    hasRecentData,
+    shouldShowHistory,
+    allThreads: group.feedbackThreads.map(t => ({
+      feedbackIndex: t.feedbackIndex,
+      hasQuestion: !!t.question,
+      questionText: t.question?.content?.slice(0, 30),
+      isRecent: t.isRecent
+    }))
+  });
 
   // Removed auto-open behavior - collapsible stays closed until manually clicked
   // useEffect(() => {
@@ -271,6 +327,13 @@ export function AgentGroup({
                 {/* Question Message */}
                 {recentThread.question && (
                   <>
+                    {console.log(`🔍 Rendering recent question ChatMessage:`, {
+                      questionText: recentThread.question.content?.slice(0, 50),
+                      sourceId: recentThread.question.sourceId,
+                      showFeedbackButtons: shouldShowFeedbackButtons(recentThread.question),
+                      questionType: recentThread.question.questionData?.type,
+                      messageType: recentThread.question.type
+                    })}
                     <ChatMessage
                       message={recentThread.question}
                       isLast={!recentThread.answer}

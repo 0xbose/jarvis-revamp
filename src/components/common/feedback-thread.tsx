@@ -66,20 +66,44 @@ export function FeedbackThread({
       if (subnetIndex !== undefined && currentWorkflowData.subnets[subnetIndex]) {
         const subnet = currentWorkflowData.subnets[subnetIndex];
         if (subnet.feedbackHistory) {
-          const hasAnswer = subnet.feedbackHistory.some(
-            (feedback: any) =>
-              feedback.feedback_question === message.questionData?.text &&
-              feedback.user_answer &&
-              feedback.user_answer.trim() !== ""
-          );
-          if (hasAnswer) {
-            return false; // Don't show feedback buttons if already answered
+          // Extract feedback index from sourceId to match the correct feedback item
+          const feedbackMatch = message.sourceId.match(/feedback_question_(\d+)/);
+          const feedbackIndex = feedbackMatch ? parseInt(feedbackMatch[1]) : null;
+          
+          if (feedbackIndex !== null && subnet.feedbackHistory) {
+            // Sort feedback history the same way as in use-subnet-cache.ts (oldest first)
+            const sortedFeedbackHistory = [...subnet.feedbackHistory].sort((a, b) => {
+              const timeA = new Date(a.created_at).getTime();
+              const timeB = new Date(b.created_at).getTime();
+              return timeA - timeB; // oldest first for proper chronological flow
+            });
+            
+            if (sortedFeedbackHistory[feedbackIndex]) {
+              const feedbackItem = sortedFeedbackHistory[feedbackIndex];
+              // Check if this specific feedback item has a user answer
+              const hasAnswer = feedbackItem.user_answer && feedbackItem.user_answer.trim() !== "";
+              if (hasAnswer) {
+                return false; // Don't show feedback buttons if already answered
+              }
+            }
           }
         }
       }
     }
 
-    return true;
+    // Check if waiting for response (same logic as chat-messages-grouped.tsx)
+    const currentSubnetStatus =
+      message.subnetIndex !== undefined
+        ? currentWorkflowData?.subnets?.[message.subnetIndex]?.status
+        : null;
+
+    const isWaitingForResponse =
+      message.subnetStatus === "awaiting_response" ||
+      currentSubnetStatus === "awaiting_response" ||
+      currentWorkflowData?.workflowStatus === "awaiting_response" ||
+      workflowStatus === "awaiting_response";
+
+    return isWaitingForResponse;
   };
 
   // Get a more descriptive title for the feedback thread

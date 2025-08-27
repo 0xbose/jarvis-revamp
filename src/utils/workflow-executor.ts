@@ -159,11 +159,7 @@ export class WorkflowExecutor {
 	 */
 	public isPolling(): boolean {
 		const result = this.currentPollingInterval !== null;
-		console.log("🔍 Debug: isPolling", {
-			currentPollingInterval: !!this.currentPollingInterval,
-			result,
-			currentWorkflowId: this.currentWorkflowId,
-		});
+		
 		return result;
 	}
 
