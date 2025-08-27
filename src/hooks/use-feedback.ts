@@ -83,37 +83,65 @@ export const useFeedback = ({
 		answer: string,
 		feedback: string
 	) => {
-		// Generate unique IDs for this feedback session
+		// Generate unique ID for this feedback answer
 		const sessionId = Date.now();
-		const feedbackMessageId = `feedback_${sessionId}`;
-		const submittingMessageId = `submitting_${sessionId}`;
-		const successMessageId = `success_${sessionId}`;
-		const errorMessageId = `error_${sessionId}`;
+		const feedbackAnswerId = `feedback_answer_${sessionId}`;
+		
+		// Find the subnet that has the SPECIFIC question being answered
+		const subnetWithQuestionIndex =
+			currentWorkflowData?.subnets?.findIndex((subnet: any) => {
+				// Check if the subnet has the question directly
+				if (subnet.question?.text === question) {
+					return true;
+				}
+
+				// Check if the question is in the feedbackHistory
+				if (
+					subnet.feedbackHistory &&
+					subnet.feedbackHistory.length > 0
+				) {
+					return subnet.feedbackHistory.some(
+						(feedback: any) =>
+							feedback.feedback_question === question
+					);
+				}
+
+				return false;
+			});
+
+		// Create retry handler for this specific feedback submission
+		const retrySubmission = async () => {
+			// Remove the failed message and retry
+			setChatMessages((prev) => prev.filter(msg => msg.id !== feedbackAnswerId));
+			await handleFeedbackSubmit(question, answer, feedback);
+		};
+
+		// Create feedback answer message showing what's being sent
+		const feedbackAnswerMessage: ChatMsg = {
+			id: feedbackAnswerId,
+			type: "answer",
+			content: feedback,
+			timestamp: new Date(),
+			isFeedbackAnswer: true,
+			subnetIndex: subnetWithQuestionIndex >= 0 ? subnetWithQuestionIndex : undefined,
+			toolName: subnetWithQuestionIndex >= 0 ? currentWorkflowData?.subnets?.[subnetWithQuestionIndex]?.toolName : undefined,
+			feedbackSubmissionState: {
+				status: "sending",
+				feedbackText: feedback,
+				retryHandler: retrySubmission
+			},
+		};
+
+		// Add feedback answer message to show user what's being sent
+		setChatMessages((prev) => {
+			const newMessages = [...prev];
+			newMessages.push(feedbackAnswerMessage);
+
+			return newMessages;
+		});
 		
 		try {
 			setIsSubmittingFeedback(true);
-
-			// Find the subnet that has the SPECIFIC question being answered
-			const subnetWithQuestionIndex =
-				currentWorkflowData?.subnets?.findIndex((subnet: any) => {
-					// Check if the subnet has the question directly
-					if (subnet.question?.text === question) {
-						return true;
-					}
-
-					// Check if the question is in the feedbackHistory
-					if (
-						subnet.feedbackHistory &&
-						subnet.feedbackHistory.length > 0
-					) {
-						return subnet.feedbackHistory.some(
-							(feedback: any) =>
-								feedback.feedback_question === question
-						);
-					}
-
-					return false;
-				});
 
 			if (
 				subnetWithQuestionIndex !== undefined &&
@@ -127,9 +155,6 @@ export const useFeedback = ({
 					"in_progress"
 				);
 			}
-
-			// Don't create feedback message immediately - let polling handle the answer display
-			// This prevents showing the answer before the system processes it
 
 			// Use the subnet we already found instead of searching again
 			const subnetWithQuestion = currentWorkflowData?.subnets?.[subnetWithQuestionIndex];
@@ -198,55 +223,101 @@ export const useFeedback = ({
 					resumePolling();
 				}, 1000);
 			}
-		} catch (error) {
-			// Clean up all messages added during this feedback session
+
+			// Update feedback answer message to show success (remove submission state to show as normal answer)
 			setChatMessages((prev) =>
-				prev.filter((msg) => 
-					msg.id !== feedbackMessageId &&
-					msg.id !== submittingMessageId &&
-					msg.id !== successMessageId &&
-					msg.id !== errorMessageId
+				prev.map((msg) =>
+					msg.id === feedbackAnswerId
+						? {
+								...msg,
+								feedbackSubmissionState: undefined,
+						  }
+						: msg
 				)
 			);
-
+		} catch (error) {
+			console.error("Error submitting feedback:", error);
 			
+			// Update feedback answer message to show error with retry option
+			setChatMessages((prev) =>
+				prev.map((msg) =>
+					msg.id === feedbackAnswerId
+						? {
+								...msg,
+								feedbackSubmissionState: {
+									...msg.feedbackSubmissionState!,
+									status: "failed" as const,
+									error: error instanceof Error ? error.message : "Failed to submit feedback",
+								},
+						  }
+						: msg
+				)
+			);
 		} finally {
 			setIsSubmittingFeedback(false);
 		}
 	};
 
 	const handleFeedbackProceed = async (question: string, answer: string) => {
-		// Generate unique IDs for this feedback session
+		// Generate unique ID for this feedback answer
 		const sessionId = Date.now();
-		const proceedMessageId = `proceed_${sessionId}`;
-		const submittingMessageId = `submitting_${sessionId}`;
-		const successMessageId = `success_${sessionId}`;
-		const errorMessageId = `error_${sessionId}`;
+		const proceedAnswerId = `proceed_answer_${sessionId}`;
+		
+		// Find the subnet that has the SPECIFIC question being answered
+		const subnetWithQuestionIndex =
+			currentWorkflowData?.subnets?.findIndex((subnet: any) => {
+				// Check if the subnet has the question directly
+				if (subnet.question?.text === question) {
+					return true;
+				}
+
+				// Check if the question is in the feedbackHistory
+				if (
+					subnet.feedbackHistory &&
+					subnet.feedbackHistory.length > 0
+				) {
+					return subnet.feedbackHistory.some(
+						(feedback: any) =>
+							feedback.feedback_question === question
+					);
+				}
+
+				return false;
+			});
+
+		// Create retry handler for this specific feedback submission
+		const retrySubmission = async () => {
+			// Remove the failed message and retry
+			setChatMessages((prev) => prev.filter(msg => msg.id !== proceedAnswerId));
+			await handleFeedbackProceed(question, answer);
+		};
+
+		// Create feedback answer message showing "Yes, proceed"
+		const proceedAnswerMessage: ChatMsg = {
+			id: proceedAnswerId,
+			type: "answer",
+			content: "Yes, proceed",
+			timestamp: new Date(),
+			isFeedbackAnswer: true,
+			subnetIndex: subnetWithQuestionIndex >= 0 ? subnetWithQuestionIndex : undefined,
+			toolName: subnetWithQuestionIndex >= 0 ? currentWorkflowData?.subnets?.[subnetWithQuestionIndex]?.toolName : undefined,
+			feedbackSubmissionState: {
+				status: "sending",
+				feedbackText: "Yes, proceed",
+				retryHandler: retrySubmission
+			},
+		};
+
+		// Add feedback answer message to show user what's being sent
+		setChatMessages((prev) => {
+			const newMessages = [...prev];
+			newMessages.push(proceedAnswerMessage);
+
+			return newMessages;
+		});
 		
 		try {
 			setIsSubmittingFeedback(true);
-
-			// Find the subnet that has the SPECIFIC question being answered
-			const subnetWithQuestionIndex =
-				currentWorkflowData?.subnets?.findIndex((subnet: any) => {
-					// Check if the subnet has the question directly
-					if (subnet.question?.text === question) {
-						return true;
-					}
-
-					// Check if the question is in the feedbackHistory
-					if (
-						subnet.feedbackHistory &&
-						subnet.feedbackHistory.length > 0
-					) {
-						return subnet.feedbackHistory.some(
-							(feedback: any) =>
-								feedback.feedback_question === question
-						);
-					}
-
-					return false;
-				});
 
 			if (
 				subnetWithQuestionIndex !== undefined &&
@@ -381,41 +452,88 @@ export const useFeedback = ({
 					resumePolling();
 				}, 1000);
 			}
-		} catch (error) {
-			// Clean up all messages added during this feedback session
+
+			// Update feedback answer message to show success (remove submission state to show as normal answer)
 			setChatMessages((prev) =>
-				prev.filter((msg) => 
-					msg.id !== proceedMessageId &&
-					msg.id !== submittingMessageId &&
-					msg.id !== successMessageId &&
-					msg.id !== errorMessageId
+				prev.map((msg) =>
+					msg.id === proceedAnswerId
+						? {
+								...msg,
+								feedbackSubmissionState: undefined,
+						  }
+						: msg
 				)
 			);
-
+		} catch (error) {
+			console.error("Error proceeding with feedback:", error);
+			
+			// Update feedback answer message to show error with retry option
+			setChatMessages((prev) =>
+				prev.map((msg) =>
+					msg.id === proceedAnswerId
+						? {
+								...msg,
+								feedbackSubmissionState: {
+									...msg.feedbackSubmissionState!,
+									status: "failed" as const,
+									error: error instanceof Error ? error.message : "Failed to proceed with feedback",
+								},
+						  }
+						: msg
+				)
+			);
 		} finally {
 			setIsSubmittingFeedback(false);
 		}
 	};
 
 	const handleFeedbackResponse = async (feedback: string) => {
-		// Generate unique IDs for this feedback session
+		// Generate unique ID for this feedback answer
 		const sessionId = Date.now();
-		const feedbackMessageId = `feedback_${sessionId}`;
-		const submittingMessageId = `submitting_${sessionId}`;
-		const successMessageId = `success_${sessionId}`;
-		const errorMessageId = `error_${sessionId}`;
+		const responseAnswerId = `response_answer_${sessionId}`;
+		
+		// Find the first subnet that has a question (for general feedback responses)
+		const subnetWithQuestionIndex =
+			currentWorkflowData?.subnets?.findIndex(
+				(subnet: any) =>
+					(subnet.status === "awaiting_response" ||
+						(subnet.status === "pending" && subnet.question)) &&
+					subnet.question
+			);
+
+		// Create retry handler for this specific feedback submission
+		const retrySubmission = async () => {
+			// Remove the failed message and retry
+			setChatMessages((prev) => prev.filter(msg => msg.id !== responseAnswerId));
+			await handleFeedbackResponse(feedback);
+		};
+
+		// Create feedback answer message showing the response
+		const responseAnswerMessage: ChatMsg = {
+			id: responseAnswerId,
+			type: "answer",
+			content: feedback,
+			timestamp: new Date(),
+			isFeedbackAnswer: true,
+			subnetIndex: subnetWithQuestionIndex >= 0 ? subnetWithQuestionIndex : undefined,
+			toolName: subnetWithQuestionIndex >= 0 ? currentWorkflowData?.subnets?.[subnetWithQuestionIndex]?.toolName : undefined,
+			feedbackSubmissionState: {
+				status: "sending",
+				feedbackText: feedback,
+				retryHandler: retrySubmission
+			},
+		};
+
+		// Add feedback answer message to show user what's being sent
+		setChatMessages((prev) => {
+			const newMessages = [...prev];
+			newMessages.push(responseAnswerMessage);
+
+			return newMessages;
+		});
 		
 		try {
 			setIsSubmittingFeedback(true);
-
-			// Find the first subnet that has a question (for general feedback responses)
-			const subnetWithQuestionIndex =
-				currentWorkflowData?.subnets?.findIndex(
-					(subnet: any) =>
-						(subnet.status === "awaiting_response" ||
-							(subnet.status === "pending" && subnet.question)) &&
-						subnet.question
-				);
 
 			if (
 				subnetWithQuestionIndex !== undefined &&
@@ -429,9 +547,6 @@ export const useFeedback = ({
 					"in_progress"
 				);
 			}
-
-			// Don't create feedback message immediately - let polling handle the answer display
-			// This prevents showing the answer before the system processes it
 
 			// Use the subnet we already found instead of searching again
 			const subnetWithQuestion = currentWorkflowData?.subnets?.[subnetWithQuestionIndex];
@@ -520,17 +635,36 @@ export const useFeedback = ({
 					resumePolling();
 				}, 1000);
 			}
-		} catch (error) {
-			// Clean up all messages added during this feedback session
+
+			// Update feedback answer message to show success (remove submission state to show as normal answer)
 			setChatMessages((prev) =>
-				prev.filter((msg) => 
-					msg.id !== feedbackMessageId &&
-					msg.id !== submittingMessageId &&
-					msg.id !== successMessageId &&
-					msg.id !== errorMessageId
+				prev.map((msg) =>
+					msg.id === responseAnswerId
+						? {
+								...msg,
+								feedbackSubmissionState: undefined,
+						  }
+						: msg
 				)
 			);
-
+		} catch (error) {
+			console.error("Error submitting feedback response:", error);
+			
+			// Update feedback answer message to show error with retry option
+			setChatMessages((prev) =>
+				prev.map((msg) =>
+					msg.id === responseAnswerId
+						? {
+								...msg,
+								feedbackSubmissionState: {
+									...msg.feedbackSubmissionState!,
+									status: "failed" as const,
+									error: error instanceof Error ? error.message : "Failed to submit feedback response",
+								},
+						  }
+						: msg
+				)
+			);
 		} finally {
 			setIsSubmittingFeedback(false);
 		}

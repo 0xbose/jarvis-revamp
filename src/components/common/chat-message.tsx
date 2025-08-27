@@ -17,6 +17,10 @@ import {
 	MessageSquare,
 	RefreshCw,
 	User,
+	Clock,
+	CheckCircle,
+	XCircle,
+	RotateCcw,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -819,6 +823,12 @@ export function ChatMessage({
 	}
 
 	if (message.type === "answer") {
+		// Check if this is a feedback answer with submission state
+		const isSubmittingFeedback = message.isFeedbackAnswer && message.feedbackSubmissionState;
+		const submissionState = message.feedbackSubmissionState;
+
+
+
 		return (
 			<div className="relative mb-0 w-full flex justify-end">
 				<div className="flex-1 min-w-0 p-4 w-fit flex justify-end">
@@ -826,7 +836,9 @@ export function ChatMessage({
 						<div className="flex-shrink-0 size-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
 							<User className="size-5 text-primary" />
 						</div>
-						<div className="flex-1 min-w-0 bg-primary/5 rounded-lg p-3 border border-primary/10 w-fit">
+						<div className={`flex-1 min-w-0 bg-primary/5 rounded-lg p-3 border border-primary/10 w-fit relative ${
+							isSubmittingFeedback && submissionState?.status === "failed" ? "border-red-400/20" : ""
+						}`}>
 							{isMarkdownContent(message.content) ? (
 								<div className="text-foreground text-sm leading-relaxed overflow-hidden">
 									<MDXRenderer content={message.content} />
@@ -836,12 +848,37 @@ export function ChatMessage({
 									{convertUrlsToLinks(message.content)}
 								</div>
 							)}
+
+							{/* Show retry icon for failed feedback submissions */}
+							{isSubmittingFeedback && submissionState?.status === "failed" && submissionState.retryHandler && (
+								<Button
+									onClick={() => {
+										if (submissionState.retryHandler) {
+											submissionState.retryHandler();
+										}
+									}}
+									variant="ghost"
+									size="sm"
+									className="absolute -top-2 -right-2 h-6 w-6 p-0 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-full"
+								>
+									<RotateCcw className="size-3 text-red-400" />
+								</Button>
+							)}
+							
+							{/* Show loading indicator for sending feedback */}
+							{isSubmittingFeedback && submissionState?.status === "sending" && (
+								<div className="absolute -top-1 -right-1">
+									<Clock className="size-3 text-blue-400 animate-pulse" />
+								</div>
+							)}
 						</div>
 					</div>
 				</div>
 			</div>
 		);
 	}
+
+
 
 	// Workflow subnet message - shows status of individual workflow steps
 	if (message.type === "workflow_subnet") {

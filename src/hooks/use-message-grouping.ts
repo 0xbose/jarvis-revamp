@@ -66,6 +66,7 @@ export const useMessageGrouping = () => {
       // System-level messages (user messages, general responses)
       if (message.subnetIndex === undefined || message.type === "user") {
         systemMessages.push(message);
+
         return;
       }
 
@@ -153,6 +154,36 @@ export const useMessageGrouping = () => {
         // Update thread timestamp to latest message
         if (message.timestamp > thread.timestamp) {
           thread.timestamp = message.timestamp;
+        }
+      } else if (message.type === "answer" && message.isFeedbackAnswer) {
+        // Handle feedback answer messages that don't have sourceId with "feedback"
+        // These should be added to the most recent feedback thread as answers
+        
+        // Find the most recent feedback thread that doesn't have an answer yet
+        let targetThread = group.feedbackThreads
+          .filter(t => !t.answer)
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+        
+        if (targetThread) {
+          targetThread.answer = message;
+          targetThread.isRecent = true;
+          if (message.timestamp > targetThread.timestamp) {
+            targetThread.timestamp = message.timestamp;
+          }
+
+        } else {
+          // If no suitable thread exists, create a new one with just the answer
+          const newThread = {
+            feedbackIndex: group.feedbackThreads.length,
+            threadKey: `${message.subnetIndex}_${group.feedbackThreads.length}`,
+            question: null,
+            answer: message,
+            response: null,
+            timestamp: message.timestamp,
+            isRecent: true,
+          };
+          group.feedbackThreads.push(newThread);
+
         }
       } else {
         // Main subnet message (non-feedback)

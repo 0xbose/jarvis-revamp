@@ -108,6 +108,8 @@ export function ChatMessagesGrouped({
   // Group messages by subnet and feedback threads, passing previous messages to identify recent data
   const { systemMessages, subnetGroups } = groupMessagesBySubnet(filteredMessages, previousMessagesRef.current);
   
+
+  
   // Update previous messages after grouping (so next render will compare against current state)
   useEffect(() => {
     previousMessagesRef.current = messages;

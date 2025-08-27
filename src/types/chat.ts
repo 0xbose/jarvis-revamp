@@ -37,6 +37,14 @@ export type ChatMsg = {
 	isTimeoutMessage?: boolean;
 	showRefreshButton?: boolean;
 	showLoadingDots?: boolean;
+	feedbackSubmissionState?: {
+		status: "sending" | "sent" | "failed";
+		feedbackText: string;
+		error?: string;
+		retryHandler?: () => Promise<void>;
+	};
+	// For answer messages that represent feedback submissions
+	isFeedbackAnswer?: boolean;
 };
 
 export type FeedbackHistoryItem = {
