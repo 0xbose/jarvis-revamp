@@ -24,6 +24,7 @@ import { MDXRenderer, isMarkdownContent } from "./mdx-renderer";
 import { ChatMsg } from "@/types/chat";
 import Link from "next/link";
 import { LoadingDots } from "../ui/loading-dots";
+import { Skeleton } from "../ui/skeleton";
 
 function convertUrlsToLinks(text: string): React.ReactNode {
 	if (!text || typeof text !== "string") return text;
@@ -79,6 +80,9 @@ export function ChatMessage({
 	pollingStoppedAt,
 	onRefreshPolling,
 }: ChatMessageProps) {
+	// Create unique state keys based on message ID and workflow context to prevent state mixing
+	const messageStateKey = `${message.id}_${message.sourceId || message.toolName || 'default'}`;
+	
 	const [showFeedbackInput, setShowFeedbackInput] = useState(false);
 	const [feedbackText, setFeedbackText] = useState("");
 	const [hideAuthButton, setHideAuthButton] = useState(false);
@@ -160,6 +164,11 @@ export function ChatMessage({
 	}
 
 	const isWorkflowActivelyExecuting = () => {
+		// Don't consider workflow as executing if it's completed, failed, or stopped
+		if (workflowStatus === "completed" || workflowStatus === "failed" || workflowStatus === "stopped") {
+			return false;
+		}
+		
 		return (
 			workflowStatus === "running" ||
 			workflowStatus === "in_progress" ||
@@ -232,12 +241,15 @@ export function ChatMessage({
 			message.type === "question" &&
 			message.questionData?.type === "feedback"
 		) {
-			console.log(`🔍 shouldHideFeedbackButtons for feedback question:`, {
+			console.log(`🔍 shouldHideFeedbackButtons for feedback question (agent: ${message.toolName}):`, {
 				messageId: message.id,
+				toolName: message.toolName,
+				sourceId: message.sourceId,
 				hideInteractive,
 				hideFeedbackButtons,
 				feedbackProcessed,
 				shouldHide,
+				workflowStatus,
 				questionText: message.questionData?.text?.slice(0, 30),
 			});
 		}
@@ -250,10 +262,12 @@ export function ChatMessage({
 	// Reset button states when workflow completes or is no longer actively executing
 	useEffect(() => {
 		if (!isWorkflowActivelyExecuting()) {
+			console.log("🔄 Workflow no longer executing for agent:", message.toolName, "message:", message.id, "resetting button states");
 			setClickedButtonType(null);
 			setIsButtonPending(false);
 			// When workflow completes, hide the buttons that were interacted with
 			if (clickedButtonType) {
+				console.log("🔄 Hiding buttons based on clicked type:", clickedButtonType, "for agent:", message.toolName);
 				if (clickedButtonType.includes("notification")) {
 					setHideNotificationButtons(true);
 				}
@@ -265,7 +279,7 @@ export function ChatMessage({
 				}
 			}
 		}
-	}, [workflowStatus, clickedButtonType]);
+	}, [workflowStatus, clickedButtonType, message.toolName, message.id]);
 
 	// Reset button states when showing feedback input to clear any stuck states
 	useEffect(() => {
@@ -511,6 +525,8 @@ export function ChatMessage({
 													onClick={async () => {
 														if (shouldDisableButtons()) return;
 
+														console.log("💬 Feedback proceed clicked for agent:", message.toolName, "message:", message.id);
+
 														if (isWorkflowActivelyExecuting()) {
 															setClickedButtonType("feedback-proceed");
 															setIsButtonPending(true);
@@ -520,13 +536,14 @@ export function ChatMessage({
 
 														try {
 															if (onFeedbackProceed && message.questionData?.text) {
+																console.log("💬 Calling onFeedbackProceed for agent:", message.toolName, "with question:", message.questionData.text);
 																await onFeedbackProceed(
 																	message.questionData.text,
 																	"Yes, proceed"
 																);
 															}
 														} catch (error) {
-															console.error("Error proceeding with feedback:", error);
+															console.error("💬 Error proceeding with feedback for agent:", message.toolName, error);
 															setFeedbackProcessed(false);
 															setClickedButtonType(null);
 															setIsButtonPending(false);
@@ -600,6 +617,8 @@ export function ChatMessage({
 															if (!feedbackText.trim()) return;
 															if (isButtonPending && clickedButtonType !== "feedback-submit") return;
 
+															console.log("💬 Feedback submit clicked for agent:", message.toolName, "message:", message.id, "feedback:", feedbackText.trim());
+
 															try {
 																if (isWorkflowActivelyExecuting()) {
 																	setClickedButtonType("feedback-submit");
@@ -609,6 +628,7 @@ export function ChatMessage({
 																setFeedbackProcessed(true);
 
 																if (onFeedbackSubmit && message.questionData?.text) {
+																	console.log("💬 Calling onFeedbackSubmit for agent:", message.toolName, "with feedback:", feedbackText.trim());
 																	await onFeedbackSubmit(
 																		message.questionData.text,
 																		"User feedback",
@@ -619,7 +639,7 @@ export function ChatMessage({
 																	setShowFeedbackInput(false);
 																}
 															} catch (error) {
-																console.error("Error submitting feedback:", error);
+																console.error("💬 Error submitting feedback for agent:", message.toolName, error);
 																setFeedbackProcessed(false);
 															} finally {
 																setClickedButtonType(null);
@@ -651,6 +671,7 @@ export function ChatMessage({
 												if (shouldDisableButtons()) return;
 
 												if (isWorkflowActivelyExecuting()) {
+													console.log("🔐 Setting authenticate button state for agent:", message.toolName, "message:", message.id);
 													setClickedButtonType("authenticate");
 													setIsButtonPending(true);
 												}
@@ -658,22 +679,22 @@ export function ChatMessage({
 												const authUrl = message.questionData?.authUrl;
 												
 												if (authUrl) {
-													console.log("Opening auth URL from questionData:", authUrl);
+													console.log("🔐 Opening auth URL from questionData for agent:", message.toolName, "URL:", authUrl);
 													window.open(authUrl, "_blank", "noopener,noreferrer");
 												} else {
-													console.log("No authUrl in questionData, falling back to text parsing");
+													console.log("🔐 No authUrl in questionData for agent:", message.toolName, "falling back to text parsing");
 													
 													const questionText = message.questionData?.text || message.content;
 													const urlMatch = questionText.match(/https?:\/\/[^\s]+/);
 													if (urlMatch) {
-														console.log("Found URL in text:", urlMatch[0]);
+														console.log("🔐 Found URL in text for agent:", message.toolName, "URL:", urlMatch[0]);
 														window.open(urlMatch[0], "_blank", "noopener,noreferrer");
 													} else {
-														console.log("No URL found in text content");
+														console.log("🔐 No URL found in text content for agent:", message.toolName);
 													}
 												}
 
-												console.log("🔐 Setting showAuthConfirmation to true");
+												console.log("🔐 Setting showAuthConfirmation to true for agent:", message.toolName, "message:", message.id);
 												setShowAuthConfirmation(true);
 												if (!isWorkflowActivelyExecuting()) {
 													setHideAuthButton(true);
@@ -701,6 +722,11 @@ export function ChatMessage({
 											<span className="text-sm font-medium">
 												Authentication Required
 											</span>
+											{message.toolName && (
+												<span className="text-xs text-gray-400 bg-gray-800/50 px-2 py-1 rounded">
+													{message.toolName}
+												</span>
+											)}
 										</div>
 										<p className="text-gray-300 text-sm mb-3">
 											Have you completed the authentication process in the new tab?
@@ -708,10 +734,10 @@ export function ChatMessage({
 										<div className="flex gap-3">
 											<Button
 												onClick={async () => {
-													console.log("🔐 Yes, Authenticated button clicked!");
+													console.log("🔐 Yes, Authenticated button clicked for agent:", message.toolName, "message:", message.id);
 													
 													if (isWorkflowActivelyExecuting()) {
-														console.log("🔐 Setting auth-confirm button state");
+														console.log("🔐 Setting auth-confirm button state for:", messageStateKey);
 														setClickedButtonType("auth-confirm");
 														setIsButtonPending(true);
 													}
@@ -719,9 +745,11 @@ export function ChatMessage({
 													setShowAuthConfirmation(false);
 
 													if (onFeedbackProceed && message.questionData?.text) {
-														console.log("🔐 Calling onFeedbackProceed with:", {
+														console.log("🔐 Calling onFeedbackProceed for agent:", message.toolName, "with:", {
 															question: message.questionData.text,
-															answer: "Yes, I have authenticated successfully"
+															answer: "Yes, I have authenticated successfully",
+															messageId: message.id,
+															sourceId: message.sourceId
 														});
 														
 														await onFeedbackProceed(
@@ -731,10 +759,11 @@ export function ChatMessage({
 
 														setFeedbackProcessed(true);
 													} else {
-														console.log("🔐 onFeedbackProceed or questionData.text not available:", {
+														console.log("🔐 onFeedbackProceed or questionData.text not available for agent:", message.toolName, {
 															onFeedbackProceed: !!onFeedbackProceed,
 															questionData: message.questionData,
-															questionText: message.questionData?.text
+															questionText: message.questionData?.text,
+															messageId: message.id
 														});
 													}
 												}}
@@ -748,7 +777,7 @@ export function ChatMessage({
 											</Button>
 											<Button
 												onClick={() => {
-													console.log("🔐 Cancel button clicked!");
+													console.log("🔐 Cancel button clicked for agent:", message.toolName, "message:", message.id);
 													
 													setShowAuthConfirmation(false);
 													setHideAuthButton(false);
@@ -859,7 +888,7 @@ export function ChatMessage({
 						)} */}
 
 
-						{message.content && (
+						{(message.content || message.showLoadingDots) && (
 							<div
 								className={`text-sm leading-relaxed ${
 									message.subnetStatus === "failed"
@@ -868,15 +897,19 @@ export function ChatMessage({
 								}`}
 							>
 								<div className="flex items-center gap-2">
-									{isMarkdownContent(message.content) ? (
-										<MDXRenderer content={message.content} />
-									) : (
-										<div className="whitespace-pre-wrap break-words overflow-hidden">
-											{convertUrlsToLinks(message.content)}
-										</div>
+									{message.content && (
+										isMarkdownContent(message.content) ? (
+											<MDXRenderer content={message.content} />
+										) : (
+											<div className="whitespace-pre-wrap break-words overflow-hidden">
+												{convertUrlsToLinks(message.content)}
+											</div>
+										)
 									)}
 									{message.showLoadingDots && (
-										<LoadingDots className="ml-2" />
+										<div className="flex items-center gap-2 w-full">
+											<Skeleton className="w-1/2 h-8 animate-pulse bg-[#303333]" />
+										</div>
 									)}
 								</div>
 							</div>

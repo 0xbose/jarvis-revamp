@@ -197,6 +197,13 @@ export default function AgentChatPage() {
 				currentWorkflowData.requestId || currentWorkflowData.workflowId;
 			if (workflowId === urlWorkflowId) {
 				const status = currentWorkflowData.workflowStatus;
+				
+				// Ensure workflow status is synchronized with currentWorkflowData
+				if (status !== workflowStatus) {
+					console.log(`🔄 Syncing workflow status: ${workflowStatus} -> ${status}`);
+					setWorkflowStatus(status);
+				}
+				
 				const shouldPoll =
 					status === "in_progress" ||
 					status === "waiting" ||
@@ -278,7 +285,7 @@ export default function AgentChatPage() {
 				);
 			}
 		}
-	}, [currentWorkflowData, urlWorkflowId, isShowingCachedMessages]);
+	}, [currentWorkflowData, urlWorkflowId, isShowingCachedMessages, workflowStatus, setWorkflowStatus]);
 
 	useEffect(() => {
 		return () => {
@@ -508,12 +515,14 @@ export default function AgentChatPage() {
 			isInFeedbackMode ||
 			currentWorkflowData?.workflowStatus === "awaiting_response"
 		) {
+			console.log("🔄 Handling feedback response for agent:", selectedAgent.name, "message:", message);
 			await handleFeedbackResponse(message);
 			return;
 		}
 
 		if (isExecuting) return;
 
+		console.log("🚀 Starting new workflow for agent:", selectedAgent.name, "message:", message);
 		try {
 			await executeNewWorkflow(
 				selectedAgent as AgentDetail,
@@ -523,7 +532,7 @@ export default function AgentChatPage() {
 				{ address }
 			);
 		} catch (error) {
-			console.error("Error executing workflow:", error);
+			console.error("Error executing workflow for agent:", selectedAgent.name, error);
 		}
 	};
 
@@ -538,6 +547,7 @@ export default function AgentChatPage() {
 	};
 
 	const handleNotificationYes = async (notification: ChatMsg) => {
+		console.log("✅ Notification Yes for agent:", selectedAgent?.name, "notification:", notification.id, "tool:", notification.toolName);
 		setPendingNotifications((prev) =>
 			prev.filter((n) => n.id !== notification.id)
 		);
@@ -546,6 +556,7 @@ export default function AgentChatPage() {
 	};
 
 	const handleNotificationNo = async (notification: ChatMsg) => {
+		console.log("❌ Notification No for agent:", selectedAgent?.name, "notification:", notification.id, "tool:", notification.toolName);
 		setPendingNotifications((prev) =>
 			prev.filter((n) => n.id !== notification.id)
 		);
@@ -1120,7 +1131,9 @@ export default function AgentChatPage() {
 								</div>
 							)}
 
-							{ !shouldShowSkeleton() && workflowStatus === "in_progress" && (
+							{ !shouldShowSkeleton() && 
+								(workflowStatus === "in_progress" || workflowStatus === "waiting") && 
+								!(currentWorkflowData?.workflowStatus === "completed" || currentWorkflowData?.workflowStatus === "failed" || currentWorkflowData?.workflowStatus === "stopped") && (
 								<div className="flex items-center space-x-1 mt-6 ml-8.5">
 									<div
 										className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
