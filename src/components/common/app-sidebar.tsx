@@ -25,6 +25,7 @@ import { useGlobalStore } from "@/stores/global-store";
 import { useChatStore } from "@/stores/chat-store";
 import { useWorkflowExecutionStore } from "@/stores/workflow-execution-store";
 import ChatSidebar from "./chat-sidebar";
+import { useQueryClient } from "@tanstack/react-query";
 
 const navItems = [
 	{
@@ -52,6 +53,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const { reset: resetChatStore } = useChatStore();
 	const { reset: resetWorkflowExecutionStore } = useWorkflowExecutionStore();
 	const isChat = pathname.includes("/chat") || pathname.includes("/create");
+	const queryClient = useQueryClient();
 
 	const handleLogout = async () => {
 		try {
@@ -109,6 +111,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 												<Link
 													href={item.url}
 													className="font-medium hover:text-primary-foreground"
+													onClick={() => {
+														queryClient.invalidateQueries({ queryKey: ["history"] });
+													}}
 												>
 													{item.icon}
 												</Link>
