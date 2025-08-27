@@ -234,9 +234,7 @@ export function ChatMessage({
 			return true;
 		}
 
-		const hideInteractive = shouldHideInteractiveElements();
-		const shouldHide = hideInteractive || hideFeedbackButtons;
-
+		// Special handling for feedback questions - they should always show buttons when showFeedbackButtons is true
 		if (
 			message.type === "question" &&
 			message.questionData?.type === "feedback"
@@ -245,14 +243,18 @@ export function ChatMessage({
 				messageId: message.id,
 				toolName: message.toolName,
 				sourceId: message.sourceId,
-				hideInteractive,
 				hideFeedbackButtons,
 				feedbackProcessed,
-				shouldHide,
 				workflowStatus,
 				questionText: message.questionData?.text?.slice(0, 30),
+				finalResult: hideFeedbackButtons // Only hide if explicitly set to hide
 			});
+			
+			return hideFeedbackButtons; // Only hide if explicitly set to hide, ignore interactive elements logic
 		}
+
+		const hideInteractive = shouldHideInteractiveElements();
+		const shouldHide = hideInteractive || hideFeedbackButtons;
 
 		return shouldHide;
 	};
@@ -288,6 +290,19 @@ export function ChatMessage({
 			setIsButtonPending(false);
 		}
 	}, [showFeedbackInput]);
+
+	// Reset all states when message ID changes to prevent state leakage between different messages
+	useEffect(() => {
+		setFeedbackProcessed(false);
+		setHideFeedbackButtons(false);
+		setHideAuthButton(false);
+		setHideNotificationButtons(false);
+		setShowFeedbackInput(false);
+		setFeedbackText("");
+		setShowAuthConfirmation(false);
+		setClickedButtonType(null);
+		setIsButtonPending(false);
+	}, [message.id]);
 
 	if (message.type === "user") {
 		return (
