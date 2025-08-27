@@ -433,7 +433,8 @@ export const useChatMessages = () => {
 								msg.subnetStatus === "in_progress" &&
 								(msg.content.includes("Processing") ||
 									msg.content.includes("Contacting") ||
-									msg.content.includes("agent..."))
+									msg.content.includes("agent...") ||
+									(msg.content === "" && msg.showLoadingDots))
 							) {
 								console.log(
 									`🏁 Removing processing message for subnet ${msg.subnetIndex} - workflow completed`
@@ -446,7 +447,8 @@ export const useChatMessages = () => {
 								!msg.content.includes("Processing") &&
 								!msg.content.includes("Waiting for") &&
 								!msg.content.includes("Queued for") &&
-								!msg.content.includes("Contacting")
+								!msg.content.includes("Contacting") &&
+								!(msg.content === "" && msg.showLoadingDots)
 							) {
 								console.log(
 									`✅ Keeping subnet response ${
@@ -485,7 +487,8 @@ export const useChatMessages = () => {
 							if (
 								msg.subnetStatus === "in_progress" &&
 								(msg.content.includes("Processing") ||
-									msg.content.includes("Contacting")) &&
+									msg.content.includes("Contacting") ||
+									(msg.content === "" && msg.showLoadingDots)) &&
 								hasNewMessageForSubnet
 							) {
 								console.log(
@@ -497,7 +500,8 @@ export const useChatMessages = () => {
 							if (
 								msg.subnetStatus === "in_progress" &&
 								(msg.content.includes("Processing") ||
-									msg.content.includes("Contacting")) &&
+									msg.content.includes("Contacting") ||
+									(msg.content === "" && msg.showLoadingDots)) &&
 								!hasNewMessageForSubnet
 							) {
 								console.log(

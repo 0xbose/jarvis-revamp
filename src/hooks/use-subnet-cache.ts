@@ -967,21 +967,10 @@ export const useSubnetCache = () => {
 							subnet.data === "undefined";
 
 						if (hasNoData && !hasFeedbackHistory) {
-							// Check if we have a prompt to determine the state
-							const hasPrompt = subnet.prompt && subnet.prompt.trim() !== "";
-							const agentName = subnet.toolName || "agent";
-							
-							let content = "";
-							if (hasPrompt) {
-								content = `Sending prompt to ${agentName}`;
-							} else {
-								content = `Contacting ${agentName}`;
-							}
-
 							dataMessages.push({
 								id: `subnet_${index}_processing_${Date.now()}`,
 								type: "workflow_subnet",
-								content: content,
+								content: "",
 								timestamp: new Date(),
 								subnetStatus: "in_progress",
 								toolName: subnet.toolName,
