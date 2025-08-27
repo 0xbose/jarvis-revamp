@@ -1043,6 +1043,7 @@ export const useSubnetCache = () => {
 								isRegenerated: isRegenerating,
 								contentHash,
 								prompt: subnet.prompt,
+								showLoadingDots: false, // Ensure loading dots are not shown for completed subnets
 							};
 							dataMessages.push(dataMessage);
 

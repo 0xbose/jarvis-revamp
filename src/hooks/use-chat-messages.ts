@@ -442,6 +442,7 @@ export const useChatMessages = () => {
 								return false;
 							}
 
+							// Keep messages with actual content (responses from completed subnets)
 							if (
 								msg.content &&
 								!msg.content.includes("Processing") &&
@@ -452,6 +453,21 @@ export const useChatMessages = () => {
 							) {
 								console.log(
 									`✅ Keeping subnet response ${
+										msg.subnetIndex
+									}: "${msg.content?.slice(0, 50)}..."`
+								);
+								return true;
+							}
+
+							// For completed workflows, also keep messages with "done" status that have actual content
+							if (
+								isWorkflowCompleted &&
+								msg.subnetStatus === "done" &&
+								msg.content &&
+								msg.content.trim() !== ""
+							) {
+								console.log(
+									`✅ Keeping completed subnet response ${
 										msg.subnetIndex
 									}: "${msg.content?.slice(0, 50)}..."`
 								);

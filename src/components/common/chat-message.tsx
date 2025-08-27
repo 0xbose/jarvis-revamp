@@ -906,7 +906,7 @@ export function ChatMessage({
 											</div>
 										)
 									)}
-									{message.showLoadingDots && (
+									{message.showLoadingDots && !message.content && message.subnetStatus !== "done" && (
 										<div className="flex items-center gap-2 w-full">
 											<Skeleton className="w-1/2 h-8 animate-pulse bg-[#303333]" />
 										</div>
@@ -1067,15 +1067,10 @@ export function ChatMessage({
 
 	return (
 		<div className="relative mb-0">
-			<div className="relative flex items-start">
-				<div className="flex-1 min-w-0 px-4 pb-4 overflow-hidden">
+			<div className="relative flex items-start bg-card rounded-lg">
+				<div className="flex-1 min-w-0 p-4 overflow-hidden">
 					<div className="text-gray-200 text-sm leading-relaxed overflow-hidden">
-						<div className="mb-2">
-							<div className="text-sm font-medium text-gray-400 mb-1 flex items-center gap-2">
-								<Check className="size-4" />
-								<span>Response</span>
-							</div>
-						</div>
+
 						<div className="flex items-start gap-2">
 							<div className="flex-1 min-w-0">
 								{isMarkdownContent(message.content) ? (
