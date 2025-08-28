@@ -29,6 +29,7 @@ import { useChatScroll } from "@/hooks/use-chat-scroll";
 import { useWorkflowExecution } from "@/hooks/use-workflow-execution";
 import { useFeedback } from "@/hooks/use-feedback";
 import { useMessageGrouping } from "@/hooks/use-message-grouping";
+import { ChatMessagesContainer } from "@/components/common/chat-messages-container";
 import { ChatMessagesGrouped } from "@/components/common/chat-messages-grouped";
 import { ComparisonView } from "@/components/common/comparison-view";
 
@@ -769,444 +770,49 @@ export default function AgentChatPage() {
 	}
 
 	return (
-		<div className="relative w-full h-full flex flex-col">
-			{chatMessages.length === 0 ? (
-				<div className="w-10/12 max-w-7xl mx-auto p-4">
-					<ChatSkeleton />
-				</div>
-			) : (
-				<div>
-					<div className="flex-1 p-4 pb-20 min-h-0 w-full overflow-y-auto scrollbar-hide h-[calc(100vh-10rem)]">
-						<div
-							ref={chatContainerRef}
-							className=" flex flex-col gap-4 w-10/12 max-w-7xl mx-auto"
-							onScroll={handleScroll}
-						>
-							<ChatMessagesGrouped
-								messages={chatMessages}
-								urlWorkflowId={urlWorkflowId}
-								currentWorkflowData={currentWorkflowData}
-								workflowStatus={workflowStatus}
-								completedFeedback={completedFeedback}
-								pendingNotifications={pendingNotifications}
-								pollingStoppedAt={pollingStoppedAt}
-								onNotificationYes={handleNotificationYes}
-								onNotificationNo={handleNotificationNo}
-								onFeedbackProceed={handleFeedbackProceed}
-								onFeedbackSubmit={handleFeedbackSubmit}
-								onRefreshPolling={refreshPolling}
-								isShowingCachedMessages={isShowingCachedMessages}
-								selectedAgent={selectedAgent}
-
-							/>
-
-							{/* TEMP: Keep original for testing - remove this section after verification
-							{chatMessages
-								.filter((message) => {
-									if (
-										typeof message.content === "string" &&
-										message.content.trim().toLowerCase() ===
-											"yes, proceed" &&
-										message.type !== "answer"
-									) {
-										return false;
-									}
-
-									const isWorkflowCompleted =
-										currentWorkflowData?.workflowStatus ===
-											"completed" ||
-										currentWorkflowData?.workflowStatus ===
-											"failed" ||
-										currentWorkflowData?.workflowStatus ===
-											"stopped" ||
-										workflowStatus === "completed" ||
-										workflowStatus === "failed" ||
-										workflowStatus === "stopped";
-
-									// Don't filter out feedback questions even if workflow is stopped
-									// They might be from feedback history that needs to be displayed
-									if (
-										isWorkflowCompleted &&
-										message.type === "question" &&
-										message.questionData?.type !==
-											"feedback"
-									) {
-										return false;
-									}
-
-									return true;
-								})
-								// No sorting - maintain chronological order as messages arrive
-								.map((message, index) => (
-									<ChatMessage
-										key={`${urlWorkflowId}-${message.id}`}
-										message={message}
-										isLast={
-											index === chatMessages.length - 1
-										}
-										onNotificationYes={
-											handleNotificationYes
-										}
-										onNotificationNo={handleNotificationNo}
-										isPendingNotification={pendingNotifications.some(
-											(n) => n.id === message.id
-										)}
-										onFeedbackSubmit={handleFeedbackSubmit}
-										onFeedbackProceed={
-											handleFeedbackProceed
-										}
-										onRefreshPolling={refreshPolling}
-										showFeedbackButtons={(() => {
-											// Quick early returns for better performance
-											if (message.type !== "question") {
-												console.log(
-													`🚫 Feedback buttons hidden - message type: ${message.type}`
-												);
-												return false;
-											}
-											if (
-												message.questionData?.type !==
-												"feedback"
-											) {
-												console.log(
-													`🚫 Feedback buttons hidden - question type: ${message.questionData?.type} (expected: feedback)`
-												);
-												return false;
-											}
-
-											// Check if this is a cached message that's no longer active
-											// Only hide feedback buttons for cached messages if the workflow is not waiting for response
-											if (isShowingCachedMessages) {
-												const isWorkflowWaitingForResponse =
-													currentWorkflowData?.workflowStatus ===
-														"awaiting_response" ||
-													workflowStatus ===
-														"awaiting_response";
-
-												const currentSubnetStatus =
-													message.subnetIndex !==
-													undefined
-														? currentWorkflowData
-																?.subnets?.[
-																message
-																	.subnetIndex
-														  ]?.status
-														: null;
-
-												const isSubnetWaitingForResponse =
-													message.subnetStatus ===
-														"awaiting_response" ||
-													currentSubnetStatus ===
-														"awaiting_response";
-
-												// If workflow or subnet is waiting for response, keep buttons active even for cached messages
-												if (
-													!isWorkflowWaitingForResponse &&
-													!isSubnetWaitingForResponse
-												) {
-													console.log(
-														`🚫 Feedback buttons hidden - cached message not waiting for response: workflow=${currentWorkflowData?.workflowStatus}, subnet=${currentSubnetStatus}`
-													);
-													return false;
-												} else {
-													console.log(
-														`✅ Feedback buttons kept active for cached message - workflow or subnet waiting for response: workflow=${currentWorkflowData?.workflowStatus}, subnet=${currentSubnetStatus}`
-													);
-												}
-											}
-
-											// Check workflow completion status
-											const isWorkflowComplete =
-												currentWorkflowData?.workflowStatus ===
-													"completed" ||
-												currentWorkflowData?.workflowStatus ===
-													"failed" ||
-												currentWorkflowData?.workflowStatus ===
-													"stopped" ||
-												workflowStatus ===
-													"completed" ||
-												workflowStatus === "failed" ||
-												workflowStatus === "stopped";
-
-											if (isWorkflowComplete) {
-												console.log(
-													`🚫 Feedback buttons hidden - workflow complete: ${
-														currentWorkflowData?.workflowStatus ||
-														workflowStatus
-													}`
-												);
-												return false;
-											}
-
-											// Check if waiting for response
-											// For feedback questions, also check the current subnet status
-											const currentSubnetStatus =
-												message.subnetIndex !==
-												undefined
-													? currentWorkflowData
-															?.subnets?.[
-															message.subnetIndex
-													  ]?.status
-													: null;
-
-											const isWaitingForResponse =
-												message.subnetStatus ===
-													"awaiting_response" ||
-												message.subnetStatus ===
-													"pending" ||
-												currentSubnetStatus ===
-													"awaiting_response" || // Check current subnet status
-												currentWorkflowData?.workflowStatus ===
-													"awaiting_response" ||
-												workflowStatus ===
-													"awaiting_response";
-
-											if (
-												message.type === "question" &&
-												message.questionData?.type ===
-													"feedback"
-											) {
-												console.log(
-													`🔍 Feedback question waiting check:`,
-													{
-														messageId: message.id,
-														messageSubnetStatus:
-															message.subnetStatus,
-														currentSubnetStatus,
-														workflowStatus:
-															currentWorkflowData?.workflowStatus ||
-															workflowStatus,
-														isWaitingForResponse,
-														subnetIndex:
-															message.subnetIndex,
-													}
-												);
-											}
-
-											if (!isWaitingForResponse) {
-												console.log(
-													`🚫 Feedback buttons hidden - not waiting for response. Message status: ${
-														message.subnetStatus
-													}, workflow status: ${
-														currentWorkflowData?.workflowStatus ||
-														workflowStatus
-													}`,
-													{
-														messageId: message.id,
-														messageType:
-															message.type,
-														questionType:
-															message.questionData
-																?.type,
-														questionText:
-															message.questionData?.text?.slice(
-																0,
-																30
-															),
-														subnetIndex:
-															message.subnetIndex,
-														toolName:
-															message.toolName,
-														actualSubnetStatus:
-															currentWorkflowData
-																?.subnets?.[
-																message.subnetIndex ||
-																	0
-															]?.status,
-													}
-												);
-												return false;
-											}
-
-											// Optimize subnet lookup and answer checking
-											if (
-												!message.questionData?.text ||
-												!currentWorkflowData?.subnets
-											) {
-												console.log(
-													`✅ Feedback buttons shown - no question text or subnets to check`
-												);
-												return true;
-											}
-
-											// Improved subnet matching logic
-											const subnet =
-												currentWorkflowData.subnets.find(
-													(s: any) => {
-														// Try multiple matching strategies
-														const itemIdMatch =
-															s.itemID ===
-															(message.subnetIndex ??
-																-1) +
-																1;
-														const toolNameMatch =
-															s.toolName ===
-															message.toolName;
-														const indexMatch =
-															currentWorkflowData.subnets.indexOf(
-																s
-															) ===
-															message.subnetIndex;
-
-														return (
-															itemIdMatch ||
-															toolNameMatch ||
-															indexMatch
-														);
-													}
-												);
-
-											console.log(
-												`🔍 Subnet lookup for feedback buttons:`,
-												{
-													messageSubnetIndex:
-														message.subnetIndex,
-													messageToolName:
-														message.toolName,
-													questionText:
-														message.questionData?.text?.slice(
-															0,
-															50
-														),
-													foundSubnet: !!subnet,
-													subnetItemID:
-														subnet?.itemID,
-													subnetToolName:
-														subnet?.toolName,
-													hasFeedbackHistory:
-														!!subnet?.feedbackHistory,
-													feedbackHistoryLength:
-														subnet?.feedbackHistory
-															?.length || 0,
-												}
-											);
-
-											if (!subnet?.feedbackHistory) {
-												console.log(
-													`✅ Feedback buttons shown - no feedback history`
-												);
-												return true;
-											}
-
-											// Check for existing user answer (optimized)
-											const hasExistingAnswer =
-												subnet.feedbackHistory.some(
-													(feedback: any) =>
-														feedback.feedback_question ===
-															message.questionData
-																?.text &&
-														feedback.user_answer?.trim()
-												);
-
-											console.log(
-												`🔍 Existing answer check:`,
-												{
-													hasExistingAnswer,
-													feedbackHistory:
-														subnet.feedbackHistory.map(
-															(f: any) => ({
-																question:
-																	f.feedback_question?.slice(
-																		0,
-																		30
-																	),
-																answer:
-																	f.user_answer?.slice(
-																		0,
-																		20
-																	) || "none",
-															})
-														),
-												}
-											);
-
-											const shouldShow =
-												!hasExistingAnswer;
-											console.log(
-												`${
-													shouldShow ? "✅" : "🚫"
-												} Feedback buttons ${
-													shouldShow
-														? "shown"
-														: "hidden"
-												} - existing answer: ${hasExistingAnswer}`
-											);
-											return shouldShow;
-										})()}
-										workflowStatus={workflowStatus}
-										pollingStoppedAt={pollingStoppedAt}
-									/>
-								))} */}
-
-							{shouldShowSkeleton() && (
-								<div className="space-y-2">
-									<div className="py-3 rounded-md space-y-2">
-										<Skeleton className="h-4 w-36" />
-										<Skeleton className="h-4 w-32" />
-										<Skeleton className="h-20 w-full" />
-										<div className="flex items-center space-x-2 mt-2">
-											<Skeleton className="h-4 w-20 rounded" />
-											<Skeleton className="h-4 w-12" />
-										</div>
-									</div>
-									<div className="py-3 rounded-md space-y-2">
-										<Skeleton className="h-4 w-36" />
-										<Skeleton className="h-4 w-32" />
-										<Skeleton className="h-20 w-full" />
-										<div className="flex items-center space-x-2 mt-2">
-											<Skeleton className="h-4 w-20 rounded" />
-											<Skeleton className="h-4 w-12" />
-										</div>
-									</div>
-								</div>
-							)}
-
-							{/* Outer loading dots removed - loading states now shown inside chat message boxes */}
-
-							<div ref={messagesEndRef} />
-						</div>
-					</div>
-				</div>
-			)}
-
-			<div className="absolute bottom-4 left-0 right-0 px-4 w-10/12 max-w-7xl mx-auto">
-				<ChatInput
-					onSend={handlePromptSubmit}
-					onStop={handleStopExecution}
-					onResume={handleResumeExecution}
-					mode={mode}
-					setMode={handleModeChange}
-					prompt={prompt}
-					setPrompt={setPrompt}
-					hideModeSelection={true}
-					disableAgentSelection={true}
-					isExecuting={
-						(workflowStatus === "stopped" ? false : isExecuting) ||
-						isSubmittingFeedback ||
-						(workflowStatus === "stopped"
-							? false
-							: currentExecution?.workflowStatus ===
-							  "in_progress") ||
-						(workflowStatus === "stopped"
-							? false
-							: currentExecution?.workflowStatus === "pending") ||
-						(workflowStatus === "stopped"
-							? false
-							: currentExecution?.workflowStatus ===
-							  "awaiting_response")
-					}
-					workflowStatus={
-						workflowStatus === "stopped"
-							? "stopped"
-							: currentWorkflowData?.workflowStatus ===
-							  "awaiting_response"
-							? "awaiting_response"
-							: workflowStatus === "pending"
-							? undefined
-							: workflowStatus
-					}
-				/>
-			</div>
-		</div>
+		<ChatMessagesContainer
+			// Core data
+			chatMessages={chatMessages}
+			urlWorkflowId={urlWorkflowId}
+			currentWorkflowData={currentWorkflowData}
+			workflowStatus={workflowStatus}
+			completedFeedback={completedFeedback}
+			pendingNotifications={pendingNotifications}
+			pollingStoppedAt={pollingStoppedAt}
+			isShowingCachedMessages={isShowingCachedMessages}
+			selectedAgent={selectedAgent}
+			
+			// Callbacks
+			onNotificationYes={handleNotificationYes}
+			onNotificationNo={handleNotificationNo}
+			onFeedbackProceed={handleFeedbackProceed}
+			onFeedbackSubmit={handleFeedbackSubmit}
+			onRefreshPolling={refreshPolling}
+			onSend={handlePromptSubmit}
+			onStop={handleStopExecution}
+			onResume={handleResumeExecution}
+			
+			// Chat input state
+			mode={mode}
+			setMode={handleModeChange}
+			prompt={prompt}
+			setPrompt={setPrompt}
+			
+			// Execution state
+			isExecuting={isExecuting}
+			isSubmittingFeedback={isSubmittingFeedback}
+			currentExecution={currentExecution}
+			
+			// UI options
+			showChatInput={true}
+			showSkeleton={true}
+			shouldShowSkeleton={shouldShowSkeleton}
+			isReadOnly={false}
+			
+			// Scroll handling
+			chatContainerRef={chatContainerRef}
+			messagesEndRef={messagesEndRef}
+			handleScroll={handleScroll}
+		/>
 	);
 }
