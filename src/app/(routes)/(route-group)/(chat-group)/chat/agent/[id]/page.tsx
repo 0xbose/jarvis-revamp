@@ -441,6 +441,8 @@ export default function AgentChatPage() {
 		handleFeedbackSubmit,
 		handleFeedbackProceed,
 		handleFeedbackResponse,
+		handleRetrySubnet,
+		retryingSubnetIndex,
 	} = useFeedback({
 		currentWorkflowId,
 		currentWorkflowData,
@@ -791,6 +793,7 @@ export default function AgentChatPage() {
 			onSend={handlePromptSubmit}
 			onStop={handleStopExecution}
 			onResume={handleResumeExecution}
+			onRetrySubnet={handleRetrySubnet}
 			
 			// Chat input state
 			mode={mode}
@@ -802,6 +805,7 @@ export default function AgentChatPage() {
 			isExecuting={isExecuting}
 			isSubmittingFeedback={isSubmittingFeedback}
 			currentExecution={currentExecution}
+			retryingSubnetIndex={retryingSubnetIndex}
 			
 			// UI options
 			showChatInput={true}

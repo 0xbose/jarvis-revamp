@@ -69,6 +69,8 @@ interface ChatMessageProps {
 	workflowStatus?: string;
 	pollingStoppedAt?: Date | null;
 	onRefreshPolling?: () => void;
+	onRetrySubnet?: (subnetIndex: number) => Promise<void>;
+	retryingSubnetIndex?: number | null;
 }
 
 export function ChatMessage({
@@ -83,7 +85,25 @@ export function ChatMessage({
 	workflowStatus,
 	pollingStoppedAt,
 	onRefreshPolling,
+	onRetrySubnet,
+	retryingSubnetIndex,
 }: ChatMessageProps) {
+	
+	// Debug logging for retry functionality
+	if (message.subnetStatus === "failed" || 
+		(message.content && message.content.toLowerCase().includes("failed")) ||
+		(message.content && message.content.toLowerCase().includes("retry subnet execution"))) {
+		console.log("🔍 ChatMessage received for retry-eligible message:", {
+			id: message.id,
+			type: message.type,
+			subnetStatus: message.subnetStatus,
+			subnetIndex: message.subnetIndex,
+			toolName: message.toolName,
+			onRetrySubnet: !!onRetrySubnet,
+			isFeedbackHistoryRetry: message.content?.toLowerCase().includes("retry subnet execution"),
+			content: message.content?.slice(0, 100)
+		});
+	}
 	// Create unique state keys based on message ID and workflow context to prevent state mixing
 	const messageStateKey = `${message.id}_${message.sourceId || message.toolName || 'default'}`;
 	
@@ -307,6 +327,19 @@ export function ChatMessage({
 		setClickedButtonType(null);
 		setIsButtonPending(false);
 	}, [message.id]);
+
+	// Debug logging for retry button
+	useEffect(() => {
+		if (message.subnetStatus === "failed" && message.type === "workflow_subnet") {
+			console.log("🔍 Debug retry button conditions:", {
+				subnetStatus: message.subnetStatus,
+				type: message.type,
+				toolName: message.toolName,
+				subnetIndex: message.subnetIndex,
+				shouldShow: true
+			});
+		}
+	}, [message.subnetStatus, message.type, message.toolName, message.subnetIndex]);
 
 	if (message.type === "user") {
 		return (
@@ -883,63 +916,12 @@ export function ChatMessage({
 	// Workflow subnet message - shows status of individual workflow steps
 	if (message.type === "workflow_subnet") {
 
-		const getStatusText = () => {
-			switch (message.subnetStatus) {
-				case "pending":
-					return "Queued";
-				case "in_progress":
-					return "Processing";
-				case "awaiting_response":
-					return "Waiting for input";
-				case "done":
-					return "Completed";
-				case "failed":
-					return "Failed";
-				default:
-					return "";
-			}
-		};
 
 		return (
 			<div className="relative mb-0">
 				<div className="relative flex items-start">
 					<div className="flex-1 min-w-0 p-4">
-						{/* {message.toolName && (
-
-							<div className="text-sm mb-1 flex items-center gap-2">
-								<span
-									className={`italic ${
-										message.subnetStatus === "failed"
-											? "text-red-300"
-											: "text-gray-400"
-									}`}
-								>
-									{message.toolName.charAt(0).toUpperCase() +
-										message.toolName.slice(1)}{" "}
-									Agent
-								</span>
-								{getStatusText() &&
-									message.subnetStatus !== "done" && (
-										<>
-											<span className="text-gray-600">
-												•
-											</span>
-											<span
-												className={`text-xs ${
-													message.subnetStatus ===
-													"failed"
-														? "text-red-400"
-														: "text-gray-400"
-												}`}
-											>
-												{getStatusText()}
-											</span>
-										</>
-									)}
-							</div>
-						)} */}
-
-
+						
 						{(message.content || message.showLoadingDots) && (
 							<div
 								className={`text-sm leading-relaxed ${
@@ -963,6 +945,121 @@ export function ChatMessage({
 											<LoadingDots className="p-2" dotClassName="bg-gray-400 dark:bg-gray-300" />
 										</div>
 									)}
+								</div>
+							</div>
+						)}
+						
+						
+						{/* Show retry button for failed subnets OR failed workflow messages OR feedback history retry messages */}
+						{(() => {
+							const shouldShowRetry = 
+								// Failed subnet messages
+								(message.subnetStatus === "failed" && message.type === "workflow_subnet") || 
+								// Failed workflow messages
+								(message.content && message.content.toLowerCase().includes("failed")) ||
+								// Feedback history messages that indicate retry failures
+								(message.content && message.content.toLowerCase().includes("retry subnet execution") && message.subnetIndex !== undefined);
+							
+							if (shouldShowRetry) {
+								console.log("🔍 Retry button conditions met:", {
+									subnetStatus: message.subnetStatus,
+									type: message.type,
+									subnetIndex: message.subnetIndex,
+									content: message.content?.slice(0, 100),
+									onRetrySubnet: !!onRetrySubnet,
+									isFeedbackHistoryRetry: message.content?.toLowerCase().includes("retry subnet execution")
+								});
+							}
+							
+							return shouldShowRetry;
+						})() && (
+							<div className="">
+								<div>
+								<Button
+									className={`px-4 py-2 text-sm transition-colors flex items-center gap-2 ${
+										retryingSubnetIndex === message.subnetIndex || retryingSubnetIndex === (() => {
+											if (message.subnetIndex !== undefined) return message.subnetIndex;
+											if (message.content) {
+												const match = message.content.match(/index (\d+)/);
+												return match ? parseInt(match[1]) : null;
+											}
+											return null;
+										})()
+											? "bg-gray-500 cursor-not-allowed" 
+											: "bg-red-500 hover:bg-red-700"
+									} text-white rounded-md`}
+									onClick={() => {
+										// Don't allow clicks while retry is in progress
+										const currentSubnetIndex = message.subnetIndex !== undefined ? message.subnetIndex : 
+											(message.content ? (() => {
+												const match = message.content.match(/index (\d+)/);
+												return match ? parseInt(match[1]) : null;
+											})() : null);
+										
+										if (retryingSubnetIndex === currentSubnetIndex) {
+											return;
+										}
+										
+										// Extract subnet index from content if not directly available
+										let subnetIndexToUse = message.subnetIndex;
+										if (subnetIndexToUse === undefined && message.content) {
+											const match = message.content.match(/index (\d+)/);
+											if (match) {
+												subnetIndexToUse = parseInt(match[1]);
+												console.log("🔍 Extracted subnet index from content:", subnetIndexToUse);
+											}
+										}
+										
+										console.log("🔍 Retry button clicked for message:", {
+											id: message.id,
+											type: message.type,
+											subnetIndex: message.subnetIndex,
+											extractedSubnetIndex: subnetIndexToUse,
+											toolName: message.toolName,
+											subnetStatus: message.subnetStatus
+										});
+										
+										if (onRetrySubnet && subnetIndexToUse !== undefined) {
+											console.log("🔄 Calling onRetrySubnet with index:", subnetIndexToUse);
+											onRetrySubnet(subnetIndexToUse);
+											console.log("✅ onRetrySubnet called successfully");
+										} else {
+											console.warn("⚠️ Cannot retry subnet:", {
+												onRetrySubnet: !!onRetrySubnet,
+												subnetIndex: message.subnetIndex,
+												extractedSubnetIndex: subnetIndexToUse
+											});
+										}
+									}}
+									disabled={retryingSubnetIndex === message.subnetIndex || retryingSubnetIndex === (() => {
+										if (message.subnetIndex !== undefined) return message.subnetIndex;
+										if (message.content) {
+											const match = message.content.match(/index (\d+)/);
+											return match ? parseInt(match[1]) : null;
+										}
+										return null;
+									})()}
+								>
+									{(() => {
+										const currentSubnetIndex = message.subnetIndex !== undefined ? message.subnetIndex : 
+											(message.content ? (() => {
+												const match = message.content.match(/index (\d+)/);
+												return match ? parseInt(match[1]) : null;
+											})() : null);
+										
+										return retryingSubnetIndex === currentSubnetIndex;
+									})() ? (
+										<>
+											<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+											Retrying...
+										</>
+									) : (
+										<>
+											<RotateCcw className="w-4 h-4" />
+											Retry
+										</>
+									)}
+								</Button>
 								</div>
 							</div>
 						)}

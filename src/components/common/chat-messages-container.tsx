@@ -28,6 +28,7 @@ interface ChatMessagesContainerProps {
   onSend: (message: string) => void;
   onStop?: () => void;
   onResume?: () => void;
+  onRetrySubnet?: (subnetIndex: number) => Promise<void>;
   
   // Chat input state
   mode?: "chat" | "agent";
@@ -39,6 +40,7 @@ interface ChatMessagesContainerProps {
   isExecuting?: boolean;
   isSubmittingFeedback?: boolean;
   currentExecution?: any;
+  retryingSubnetIndex?: number | null;
   
   // UI options
   showChatInput?: boolean;
@@ -78,6 +80,7 @@ export function ChatMessagesContainer({
   onSend,
   onStop,
   onResume,
+  onRetrySubnet,
   
   // Chat input state
   mode,
@@ -89,6 +92,7 @@ export function ChatMessagesContainer({
   isExecuting = false,
   isSubmittingFeedback = false,
   currentExecution,
+  retryingSubnetIndex,
   
   // UI options
   showChatInput = true,
@@ -149,6 +153,8 @@ export function ChatMessagesContainer({
                 isShowingCachedMessages={isShowingCachedMessages}
                 selectedAgent={selectedAgent}
                 isReadOnly={isReadOnly}
+                onRetrySubnet={onRetrySubnet}
+                retryingSubnetIndex={retryingSubnetIndex}
               />
 
               {shouldShowSkeletonContent && (

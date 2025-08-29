@@ -291,6 +291,7 @@ export function WorkflowPanel({
 	const handleNotificationNo = async () => {};
 	const handleFeedbackProceed = async () => {};
 	const handleFeedbackSubmit = async () => {};
+	const handleRetrySubnet = async () => {};
 
 	if (isLoading) {
 		return (
@@ -341,6 +342,7 @@ export function WorkflowPanel({
 							isShowingCachedMessages={isShowingCachedMessages}
 							selectedAgent={selectedAgent}
 							isReadOnly={isReadOnly}
+							onRetrySubnet={handleRetrySubnet}
 						/>
 					) : (
 						<div className="flex items-center justify-center h-32 text-muted-foreground">

@@ -19,7 +19,9 @@ interface AgentGroupProps {
   workflowStatus?: string;
   pollingStoppedAt?: Date | null;
   onRefreshPolling?: () => void;
+  onRetrySubnet?: (subnetIndex: number) => Promise<void>;
   selectedAgent?: any;
+  retryingSubnetIndex?: number | null;
 }
 
 export function AgentGroup({
@@ -33,7 +35,9 @@ export function AgentGroup({
   workflowStatus,
   pollingStoppedAt,
   onRefreshPolling,
+  onRetrySubnet,
   selectedAgent,
+  retryingSubnetIndex,
 }: AgentGroupProps) {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const { getSubnetTitle } = useMessageGrouping();
@@ -313,6 +317,8 @@ export function AgentGroup({
                     workflowStatus={workflowStatus}
                     pollingStoppedAt={pollingStoppedAt}
                     onRefreshPolling={onRefreshPolling}
+                    onRetrySubnet={onRetrySubnet}
+                    retryingSubnetIndex={retryingSubnetIndex}
                   />
                 )}
 
@@ -337,6 +343,8 @@ export function AgentGroup({
                       workflowStatus={workflowStatus}
                       pollingStoppedAt={pollingStoppedAt}
                       onRefreshPolling={onRefreshPolling}
+                      onRetrySubnet={onRetrySubnet}
+                      retryingSubnetIndex={retryingSubnetIndex}
                     />
                   </>
                 )}
@@ -356,6 +364,8 @@ export function AgentGroup({
                       workflowStatus={workflowStatus}
                       pollingStoppedAt={pollingStoppedAt}
                       onRefreshPolling={onRefreshPolling}
+                      onRetrySubnet={onRetrySubnet}
+                      retryingSubnetIndex={retryingSubnetIndex}
                     />
                   </>
                 )}
@@ -377,6 +387,8 @@ export function AgentGroup({
                 workflowStatus={workflowStatus}
                 pollingStoppedAt={pollingStoppedAt}
                 onRefreshPolling={onRefreshPolling}
+                onRetrySubnet={onRetrySubnet}
+                retryingSubnetIndex={retryingSubnetIndex}
               />
             </div>
           ))}

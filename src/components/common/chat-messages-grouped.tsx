@@ -22,6 +22,8 @@ interface ChatMessagesGroupedProps {
   isShowingCachedMessages: boolean;
   selectedAgent?: any;
   isReadOnly?: boolean;
+  onRetrySubnet?: (subnetIndex: number) => Promise<void>;
+  retryingSubnetIndex?: number | null;
 }
 
 export function ChatMessagesGrouped({
@@ -40,6 +42,8 @@ export function ChatMessagesGrouped({
   isShowingCachedMessages,
   selectedAgent,
   isReadOnly = false,
+  onRetrySubnet,
+  retryingSubnetIndex,
 }: ChatMessagesGroupedProps) {
   const { groupMessagesBySubnet } = useMessageGrouping();
   
@@ -202,6 +206,8 @@ export function ChatMessagesGrouped({
           workflowStatus={workflowStatus || currentWorkflowData?.workflowStatus}
           pollingStoppedAt={pollingStoppedAt}
           onRefreshPolling={onRefreshPolling}
+          onRetrySubnet={onRetrySubnet}
+          retryingSubnetIndex={retryingSubnetIndex}
         />
       ))}
 
@@ -221,7 +227,8 @@ export function ChatMessagesGrouped({
           pollingStoppedAt={pollingStoppedAt}
           onRefreshPolling={onRefreshPolling}
           selectedAgent={selectedAgent}
-
+          onRetrySubnet={onRetrySubnet}
+          retryingSubnetIndex={retryingSubnetIndex}
         />
       ))}
     </>

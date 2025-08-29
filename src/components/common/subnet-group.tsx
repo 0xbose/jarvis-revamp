@@ -20,6 +20,8 @@ interface SubnetGroupProps {
   pollingStoppedAt?: Date | null;
   onRefreshPolling?: () => void;
   selectedAgent?: any;
+  onRetrySubnet?: (subnetIndex: number) => Promise<void>;
+  retryingSubnetIndex?: number | null;
 
 }
 
@@ -36,6 +38,8 @@ export function SubnetGroup({
   pollingStoppedAt,
   onRefreshPolling,
   selectedAgent,
+  onRetrySubnet,
+  retryingSubnetIndex,
 }: SubnetGroupProps) {
   return (
     <div className="relative mb-4">
@@ -51,6 +55,8 @@ export function SubnetGroup({
         pollingStoppedAt={pollingStoppedAt}
         onRefreshPolling={onRefreshPolling}
         selectedAgent={selectedAgent}
+        onRetrySubnet={onRetrySubnet}
+        retryingSubnetIndex={retryingSubnetIndex}
       />
     </div>
   );
