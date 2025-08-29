@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ChatMsg, WorkflowStatus } from "@/types/chat";
+import { WorkflowExecutionPayload, AgentDetail } from "@/types";
 import { workflowExecutor } from "@/utils/workflow-executor";
-import { useWorkflowExecutionStore } from "@/stores/workflow-execution-store";
-import { useWorkflowExecutor } from "@/hooks/use-workflow-executor";
+import { useWorkflowExecutionStore, useExecutionStatusStore, useUIStore } from "@/stores";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSubnetCache } from "./use-subnet-cache";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
 import { Web3Context } from "@/types/wallet";
-import { AgentDetail } from "@/types";
+import { STATUS } from "@/config/constants";
 
 interface UseWorkflowExecutionProps {
 	updateMessagesWithSubnetData: (
@@ -52,11 +52,145 @@ export const useWorkflowExecution = ({
 		setRefreshUIStatus,
 		setPollingTimers,
 	} = useWorkflowExecutionStore();
-	const { executeAgentWorkflow } = useWorkflowExecutor();
+	
+	// Add executor store hooks
+	const { updateExecutionStatus } = useExecutionStatusStore();
+	const { updateTestStatus } = useUIStore();
+	
 	const queryClient = useQueryClient();
 	
 	// Use the subnet cache hook for subnet operations
 	const { clearWorkflowCache, clearWorkflowTracking } = useSubnetCache();
+
+	// Add executor functions directly in this hook
+	const executeWorkflow = useCallback(
+		async (
+			payload: WorkflowExecutionPayload,
+			skyBrowser: SkyMainBrowser,
+			web3Context: Web3Context,
+			onStatusUpdate?: (data: any) => void
+		) => {
+			try {
+				updateExecutionStatus({ isRunning: true });
+				updateTestStatus({
+					isRunning: true,
+					status: STATUS.PROCESSING,
+				});
+
+				const requestId = await workflowExecutor.executeWorkflow(
+					payload,
+					skyBrowser,
+					web3Context,
+					(statusData) => {
+						console.log("📡 Workflow status update:", statusData);
+
+						if (
+							statusData.workflowStatus === "completed" ||
+							statusData.workflowStatus === "failed"
+						) {
+							updateExecutionStatus({ isRunning: false });
+							updateTestStatus({
+								isRunning: false,
+								status:
+									statusData.workflowStatus === "completed"
+										? STATUS.TEST_COMPLETED
+										: STATUS.FAILED,
+							});
+						}
+
+						if (
+							statusData.workflowStatus === "in_progress" ||
+							statusData.workflowStatus === "waiting"
+						) {
+							updateExecutionStatus({
+								currentSubnet: statusData.currentSubnet,
+							});
+						}
+
+						if (onStatusUpdate) {
+							onStatusUpdate(statusData);
+						}
+					}
+				);
+
+				updateExecutionStatus({ responseId: requestId });
+				return requestId;
+			} catch (error: unknown) {
+				updateExecutionStatus({ isRunning: false });
+				updateTestStatus({ isRunning: false, status: STATUS.FAILED });
+				throw error;
+			}
+		},
+		[updateExecutionStatus, updateTestStatus]
+	);
+
+	const executeAgentWorkflow = useCallback(
+		async (
+			agentDetail: AgentDetail,
+			userPrompt: string,
+			userAddress: string,
+			skyBrowser: SkyMainBrowser,
+			web3Context: Web3Context,
+			onStatusUpdate?: (data: any) => void
+		) => {
+			try {
+				updateExecutionStatus({ isRunning: true });
+				updateTestStatus({
+					isRunning: true,
+					status: STATUS.PROCESSING,
+				});
+
+				const requestId = await workflowExecutor.executeAgentWorkflow(
+					agentDetail,
+					userPrompt,
+					userAddress,
+					skyBrowser,
+					web3Context,
+					(statusData) => {
+						console.log(
+							"📡 Agent workflow status update:",
+							statusData
+						);
+
+						if (
+							statusData.workflowStatus === "completed" ||
+							statusData.workflowStatus === "failed"
+						) {
+							updateExecutionStatus({ isRunning: false });
+							updateTestStatus({
+								isRunning: false,
+								status:
+									statusData.workflowStatus === "completed"
+										? STATUS.TEST_COMPLETED
+										: STATUS.FAILED,
+							});
+						}
+
+						if (
+							statusData.workflowStatus === "in_progress" ||
+							statusData.workflowStatus === "waiting"
+						) {
+							updateExecutionStatus({
+								currentSubnet: statusData.currentSubnet,
+							});
+						}
+
+						if (onStatusUpdate) {
+							onStatusUpdate(statusData);
+						}
+					}
+				);
+
+				updateExecutionStatus({ responseId: requestId });
+				return requestId;
+			} catch (error: unknown) {
+				updateExecutionStatus({ isRunning: false });
+				updateTestStatus({ isRunning: false, status: STATUS.FAILED });
+				throw error;
+			}
+		},
+		[updateExecutionStatus, updateTestStatus]
+	);
 
 	const createStatusUpdateHandler = useCallback(
 		(isNewWorkflow = false, isExistingWorkflow = false) => {
@@ -663,5 +797,7 @@ export const useWorkflowExecution = ({
 		resumeExecution,
 		clearWorkflow,
 		refreshPolling,
+		executeWorkflow,
+		executeAgentWorkflow,
 	};
 };
