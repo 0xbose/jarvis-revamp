@@ -100,6 +100,9 @@ export const parseAgentResponse = (subnetData: string): AgentResponse => {
 		if (parsed?.data?.choices?.[0]?.message?.content) {
 			return { content: parsed.data.choices[0].message.content };
 		}
+		if (parsed?.data?.data?.message) {
+			return { content: parsed.data.data.message };
+		}
 		if (parsed?.data?.message) {
 			return { content: parsed.data.message };
 		}

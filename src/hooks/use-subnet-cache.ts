@@ -878,7 +878,9 @@ export const useSubnetCache = () => {
 							const parsedData = JSON.parse(subnet.data);
 
 							// Check for nested data structure (like in subnet 3)
-							if (parsedData.data && parsedData.data.message) {
+							if (parsedData.data && parsedData.data.data && parsedData.data.data.message) {
+								content = parsedData.data.data.message;
+							} else if (parsedData.data && parsedData.data.message) {
 								content = parsedData.data.message;
 							} else if (
 								parsedData.enhancedPrompt &&
@@ -996,7 +998,10 @@ export const useSubnetCache = () => {
 							const parsedData = JSON.parse(subnet.data);
 
 							// Check for nested data structure
-							if (parsedData.data && parsedData.data.message) {
+							if (parsedData.data && parsedData.data.data && parsedData.data.data.message) {
+								// For Twitter responses: data.data.message
+								content = parsedData.data.data.message;
+							} else if (parsedData.data && parsedData.data.message) {
 								content = parsedData.data.message;
 							} else if (
 								parsedData.enhancedPrompt &&
@@ -1091,7 +1096,10 @@ export const useSubnetCache = () => {
 						try {
 							const parsedData = JSON.parse(subnet.data);
 
-							if (parsedData.data && parsedData.data.message) {
+							if (parsedData.data && parsedData.data.data && parsedData.data.data.message) {
+								// For Twitter responses: data.data.message
+								content = parsedData.data.data.message;
+							} else if (parsedData.data && parsedData.data.message) {
 								content = parsedData.data.message;
 							} else if (
 								parsedData.enhancedPrompt &&
