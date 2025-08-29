@@ -351,24 +351,27 @@ export function ChatMessage({
 					{message.imageData && (
 						<div className="mt-3">
 							{message.isImage ? (
-								<div className="flex flex-col items-start gap-2">
-									<Image
-										src={base64ToDataUrl(
-											message.imageData,
-											message.contentType || "image/jpeg"
-										)}
-										alt="Generated image"
-										width={400}
-										height={400}
-										className="rounded-lg border border-border max-w-full h-auto"
-										onError={(e) => {
-											console.error(
-												"Failed to load image:",
-												e
-											);
-										}}
+								<div className="relative w-fit ">
+								<Image
+									src={base64ToDataUrl(
+										message.imageData,
+										message.contentType || "image/jpeg"
+									)}
+									alt="Generated image"
+									width={400}
+									height={400}
+									className="rounded-lg border border-border max-w-fit h-auto"
+									onError={(e) => {
+										console.error(
+											"Failed to load image:",
+											e
+										);
+									}}
 									/>
+								<div className="absolute top-2 right-2">
 									<Button
+										size="icon"
+										className="p-1 bg-background/80"
 										onClick={() => {
 											const link =
 												document.createElement("a");
@@ -386,12 +389,10 @@ export function ChatMessage({
 													"jpg");
 											link.click();
 										}}
-										variant="outline"
-										size="sm"
 									>
-										<DownloadIcon className="w-4 h-4" />
-										Download
+										<DownloadIcon className="w-3 h-3 text-foreground" />
 									</Button>
+								</div>
 								</div>
 							) : (
 								<div className="p-4 border border-border rounded-lg bg-muted/20">
@@ -1067,6 +1068,7 @@ export function ChatMessage({
 						{message.imageData && (
 							<div className="mt-3">
 								{message.isImage ? (
+									<div className="relative w-fit ">
 									<Image
 										src={base64ToDataUrl(
 											message.imageData,
@@ -1075,14 +1077,40 @@ export function ChatMessage({
 										alt="Generated image"
 										width={400}
 										height={400}
-										className="rounded-lg border border-border max-w-full h-auto"
+										className="rounded-lg border border-border max-w-fit h-auto"
 										onError={(e) => {
 											console.error(
 												"Failed to load image:",
 												e
 											);
 										}}
-									/>
+										/>
+									<div className="absolute top-2 right-2">
+										<Button
+											size="icon"
+											className="p-1 bg-background/80"
+											onClick={() => {
+												const link =
+													document.createElement("a");
+												link.href = base64ToDataUrl(
+													message.imageData!,
+													message.contentType ||
+														"image/jpeg"
+												);
+												link.download =
+													"generated_image." +
+													((message.contentType &&
+														message.contentType.split(
+															"/"
+														)[1]) ||
+														"jpg");
+												link.click();
+											}}
+										>
+											<DownloadIcon className="w-3 h-3 text-foreground" />
+										</Button>
+									</div>
+									</div>
 								) : (
 									<div className="p-4 border border-border rounded-lg bg-muted/20">
 										<div className="flex items-center gap-3">
@@ -1233,37 +1261,48 @@ export function ChatMessage({
 						</div>
 					</div>
 					{message.imageData && message.isImage && (
-						<div className="mt-3">
-							<Image
-								src={base64ToDataUrl(
-									message.imageData,
-									message.contentType || "image/jpeg"
-								)}
-								alt="Generated image"
-								width={400}
-								height={400}
-								className="rounded-lg border border-border/50"
+						<div className="relative w-fit ">
+						<Image
+							src={base64ToDataUrl(
+								message.imageData,
+								message.contentType || "image/jpeg"
+							)}
+							alt="Generated image"
+							width={400}
+							height={400}
+							className="rounded-lg border border-border max-w-fit h-auto"
+							onError={(e) => {
+								console.error(
+									"Failed to load image:",
+									e
+								);
+							}}
 							/>
+						<div className="absolute top-2 right-2">
 							<Button
+								size="icon"
+								className="p-1 bg-background/80"
 								onClick={() => {
-									const link = document.createElement("a");
+									const link =
+										document.createElement("a");
 									link.href = base64ToDataUrl(
 										message.imageData!,
-										message.contentType || "image/jpeg"
+										message.contentType ||
+											"image/jpeg"
 									);
 									link.download =
 										"generated_image." +
-										(message.contentType?.split("/")[1] ||
+										((message.contentType &&
+											message.contentType.split(
+												"/"
+											)[1]) ||
 											"jpg");
 									link.click();
 								}}
-								variant="outline"
-								size="sm"
-								className="mt-2 text-xs"
 							>
-								<DownloadIcon className="w-3 h-3 mr-1" />
-								Download Image
+								<DownloadIcon className="w-3 h-3 text-foreground" />
 							</Button>
+						</div>
 						</div>
 					)}
 				</div>
