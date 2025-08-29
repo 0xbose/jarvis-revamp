@@ -42,11 +42,6 @@ const navItems = [
 		url: "/history",
 	},
 	{
-		icon: <Wallet2Icon className="size-5" strokeWidth={1.5} />,
-		title: "Manage Funds",
-		url: "/add-funds",
-	},
-	{
 		icon: <StoreIcon className="size-5" strokeWidth={1.5} />,
 		title: "Market Place",
 		url: "/market-place",
@@ -54,8 +49,13 @@ const navItems = [
 	{
 		icon: <BotIcon className="size-5" strokeWidth={1.5} />,
 		title: "Agents",
-		url: "/agents",
+		url: "/user-agents",
 	},
+	{
+		icon: <Wallet2Icon className="size-5" strokeWidth={1.5} />,
+		title: "Manage Funds",
+		url: "/add-funds",
+	}
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
