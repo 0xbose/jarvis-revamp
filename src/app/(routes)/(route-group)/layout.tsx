@@ -14,7 +14,7 @@ export default function layout({ children }: { children: React.ReactNode }) {
 			>
 				<AppSidebar />
 			</SidebarProvider>
-			<div className="w-full h-full flex-1 p-3 mx-auto">{children}</div>
+			<div className="w-full h-full flex-1 px-3 mx-auto">{children}</div>
 		</div>
 	);
 }

@@ -28,7 +28,7 @@ export default function RootLayout({
 				<Web3AuthProvider>
 				<Web3ContextProvider>
 					<div className="min-h-screen bg-background">
-						<main className="h-screen w-full">{children}</main>
+						<main className="h-full w-full">{children}</main>
 					</div>
 					<Toaster />
 				</Web3ContextProvider>	

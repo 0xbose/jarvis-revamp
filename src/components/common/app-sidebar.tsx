@@ -44,7 +44,7 @@ const navItems = [
 	{
 		icon: <StoreIcon className="size-5" strokeWidth={1.5} />,
 		title: "Market Place",
-		url: "/market-place",
+		url: "/marketplace",
 	},
 	{
 		icon: <BotIcon className="size-5" strokeWidth={1.5} />,

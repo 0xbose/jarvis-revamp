@@ -42,7 +42,7 @@ export const getUserAgents = async (
 		skyBrowser,
 		web3Context
 	);
-	const response = await axiosInstance.get("/agents", {
+	const response = await axiosInstance.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}agents`, {
 		params: {
 			search: params?.search,
 			limit: params?.limit || 10,
