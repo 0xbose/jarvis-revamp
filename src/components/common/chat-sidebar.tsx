@@ -65,10 +65,10 @@ interface WorkflowItem {
 	agentId: string;
 	status: string;
 	userPrompt?: string;
-	questionType?: string; // Add questionType field for awaiting_response statuses
+	questionType?: string;
 }
 
-const getWorkflowIcon = (status: string, questionType?: string) => {
+const getWorkflowIcon = (status: string) => {
 	switch (status) {
 		case "completed":
 			return CheckCircle; 
@@ -94,11 +94,11 @@ const getWorkflowIconColor = (status: string, questionType?: string) => {
 		case "completed":
 			return "text-green-700"; 
 		case "awaiting_response":
-			return "text-yellow-500"; 
+			return "text-yellow-500/90"; 
 		case "stopped":
 			return "text-gray-500"; 
 		case "failed":
-			return "text-red-700"; 
+			return "text-red-500/90"; 
 		case "in_progress":
 			return "text-blue-700"; 
 		case "waiting":
@@ -145,8 +145,8 @@ const WorkflowItem = React.memo(
 		currentWorkflowId?: string | null;
 	}) => {
 		const router = useRouter();
-		const Icon = getWorkflowIcon(workflow.status, workflow.questionType);
-		const iconColor = getWorkflowIconColor(workflow.status, workflow.questionType);
+		const Icon = getWorkflowIcon(workflow.status);
+		const iconColor = getWorkflowIconColor(workflow.status);
 		const iconAnimation = getWorkflowIconAnimation(workflow.status);
 		
 		const isCompleted = workflow.status === "completed";
@@ -161,7 +161,6 @@ const WorkflowItem = React.memo(
 					router.push(`/chat/agent/${agentId}?workflowId=${workflowId}`);
 					break;
 				case "Compare":
-					// Add as comparison to current workflow
 					if (currentWorkflowId && currentAgentId) {
 						router.push(`/chat/agent/${currentAgentId}?workflowId=${currentWorkflowId}&compare=${workflowId}`);
 					}
@@ -197,7 +196,7 @@ const WorkflowItem = React.memo(
 								)
 							}
 						>
-							{Icon && <Icon className={`!size-[19px] ${iconColor} ${iconAnimation}`} />}
+							{Icon && <Icon className={`!size-[19px] ${iconColor} ${iconAnimation}`} strokeWidth={1.5} />}
 							{sidebarIsExpanded && (
 								<div className="flex items-center !w-full flex-1 min-w-0">
 									<div className="flex flex-col w-[140px] min-w-0">
@@ -228,7 +227,7 @@ const WorkflowItem = React.memo(
 								onValueChange={handleMenuSelect}
 							>
 								<SelectTrigger className="!border-none">
-									<MoreVerticalIcon className="!size-4 flex-shrink-0" />
+									<MoreVerticalIcon className="!size-4 flex-shrink-0" strokeWidth={1.5} />
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="Left">
@@ -301,14 +300,12 @@ const ChatSidebar = React.memo(() => {
 	const hasActiveWorkflow = (workflows: WorkflowItem[]) => {
 		const hasActiveHistoryWorkflow = workflows.some(
 			(workflow) => {
-				// Always poll for these active server states
 				if (workflow.status === "in_progress" || 
 					workflow.status === "waiting" || 
 					workflow.status === "pending") {
 					return true;
 				}
 				
-				// For awaiting_response, only poll if it's a notification type
 				if (workflow.status === "awaiting_response") {
 					return workflow.questionType === "notification";
 				}
@@ -375,7 +372,6 @@ const ChatSidebar = React.memo(() => {
 				return 60000; 
 			}
 
-			console.log('⏹️ Stopping polling - no active workflows or running workflow');
 			return false;
 		},
 		staleTime: 1000 * 60 * 5,

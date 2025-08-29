@@ -17,6 +17,9 @@ import {
 	PlusCircleIcon,
 	Wallet2Icon,
 	LogOutIcon,
+	StoreIcon,
+	AtomIcon,
+	BotIcon,
 } from "lucide-react";
 import CustomTooltip from "./custom-tool-tip";
 import { usePathname, useRouter } from "next/navigation";
@@ -29,19 +32,29 @@ import { useQueryClient } from "@tanstack/react-query";
 
 const navItems = [
 	{
-		icon: <PlusCircleIcon className="size-5" />,
+		icon: <PlusCircleIcon className="size-5" strokeWidth={1.5} />,
 		title: "Create",
 		url: "/create",
 	},
 	{
-		icon: <HistoryIcon className="size-5" />,
+		icon: <HistoryIcon className="size-5" strokeWidth={1.5} />,
 		title: "History",
 		url: "/history",
 	},
 	{
-		icon: <Wallet2Icon className="size-5" />,
+		icon: <Wallet2Icon className="size-5" strokeWidth={1.5} />,
 		title: "Manage Funds",
 		url: "/add-funds",
+	},
+	{
+		icon: <StoreIcon className="size-5" strokeWidth={1.5} />,
+		title: "Market Place",
+		url: "/market-place",
+	},
+	{
+		icon: <BotIcon className="size-5" strokeWidth={1.5} />,
+		title: "Agents",
+		url: "/agents",
 	},
 ];
 
@@ -57,13 +70,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
 	const handleLogout = async () => {
 		try {
-			// Disconnect wallet
 			await disconnect();
-			// Reset all stores
 			resetGlobalStore();
 			resetChatStore();
 			resetWorkflowExecutionStore();
-			// Navigate to home page
 			router.push("/");
 		} catch (error) {
 			console.error("Logout failed:", error);
@@ -100,7 +110,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 					</SidebarHeader>
 					<SidebarContent>
 						<SidebarGroup>
-							<SidebarMenu className="gap-y-4 flex flex-col items-center">
+							<SidebarMenu className="gap-y-5 flex flex-col items-center">
 								{navItems.map((item) => (
 									<SidebarMenuItem
 										key={item.title}
