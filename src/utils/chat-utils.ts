@@ -55,12 +55,3 @@ export const clearChatCache = (workflowId: string, queryClient: QueryClient): vo
 	}
 	queryClient.removeQueries({ queryKey: chatQueryKeys.chat(workflowId) });
 };
-
-export const hasCachedChatMessages = (workflowId: string, queryClient: QueryClient): boolean => {
-	if (!queryClient || !workflowId) {
-		console.warn('hasCachedChatMessages: queryClient or workflowId is missing');
-		return false;
-	}
-	const cached = queryClient.getQueryData(chatQueryKeys.chat(workflowId));
-	return cached !== undefined && Array.isArray(cached) && cached.length > 0;
-};

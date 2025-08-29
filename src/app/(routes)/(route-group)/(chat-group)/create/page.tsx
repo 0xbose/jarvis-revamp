@@ -5,7 +5,6 @@ import { useGlobalStore } from "@/stores/global-store";
 import { useRouter } from "next/navigation";
 // import Image from "next/image";
 import Spline from "@splinetool/react-spline";
-// import SvgAnimationParticles from "@/components/common/svg-animaiton-particles";
 
 export default function CreatePage() {
 	const { mode, prompt, setPrompt, setMode, selectedAgent } =
@@ -44,7 +43,6 @@ export default function CreatePage() {
 					height={1000}
 					className="w-full max-w-80 h-full"
 				/> */}
-				{/* <SvgAnimationParticles /> */}
 				<Spline scene="https://prod.spline.design/XGG3yvqNuvg63wOA/scene.splinecode" />
 				<div className="absolute bottom-5 right-5 h-10 w-36 bg-background"></div>
 				{/* </div> */}
