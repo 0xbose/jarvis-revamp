@@ -144,11 +144,12 @@ export function AgentGroup({
   };
   
   // Logic for Recent Data:
-  // - Find the thread that has isRecent flag (contains new polled data)
-  // - If no recent thread, show the latest thread (last in array) in Recent Data
+  // - Always show the thread with the highest feedbackIndex (newest feedback) in Recent Data
   // - All other threads go to history
-  const recentThread = group.feedbackThreads.find(thread => thread.isRecent) || 
-                      (group.feedbackThreads.length > 0 ? group.feedbackThreads[group.feedbackThreads.length - 1] : null);
+  const recentThread = group.feedbackThreads.length > 0 ? 
+                      group.feedbackThreads.reduce((latest, current) => 
+                        current.feedbackIndex > latest.feedbackIndex ? current : latest
+                      ) : null;
   const historyThreads = group.feedbackThreads.filter(thread => thread !== recentThread);
   const shouldShowHistory = historyThreads.length > 0;
   
@@ -203,11 +204,6 @@ export function AgentGroup({
                       {statusMessage && (
                         <span className="text-sm font-normal italic text-muted-foreground transform -rotate-1">
                           • {statusMessage}
-                        </span>
-                      )}
-                      {historyThreads.some(thread => thread.isRecent) && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 animate-pulse">
-                          New Data
                         </span>
                       )}
                     </div>

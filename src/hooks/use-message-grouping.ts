@@ -196,11 +196,11 @@ export const useMessageGrouping = () => {
       }
     });
 
-    // Sort feedback threads by timestamp within each subnet (oldest first)
+    // Sort feedback threads by feedbackIndex within each subnet (newest first for UI consistency)
 
     subnetGroups.forEach((group) => {
       group.feedbackThreads.sort((a, b) => 
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        b.feedbackIndex - a.feedbackIndex
       );
       
       // Debug logging for feedback threads

@@ -68,11 +68,6 @@ export function FeedbackDemo() {
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-blue-400" />
                 <span className="font-medium">Openai</span>
-                {showNewData && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 animate-pulse">
-                    New Data
-                  </span>
-                )}
               </div>
             </div>
           </CollapsibleTrigger>
