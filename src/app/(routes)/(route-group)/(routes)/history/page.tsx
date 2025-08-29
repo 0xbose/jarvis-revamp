@@ -24,7 +24,7 @@ import {
 	DropdownMenuCheckboxItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getHistory } from "@/controllers/requests";
+import { getHistory } from "@/controllers/requests/requests.query";
 import { useWallet } from "@/hooks/use-wallet";
 import { HistoryItem } from "@/types";
 import DataTable from "@/components/table/DataTable";

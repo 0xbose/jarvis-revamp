@@ -2,7 +2,7 @@
 import SearchAndCategories from "@/components/market-place/agent-search";
 import AgentDialog from "@/components/market-place/agent-dialog";
 import { useState } from "react";
-import { getUserAgents } from "@/controllers/agents";
+import { getUserAgents } from "@/controllers/agents/agents.query";
 import { useWallet } from "@/hooks/use-wallet";
 import { useQuery } from "@tanstack/react-query";
 import AgentMarketplaceCard from "@/components/market-place/agent-marketplace-card";

@@ -53,7 +53,7 @@ import { Skeleton } from "../ui/skeleton";
 import { useWallet } from "@/hooks/use-wallet";
 import { useExecutionStatusStore } from "@/stores/execution-status-store";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getHistory } from "@/controllers/requests";
+import { getHistory } from "@/controllers/requests/requests.query";
 import { prefetchChatData } from "@/utils/chat-utils";
 import { STORAGE_KEYS } from "@/config/constants";
 

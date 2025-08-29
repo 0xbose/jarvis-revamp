@@ -27,7 +27,7 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "../ui/textarea";
-import { getAgents } from "@/controllers/agents";
+import { getAgents } from "@/controllers/agents/agents.query";
 import { useWallet } from "@/hooks/use-wallet";
 import { useQuery } from "@tanstack/react-query";
 import { Label } from "../ui/label";
