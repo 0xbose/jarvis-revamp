@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { ChatMsg, WorkflowStatus } from "@/types/chat";
 import { WorkflowExecutionPayload, AgentDetail } from "@/types";
 import { workflowExecutor } from "@/utils/workflow-executor";
-import { useWorkflowExecutionStore, useExecutionStatusStore, useUIStore } from "@/stores";
+import { useWorkflowExecutionStore, useUIStore } from "@/stores";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSubnetCache } from "./use-subnet-cache";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
@@ -51,10 +51,9 @@ export const useWorkflowExecution = ({
 		setPollingTimeoutStatus,
 		setRefreshUIStatus,
 		setPollingTimers,
+		updateExecutionStatus,
 	} = useWorkflowExecutionStore();
 	
-	// Add executor store hooks
-	const { updateExecutionStatus } = useExecutionStatusStore();
 	const { updateTestStatus } = useUIStore();
 	
 	const queryClient = useQueryClient();

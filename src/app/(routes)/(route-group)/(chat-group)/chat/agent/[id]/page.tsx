@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { useWallet } from "@/hooks/use-wallet";
 import { AgentDetail } from "@/types";
 import { useWorkflowExecutionStore } from "@/stores/workflow-execution-store";
-import { useExecutionStatusStore } from "@/stores/execution-status-store";
 import { Skeleton } from "@/components/ui/skeleton";
 import ChatSkeleton from "@/components/common/chat-skeleton";
 import { getOriginalPayload } from "@/controllers/requests/requests.query";
@@ -67,8 +66,7 @@ export default function AgentChatPage() {
 		queryClient.invalidateQueries({ queryKey: ["history"] });
 	};
 
-	const { currentExecution } = useWorkflowExecutionStore();
-	const { updateExecutionStatus } = useExecutionStatusStore();
+	const { currentExecution, updateExecutionStatus } = useWorkflowExecutionStore();
 
 	const {
 		chatMessages,

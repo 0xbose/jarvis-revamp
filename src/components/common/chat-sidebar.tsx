@@ -51,7 +51,7 @@ import {
 } from "../ui/tooltip";
 import { Skeleton } from "../ui/skeleton";
 import { useWallet } from "@/hooks/use-wallet";
-import { useExecutionStatusStore } from "@/stores/execution-status-store";
+import { useExecutionStatusStore } from "@/stores";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getHistory } from "@/controllers/requests/requests.query";
 import { prefetchChatData } from "@/utils/chat-utils";
@@ -286,7 +286,8 @@ const ChatSidebar = React.memo(() => {
 	const sidebarRef = useRef<HTMLDivElement>(null);
 
 	const { address, skyBrowser } = useWallet();
-	const { isRunning } = useExecutionStatusStore();
+	const { executionStatus } = useExecutionStatusStore();
+	const { isRunning } = executionStatus;
 	const queryClient = useQueryClient();
 
 	const params = useParams();

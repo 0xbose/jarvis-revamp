@@ -203,12 +203,12 @@ export interface ApiKeyData {
 	timestamp: number;
 }
 
-// Execution Status Types
-export interface ExecutionStatus {
-	isRunning: boolean;
-	responseId?: string;
-	currentSubnet?: string;
-}
+// Execution Status Types - Now consolidated in workflow-execution-store
+// export interface ExecutionStatus {
+// 	isRunning: boolean;
+// 	responseId?: string;
+// 	currentSubnet?: string;
+// }
 
 // UI State Types
 export interface TestStatus {

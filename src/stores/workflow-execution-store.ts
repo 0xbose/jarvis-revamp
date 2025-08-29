@@ -44,18 +44,35 @@ export interface WorkflowExecutionStatus {
 	subnets: SubnetStatus[];
 }
 
+// Consolidated execution status interface
+export interface ExecutionStatus {
+	isRunning: boolean;
+	responseId?: string;
+	currentSubnet?: string;
+}
+
 interface WorkflowExecutionStoreState {
+	// Basic execution status (consolidated from execution-status-store)
+	executionStatus: ExecutionStatus;
+	
+	// Detailed workflow execution state
 	currentExecution: WorkflowExecutionStatus | null;
 	executionHistory: WorkflowExecutionStatus[];
+	
+	// Polling and UI state
 	isPolling: boolean;
 	isPollingTimedOut: boolean;
 	shouldShowRefreshUI: boolean;
 	pollingDuration: number;
 	timeSinceStatusChange: number;
 
-	// Actions
+	// Actions for basic execution status
+	updateExecutionStatus: (status: Partial<ExecutionStatus>) => void;
+	resetExecutionStatus: () => void;
+	
+	// Actions for workflow execution
 	setCurrentExecution: (execution: WorkflowExecutionStatus | null) => void;
-	updateExecutionStatus: (execution: WorkflowExecutionStatus) => void;
+	updateWorkflowExecutionStatus: (execution: WorkflowExecutionStatus) => void;
 	addToExecutionHistory: (execution: WorkflowExecutionStatus) => void;
 	setPollingStatus: (isPolling: boolean) => void;
 	setPollingTimeoutStatus: (isTimedOut: boolean) => void;
@@ -64,23 +81,56 @@ interface WorkflowExecutionStoreState {
 	clearCurrentExecution: () => void;
 	clearExecutionHistory: () => void;
 	stopCurrentExecution: () => void;
+	
+	// Consolidated reset
 	reset: () => void;
 }
 
 export const useWorkflowExecutionStore = create<WorkflowExecutionStoreState>()(
 	subscribeWithSelector((set) => ({
+		// Basic execution status
+		executionStatus: {
+			isRunning: false,
+			responseId: undefined,
+			currentSubnet: undefined,
+		},
+		
+		// Detailed workflow execution state
 		currentExecution: null,
 		executionHistory: [],
+		
+		// Polling and UI state
 		isPolling: false,
 		isPollingTimedOut: false,
 		shouldShowRefreshUI: false,
 		pollingDuration: 0,
 		timeSinceStatusChange: 0,
 
+		// Actions for basic execution status
+		updateExecutionStatus: (status) =>
+			set((state) => ({
+				...state,
+				executionStatus: {
+					...state.executionStatus,
+					...status,
+				},
+			})),
+			
+		resetExecutionStatus: () =>
+			set((state) => ({
+				...state,
+				executionStatus: {
+					isRunning: false,
+					responseId: undefined,
+					currentSubnet: undefined,
+				},
+			})),
+
+		// Actions for workflow execution
 		setCurrentExecution: (execution) =>
 			set({ currentExecution: execution }),
 
-		updateExecutionStatus: (execution) =>
+		updateWorkflowExecutionStatus: (execution) =>
 			set((state) => ({
 				...state,
 				currentExecution: execution,
@@ -121,8 +171,14 @@ export const useWorkflowExecutionStore = create<WorkflowExecutionStoreState>()(
 					: null,
 			})),
 
+		// Consolidated reset
 		reset: () =>
 			set({
+				executionStatus: {
+					isRunning: false,
+					responseId: undefined,
+					currentSubnet: undefined,
+				},
 				currentExecution: null,
 				executionHistory: [],
 				isPolling: false,
@@ -133,3 +189,6 @@ export const useWorkflowExecutionStore = create<WorkflowExecutionStoreState>()(
 			}),
 	}))
 );
+
+// Export the old store name for backward compatibility
+export const useExecutionStatusStore = useWorkflowExecutionStore;
