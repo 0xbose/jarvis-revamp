@@ -2,51 +2,36 @@
 import SearchAndCategories from "@/components/market-place/agent-search";
 import AgentDialog from "@/components/market-place/agent-dialog";
 import { useState } from "react";
-import { getUserAgents } from "@/controllers/agents/agents.query";
-import { useWallet } from "@/hooks/use-wallet";
+import { getAgents } from "@/controllers/agents/agents.query";
 import { useQuery } from "@tanstack/react-query";
 import AgentMarketplaceCard from "@/components/market-place/agent-marketplace-card";
 
-interface Agent {
-	id: string;
-	name: string;
-	description: string;
-	is_deployed: boolean;
-	created_at: string;
-	updated_at: string;
-	agent_address: string;
-}
 
 export default function MarketPlacePage() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState<any | "all">(
 		"all"
 	);
-	const { skyBrowser, address } = useWallet();
+
 
 	const {
-		data: agents = [],
+		data: collections = [],
 		isLoading: loading,
 		error,
 		refetch: fetchAgents,
 	} = useQuery({
-		queryKey: ["user-agents", address, searchQuery],
+		queryKey: ["agent-collections", searchQuery],
 		queryFn: async () => {
-			const data = await getUserAgents(
-				{
-					search: searchQuery,
-					limit: 20,
-					address: address || "",
-				},
-				skyBrowser || undefined,
-				{ address } as any
-			);
-			const agents = (data?.data?.agents || []).map((agent: Agent) => ({
-				...agent,
+			const data = await getAgents({
+				search: searchQuery,
+				limit: 20,
+				offset: 0,
+			});
+			const collections = (data?.data?.agents || []).map((collection: any) => ({
+				...collection,
 			}));
-			return agents as Agent[];
+			return collections;
 		},
-		enabled: !!address,
 		staleTime: 5 * 60 * 1000,
 		retry: 3,
 	});
@@ -101,7 +86,7 @@ export default function MarketPlacePage() {
 									</div>
 								))}
 							</div>
-						) : agents.length === 0 ? (
+						) : collections.length === 0 ? (
 							<div className="text-center py-16">
 								<div className="w-24 h-24 mx-auto bg-muted/30 rounded-full flex items-center justify-center mb-6">
 									<div className="w-12 h-12 text-muted-foreground">
@@ -117,8 +102,8 @@ export default function MarketPlacePage() {
 							</div>
 						) : (
 							<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-								{agents.map((agent) => (
-									<AgentMarketplaceCard key={agent.id} agent={agent} />
+									{collections.map((collection) => (
+									<AgentMarketplaceCard key={collection.id} agent={collection} />
 								))}
 							</div>
 						)}

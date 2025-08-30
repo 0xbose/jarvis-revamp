@@ -13,7 +13,7 @@ export const getAgents = async (
 	skyBrowser?: SkyMainBrowser,
 	web3Context?: Web3Context
 ): Promise<AgentResponse> => {
-	const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/agents`, {
+	const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections`, {
 		params: {
 			search: params?.search,
 			limit: params?.limit || 10,
@@ -37,7 +37,7 @@ export const getUserAgents = async (
 	web3Context?: Web3Context
 ): Promise<AgentResponse> => {
 	
-	const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/agents`, {
+	const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections`, {
 		params: {
 			search: params?.search,
 			limit: params?.limit || 10,
@@ -61,6 +61,6 @@ export const getAgentById = async (
 		skyBrowser,
 		web3Context
 	);
-	const response = await axiosInstance.get(`/agents/${id}`);
+	const response = await axiosInstance.get(`/collections/${id}`);
 	return response.data;
 };
