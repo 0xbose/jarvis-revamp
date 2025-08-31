@@ -665,12 +665,6 @@ export default function AgentChatPage() {
 	useEffect(() => {
 		let isMounted = true;
 		const fetchAgent = async () => {
-			console.log("🔍 Debug: Fetching agent", {
-				agentAddress,
-				selectedAgentAddress: selectedAgent?.agent_address,
-				selectedAgentNftAddress: 'nft_address' in selectedAgent ? selectedAgent.nft_address : 'N/A',
-				lastLoadedAgentId: lastLoadedAgentId.current
-			});
 			
 			if (
 				!selectedAgent ||
@@ -708,7 +702,7 @@ export default function AgentChatPage() {
 		return () => {
 			isMounted = false;
 		};
-	}, [agentAddress]);
+	}, [agentAddress, selectedAgent]);
 
 	if (isLoading) {
 		return (
