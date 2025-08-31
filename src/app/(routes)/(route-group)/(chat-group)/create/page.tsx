@@ -19,7 +19,7 @@ export default function CreatePage() {
 		if (prompt.trim()) {
 			if (mode === "agent") {
 				if (selectedAgent) {
-					router.push(`/chat/agent/${selectedAgent.id}`);
+					router.push(`/chat/agent/${selectedAgent.agent_address}`);
 				} else {
 					console.log("❌ No selected agent");
 				}

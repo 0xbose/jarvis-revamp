@@ -52,7 +52,7 @@ export const getUserAgents = async (
 };
 
 export const getAgentById = async (
-	id: string,
+	agentAddress: string,
 	skyBrowser?: SkyMainBrowser,
 	web3Context?: Web3Context
 ): Promise<AgentDetailResponse> => {
@@ -61,6 +61,6 @@ export const getAgentById = async (
 		skyBrowser,
 		web3Context
 	);
-	const response = await axiosInstance.get(`/collections/${id}`);
+	const response = await axiosInstance.get(`/collections/${agentAddress}`);
 	return response.data;
 };

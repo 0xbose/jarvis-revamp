@@ -57,7 +57,7 @@ export const useGlobalStore = create<GlobalStore>()(
 			console.log(
 				"🔧 Global Store: Setting selected agent to:",
 				agent?.name,
-				agent?.id
+				agent
 			);
 			set({ selectedAgent: agent });
 		},

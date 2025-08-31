@@ -63,6 +63,7 @@ interface WorkflowItem {
 	requestId: string;
 	id?: string;
 	agentId: string;
+	agentAddress: string;
 	status: string;
 	userPrompt?: string;
 	questionType?: string;
@@ -153,12 +154,12 @@ const WorkflowItem = React.memo(
 		
 		const handleMenuSelect = (value: string) => {
 			const workflowId = workflow.requestId || workflow.id || "";
-			const agentId = workflow.agentId;
+			const agentAddress = workflow.agentAddress;
 			
 			switch (value) {
 				case "Left":
 					// Navigate to single workflow view
-					router.push(`/chat/agent/${agentId}?workflowId=${workflowId}`);
+					router.push(`/chat/agent/${agentAddress}?workflowId=${workflowId}`);
 					break;
 				case "Compare":
 					if (currentWorkflowId && currentAgentId) {
@@ -188,7 +189,7 @@ const WorkflowItem = React.memo(
 						}`}
 					>
 						<Link
-							href={`/chat/agent/${workflow.agentId}?workflowId=${workflow.requestId}`}
+							href={`/chat/agent/${workflow.agentAddress}?workflowId=${workflow.requestId}`}
 							className="w-full flex items-center justify-center gap-x-1.5"
 							onMouseEnter={() =>
 								onPrefetch(
@@ -292,7 +293,7 @@ const ChatSidebar = React.memo(() => {
 
 	const params = useParams();
 	const searchParams = useSearchParams();
-	const currentAgentId = params?.id as string;
+	const currentAgentAddress = params?.agentAddress as string;
 	const currentWorkflowId = searchParams?.get("workflowId");
 
 	const hasWallet = !!address;
@@ -650,8 +651,8 @@ const ChatSidebar = React.memo(() => {
 								{visibleItems.map(
 									(workflow: WorkflowItem, index: number) => {
 										const isSelected =
-											currentAgentId ===
-												workflow.agentId &&
+											currentAgentAddress ===
+												workflow.agentAddress &&
 											currentWorkflowId ===
 												workflow.requestId;
 
@@ -681,7 +682,7 @@ const ChatSidebar = React.memo(() => {
 												}
 												isSelected={isSelected}
 												isRunning={isRunning}
-												currentAgentId={currentAgentId}
+												currentAgentId={currentAgentAddress}
 												currentWorkflowId={currentWorkflowId}
 											/>
 										);

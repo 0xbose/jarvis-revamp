@@ -44,7 +44,7 @@ export default function AgentChatPage() {
 	const params = useParams();
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const agentId = params.id as string;
+	const agentAddress = params.agentAddress as string;
 	const urlWorkflowId = searchParams.get("workflowId");
 	const compareWorkflowId = searchParams.get("compare");
 	const isComparisonMode = !!compareWorkflowId;
@@ -633,7 +633,7 @@ export default function AgentChatPage() {
 
 		const canAutoSubmit =
 			selectedAgent &&
-			selectedAgent.id === agentId &&
+			selectedAgent.agent_address === agentAddress &&
 			prompt &&
 			prompt.trim().length > 0 &&
 			skyBrowser &&
@@ -650,7 +650,7 @@ export default function AgentChatPage() {
 	}, [
 		isLoading,
 		selectedAgent?.id,
-		agentId,
+		agentAddress,
 		prompt,
 		skyBrowser,
 		address,
@@ -664,20 +664,21 @@ export default function AgentChatPage() {
 	useEffect(() => {
 		let isMounted = true;
 		const fetchAgent = async () => {
-			if (
-				!selectedAgent ||
-				selectedAgent.id !== agentId ||
-				lastLoadedAgentId.current !== agentId
-			) {
+					if (
+			!selectedAgent ||
+			selectedAgent.agent_address !== agentAddress ||
+			lastLoadedAgentId.current !== agentAddress
+		) {
 				setIsLoading(true);
 				try {
-					const response = await getAgentById(agentId);
+					const response = await getAgentById(agentAddress);
+					console.log("🔄 Fetching agent:", response);
 					const agent = response?.data;
 					if (isMounted) {
 						if (agent) {
 							setSelectedAgent(agent);
 							setError(null);
-							lastLoadedAgentId.current = agentId;
+							lastLoadedAgentId.current = agentAddress;
 						} else {
 							setError("Agent not found");
 						}
@@ -698,7 +699,7 @@ export default function AgentChatPage() {
 		return () => {
 			isMounted = false;
 		};
-	}, [agentId, selectedAgent]);
+	}, [agentAddress]);
 
 	if (isLoading) {
 		return (
@@ -761,7 +762,7 @@ export default function AgentChatPage() {
 	if (isComparisonMode && compareWorkflowId && urlWorkflowId) {
 		return (
 			<ComparisonView
-				agentId={agentId}
+				agentId={agentAddress}
 				primaryWorkflowId={urlWorkflowId}
 				compareWorkflowId={compareWorkflowId}
 				selectedAgent={selectedAgent}

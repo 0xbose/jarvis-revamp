@@ -34,11 +34,11 @@ export default function ChatInput({
 				return;
 			}
 
-			router.push(`/chat/agent/${selectedAgent.id}`);
+			router.push(`/chat/agent/${selectedAgent.agent_address}`);
 
 			// Call onSend to execute the workflow
 			if (onSend) {
-				onSend(prompt, selectedAgent.id);
+				onSend(prompt, selectedAgent.agent_address);
 			}
 		} else {
 			if (!prompt.trim()) return;

@@ -293,8 +293,8 @@ export default function WorkflowHistory() {
 					<button
 						onClick={() => {
 							const workflowId = row.original.requestId;
-							const agentId = row.original.agentId;
-							router.push(`/chat/agent/${agentId}?workflowId=${workflowId}`);
+							const agentAddress = row.original.agentAddress;
+							router.push(`/chat/agent/${agentAddress}?workflowId=${workflowId}`);
 						}}
 						className="text-sm text-gray-300 block hover:text-blue-400 transition-colors cursor-pointer text-left w-full max-w-[350px] overflow-hidden whitespace-nowrap text-ellipsis"
 						title={row.original.userPrompt || "Untitled workflow"}

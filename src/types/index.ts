@@ -221,6 +221,7 @@ export interface HistoryItem {
 	id: string;
 	requestId: string;
 	agentId?: string;
+	agentAddress?: string;
 	agentName?: string;
 	userPrompt?: string;
 	status:

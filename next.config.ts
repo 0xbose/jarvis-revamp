@@ -38,7 +38,7 @@ const nextConfig: NextConfig = {
 	},
 	// Enable experimental features
 	experimental: {
-		esmExternals: "loose",
+		// Removed esmExternals as it's not recommended
 	},
 	// Configure images to allow base64 data URLs
 	images: {
