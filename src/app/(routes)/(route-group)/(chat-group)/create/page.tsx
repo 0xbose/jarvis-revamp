@@ -19,7 +19,21 @@ export default function CreatePage() {
 		if (prompt.trim()) {
 			if (mode === "agent") {
 				if (selectedAgent) {
-					router.push(`/chat/agent/${selectedAgent.agent_address}`);
+					console.log("🔍 Debug: Create page agent info", {
+						agentName: selectedAgent.name,
+						agentAddress: selectedAgent.agent_address,
+						nftAddress: 'nft_address' in selectedAgent ? selectedAgent.nft_address : 'N/A'
+					});
+					
+					// Use nft_address as fallback if agent_address is not available
+					const agentAddress = selectedAgent.agent_address || 
+						('nft_address' in selectedAgent ? selectedAgent.nft_address : null);
+					if (agentAddress) {
+						console.log("✅ Navigating to agent:", agentAddress);
+						router.push(`/chat/agent/${agentAddress}`);
+					} else {
+						console.log("❌ No agent address available");
+					}
 				} else {
 					console.log("❌ No selected agent");
 				}

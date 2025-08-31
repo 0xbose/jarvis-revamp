@@ -34,11 +34,26 @@ export default function ChatInput({
 				return;
 			}
 
-			router.push(`/chat/agent/${selectedAgent.agent_address}`);
+			console.log("🔍 Debug: Chat input agent info", {
+				agentName: selectedAgent.name,
+				agentAddress: selectedAgent.agent_address,
+				nftAddress: 'nft_address' in selectedAgent ? selectedAgent.nft_address : 'N/A'
+			});
 
-			// Call onSend to execute the workflow
-			if (onSend) {
-				onSend(prompt, selectedAgent.agent_address);
+			// Use nft_address as fallback if agent_address is not available
+			const agentAddress = selectedAgent.agent_address || 
+				('nft_address' in selectedAgent ? selectedAgent.nft_address : null);
+			
+			if (agentAddress) {
+				console.log("✅ Chat input navigating to agent:", agentAddress);
+				router.push(`/chat/agent/${agentAddress}`);
+
+				// Call onSend to execute the workflow
+				if (onSend) {
+					onSend(prompt, agentAddress);
+				}
+			} else {
+				console.log("❌ No agent address available");
 			}
 		} else {
 			if (!prompt.trim()) return;

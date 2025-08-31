@@ -633,7 +633,8 @@ export default function AgentChatPage() {
 
 		const canAutoSubmit =
 			selectedAgent &&
-			selectedAgent.agent_address === agentAddress &&
+			(selectedAgent.agent_address === agentAddress || 
+			 ('nft_address' in selectedAgent && selectedAgent.nft_address === agentAddress)) &&
 			prompt &&
 			prompt.trim().length > 0 &&
 			skyBrowser &&
@@ -664,11 +665,19 @@ export default function AgentChatPage() {
 	useEffect(() => {
 		let isMounted = true;
 		const fetchAgent = async () => {
-					if (
-			!selectedAgent ||
-			selectedAgent.agent_address !== agentAddress ||
-			lastLoadedAgentId.current !== agentAddress
-		) {
+			console.log("🔍 Debug: Fetching agent", {
+				agentAddress,
+				selectedAgentAddress: selectedAgent?.agent_address,
+				selectedAgentNftAddress: 'nft_address' in selectedAgent ? selectedAgent.nft_address : 'N/A',
+				lastLoadedAgentId: lastLoadedAgentId.current
+			});
+			
+			if (
+				!selectedAgent ||
+				(selectedAgent.agent_address !== agentAddress && 
+				 !('nft_address' in selectedAgent && selectedAgent.nft_address === agentAddress)) ||
+				lastLoadedAgentId.current !== agentAddress
+			) {
 				setIsLoading(true);
 				try {
 					const response = await getAgentById(agentAddress);
