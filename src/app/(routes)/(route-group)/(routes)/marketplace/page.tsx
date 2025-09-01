@@ -20,7 +20,7 @@ export default function MarketPlacePage() {
 		error,
 		refetch: fetchAgents,
 	} = useQuery({
-		queryKey: ["agent-collections", searchQuery],
+		queryKey: ["marketplace-collections", searchQuery],
 		queryFn: async () => {
 			const data = await getAgents({
 				search: searchQuery,

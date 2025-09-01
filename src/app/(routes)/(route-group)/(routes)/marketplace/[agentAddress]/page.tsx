@@ -8,6 +8,9 @@ import { Clock, Activity, Settings, Zap, Copy, Rocket } from 'lucide-react';
 import { getAgentById } from '@/controllers/collections/collections.query';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { createMintingHandler, canMintAgent, getMintingStatus, MintingState } from '@/utils/agent-minting';
+import { useWallet } from '@/hooks/use-wallet';
+import { getAgentIdByAgentAddress } from '@/utils/skynetHelper';
 
 export default function Page() {
   const params = useParams();
@@ -19,6 +22,11 @@ export default function Page() {
 
   const [agentName, setAgentName] = useState('');
   const [description, setDescription] = useState('');
+  const [minting, setMinting] = useState<MintingState>({});
+  const [selectedAgentNFTId, setSelectedAgentNFTId] = useState<string>('');
+  const [ownsAgent, setOwnsAgent] = useState<boolean>(false);
+
+  const { address, skyBrowser } = useWallet();
 
   const {
     data: agentData,
@@ -26,7 +34,7 @@ export default function Page() {
     error,
     refetch: fetchAgent,
   } = useQuery({
-    queryKey: ["marketplace-agent-by-address", agentAddress],
+    queryKey: ["marketplace-collection-by-address", agentAddress],
     queryFn: async () => {
       if (!agentAddress) return null;
       const data = await getAgentById(agentAddress);
@@ -36,6 +44,48 @@ export default function Page() {
     staleTime: 5 * 60 * 1000,
     retry: 3,
   });
+
+  const handleMintAgentNft = createMintingHandler(
+    skyBrowser,
+    address || '',
+    setMinting,
+    setSelectedAgentNFTId,
+    agentAddress // Pass the NFT contract address from URL
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    async function checkOwnership() {
+      // Use the agentAddress from URL params as the NFT contract address
+      const nftContractAddress = agentAddress;
+      
+      if (
+        agentData &&
+        nftContractAddress &&
+        address &&
+        skyBrowser
+      ) {
+        try {
+          const agentId = await getAgentIdByAgentAddress(
+            nftContractAddress,
+            address,
+            skyBrowser
+          );
+          if (!cancelled) {
+            setOwnsAgent(!!agentId);
+          }
+        } catch (e) {
+          if (!cancelled) setOwnsAgent(false);
+        }
+      } else {
+        setOwnsAgent(false);
+      }
+    }
+    checkOwnership();
+    return () => {
+      cancelled = true;
+    };
+  }, [agentData, address, skyBrowser, agentAddress]);
 
   useEffect(() => {
     fetchAgent();
@@ -95,7 +145,7 @@ export default function Page() {
                     Collection ID
                   </Label>
                   <code className="text-sm font-mono text-foreground">{agentData?.collection_id || agentData?.id || "N/A"}</code>
-                  <Button 
+                  <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => navigator.clipboard.writeText(agentData?.collection_id || agentData?.id || '')}
@@ -121,9 +171,16 @@ export default function Page() {
             </div>
           </div>
           <div className="space-y-3">
-          <Button className="w-fit hover:bg-green-500/80 bg-green-500 text-black cursor-pointer">
-            <Rocket className="w-4 h-4 mr-2" />
-            Mint Agent</Button>
+            {!ownsAgent && (
+              <Button 
+                className="w-fit hover:bg-green-500/80 bg-green-500 text-black cursor-pointer"
+                onClick={() => agentData && handleMintAgentNft(agentData)}
+                disabled={!canMintAgent(agentData, skyBrowser) || getMintingStatus(agentAddress || '', minting)}
+              >
+                <Rocket className="w-4 h-4 mr-2" />
+                {getMintingStatus(agentAddress || '', minting) ? 'Minting...' : 'Mint Agent'}
+              </Button>
+            )}
           </div>
         </div>
         <div className="space-y-4">

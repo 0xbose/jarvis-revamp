@@ -16,10 +16,9 @@ import { Agent } from "@/types";
 import { getAgents } from "@/controllers/collections/collections.query";
 import {
 	checkAgentNFTOwnership,
-	mintAgentNft,
 	getUserAgentNFTIds,
-	getAgentIdByAgentAddress,
 } from "@/utils/skynetHelper";
+import { createMintingHandler, MintingState } from "@/utils/agent-minting";
 import { toast } from "sonner";
 import SearchBar from "./search";
 import AgentCard from "./agent-card";
@@ -44,59 +43,15 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
 	const { skyBrowser, address } = useWallet();
 
 	const [selectedAgentNFTId, setSelectedAgentNFTId] = useState<string>("");
-	const [minting, setMinting] = useState<Record<string, boolean>>({});
+	const [minting, setMinting] = useState<MintingState>({});
 
-	// Removed ownership checking - we'll handle this when user tries to select
-
-	const handleMintAgentNft = async (agent: AgentWithOwnership) => {
-		if (!agent || !skyBrowser) {
-			toast.error(
-				"Please select a deployed agent and ensure wallet is connected"
-			);
-			return;
-		}
-
-		if (!agent.is_deployed) {
-			toast.error("Only deployed agents can have NFTs minted");
-			return;
-		}
-
-		setMinting((prev) => ({ ...prev, [agent.agent_address]: true }));
-		try {
-			const agentData = {
-				nft_address: agent.agent_address,
-				collection_id: agent.agent_address,
-				originalId: agent.id,
-			};
-
-			const result = await mintAgentNft(skyBrowser, agentData);
-
-			if (result) {
-				toast.success("Agent NFT minted successfully!");
-
-				await new Promise((resolve) => setTimeout(resolve, 2000));
-
-				if (agent.agent_address) {
-					const newAgentId = await getAgentIdByAgentAddress(
-						agent.agent_address,
-						address!,
-						skyBrowser
-					);
-
-					if (newAgentId) {
-						setSelectedAgentNFTId(newAgentId);
-					}
-				}
-			} else {
-				toast.error("Failed to mint agent NFT");
-			}
-		} catch (error) {
-			console.error("Error minting agent NFT:", error);
-			toast.error("Failed to mint agent NFT");
-		} finally {
-			setMinting((prev) => ({ ...prev, [agent.agent_address]: false }));
-		}
-	};
+	// Create the minting handler using the helper function
+	const handleMintAgentNft = createMintingHandler(
+		skyBrowser,
+		address || '',
+		setMinting,
+		setSelectedAgentNFTId
+	);
 
 	// Removed checkAgentOwnership function
 
@@ -105,9 +60,10 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
 			setLoading(true);
 			setError(null);
 			try {
-				const data = await getUserMintedAgents(
+				const data = await getAgents(
 					{
-						address: address!,
+						// address: address!,
+						search: searchValue,
 						limit: 21,
 						offset: 0,
 					},
