@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import Image from 'next/image';
 import { Clock, Activity, Settings, Zap, Copy, Rocket } from 'lucide-react';
-import { getAgentById } from '@/controllers/agents/agents.query';
+import { getAgentById } from '@/controllers/collections/collections.query';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 

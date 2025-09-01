@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 import SearchBar from "./search";
 import AgentCard from "./agent-card";
+import { getUserMintedAgents } from "@/controllers/agents/agents.query";
 
 interface AgentWithOwnership extends Agent {
 	// Removed isOwned property - we'll handle ownership dynamically
@@ -104,13 +105,12 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
 			setLoading(true);
 			setError(null);
 			try {
-				const data = await getAgents(
+				const data = await getUserMintedAgents(
 					{
-						search: searchValue,
+						address: address!,
 						limit: 21,
+						offset: 0,
 					},
-					skyBrowser || undefined,
-					{ address } as any
 				);
 				const agents = (data?.data?.agents || []).map(
 					(agent: Agent) => ({
