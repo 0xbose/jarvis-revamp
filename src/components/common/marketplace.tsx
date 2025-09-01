@@ -13,7 +13,7 @@ import { Plus, StoreIcon, XIcon, Loader2 } from "lucide-react";
 import { useGlobalStore } from "@/stores/global-store";
 import { useWallet } from "@/hooks/use-wallet";
 import { Agent } from "@/types";
-import { getAgents } from "@/controllers/agents/agents.query";
+import { getAgents } from "@/controllers/collections/collections.query";
 import {
 	checkAgentNFTOwnership,
 	mintAgentNft,

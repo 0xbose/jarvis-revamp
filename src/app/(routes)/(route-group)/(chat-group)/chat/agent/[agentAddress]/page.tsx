@@ -5,7 +5,7 @@ import { SubnetGroup } from "@/components/common/subnet-group";
 import React, { useEffect, useState, useRef } from "react";
 import { useGlobalStore } from "@/stores/global-store";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { getAgentById } from "@/controllers/agents/agents.query";
+import { getAgentById } from "@/controllers/collections/collections.query";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/hooks/use-wallet";
 import { AgentDetail } from "@/types";
