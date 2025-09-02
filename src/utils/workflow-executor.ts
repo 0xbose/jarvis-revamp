@@ -728,7 +728,7 @@ export class WorkflowExecutor {
 		}));
 
 		return {
-			agentId: agentDetail.id,
+			agentId: agentDetail.agent_uuid,
 			prompt: userPrompt,
 			workflow: workflow,
 			userAuthPayload: {

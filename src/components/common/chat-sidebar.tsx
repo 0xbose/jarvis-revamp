@@ -64,6 +64,7 @@ interface WorkflowItem {
 	id?: string;
 	agentId: string;
 	agentAddress: string;
+	agentIDFromCollection: string;
 	status: string;
 	userPrompt?: string;
 	questionType?: string;
@@ -156,14 +157,22 @@ const WorkflowItem = React.memo(
 			const workflowId = workflow.requestId || workflow.id || "";
 			const agentAddress = workflow.agentAddress;
 			
+			// Debug logging
+			console.log("🔍 Chat Sidebar Debug:", {
+				workflowId,
+				agentAddress,
+				agentIDFromCollection: workflow.agentIDFromCollection,
+				workflow: workflow
+			});
+			
 			switch (value) {
 				case "Left":
 					// Navigate to single workflow view
-					router.push(`/chat/agent/${agentAddress}?workflowId=${workflowId}`);
+					router.push(`/chat/agent/${agentAddress}?workflowId=${workflowId}&nftId=${workflow.agentIDFromCollection}`);
 					break;
 				case "Compare":
 					if (currentWorkflowId && currentAgentId) {
-						router.push(`/chat/agent/${currentAgentId}?workflowId=${currentWorkflowId}&compare=${workflowId}`);
+						router.push(`/chat/agent/${currentAgentId}?workflowId=${currentWorkflowId}&compare=${workflowId}&nftId=${workflow.agentIDFromCollection}`);
 					}
 					break;
 				default:
@@ -189,13 +198,19 @@ const WorkflowItem = React.memo(
 						}`}
 					>
 						<Link
-							href={`/chat/agent/${workflow.agentAddress}?workflowId=${workflow.requestId}`}
+							href={`/chat/agent/${workflow.agentAddress}?workflowId=${workflow.requestId}&nftId=${workflow.agentIDFromCollection}`}
 							className="w-full flex items-center justify-center gap-x-1.5"
-							onMouseEnter={() =>
+							onMouseEnter={() => {
+								// Debug logging
+								console.log("🔍 Link Debug:", {
+									href: `/chat/agent/${workflow.agentAddress}?workflowId=${workflow.requestId}&nftId=${workflow.agentIDFromCollection}`,
+									agentIDFromCollection: workflow.agentIDFromCollection,
+									workflow: workflow
+								});
 								onPrefetch(
 									workflow.requestId || workflow.id || ""
-								)
-							}
+								);
+							}}
 						>
 							{Icon && <Icon className={`!size-[19px] ${iconColor} ${iconAnimation}`} strokeWidth={1.5} />}
 							{sidebarIsExpanded && (
@@ -332,8 +347,6 @@ const ChatSidebar = React.memo(() => {
 
 			if (response.workflows && Array.isArray(response.workflows)) {
 				return response.workflows;
-			} else if (response.success && response.data?.requests) {
-				return response.data.requests;
 			}
 			return [];
 		},

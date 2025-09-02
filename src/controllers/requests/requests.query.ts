@@ -1,6 +1,7 @@
 import { getAxiosInstanceWithApiKey } from "@/lib/axios";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
 import { Web3Context } from "@/types/wallet";
+import { WorkflowRequestsResponse } from "@/types/requests";
 
 export const getOriginalPayload = async (
 	workflowId: string,
@@ -34,7 +35,7 @@ export const getHistory = async (
 	},
 	skyBrowser?: SkyMainBrowser,
 	web3Context?: Web3Context
-): Promise<any> => {
+): Promise<WorkflowRequestsResponse> => {
 	const axiosInstance = await getAxiosInstanceWithApiKey(
 		process.env.NEXT_PUBLIC_NFT_USER_AGENT_URL || "",
 		skyBrowser,

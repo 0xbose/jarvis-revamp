@@ -6,9 +6,7 @@ import { LucideArrowUp, Square, Play } from "lucide-react";
 import { ChatInputProps } from "@/types/types";
 import { useGlobalStore } from "@/stores/global-store";
 import { useRouter } from "next/navigation";
-
 import Marketplace from "./marketplace";
-import { cn } from "@/lib/utils";
 
 export default function ChatInput({
 	onSend,
@@ -38,7 +36,7 @@ export default function ChatInput({
 				('nft_address' in selectedAgent ? selectedAgent.nft_address : null);
 			
 			if (agentAddress) {
-				router.push(`/chat/agent/${agentAddress}`);
+				router.push(`/chat/agent/${agentAddress}?nftId=${selectedAgent.nft_id}`);
 
 				// Call onSend to execute the workflow
 				if (onSend) {
@@ -77,13 +75,10 @@ export default function ChatInput({
 		(isAgentMode && isAgentSelected && !!prompt.trim()) ||
 		(!isAgentMode && !!prompt.trim());
 
-	// Determine button state and appearance
 	const isWorkflowStopped = workflowStatus === "stopped";
 	const showResumeButton = isWorkflowStopped;
 	const showStopButton = isExecuting && !isWorkflowStopped;
-	const buttonDisabled = !canSubmit && !showStopButton && !showResumeButton;
 
-	// Get appropriate placeholder text
 	const getPlaceholderText = () => {
 		if (isExecuting && workflowStatus === "awaiting_response") {
 			return "Provide feedback to continue...";

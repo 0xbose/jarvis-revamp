@@ -19,13 +19,16 @@ export default function CreatePage() {
 		if (prompt.trim()) {
 			if (mode === "agent") {
 				if (selectedAgent) {
-					const agentAddress = selectedAgent.agent_address || 
+					const agentAddress = ('collection_address' in selectedAgent ? selectedAgent.collection_address : null) ||
+						('collection_id' in selectedAgent ? selectedAgent.collection_id : null) ||
 						('nft_address' in selectedAgent ? selectedAgent.nft_address : null);
-					if (agentAddress) {
+					const nftId = ('nft_id' in selectedAgent ? selectedAgent.nft_id : null);
+					
+					if (agentAddress && nftId) {
 						console.log("✅ Navigating to agent:", agentAddress);
-						router.push(`/chat/agent/${agentAddress}`);
+						router.push(`/chat/agent/${agentAddress}?nftId=${nftId}`);
 					} else {
-						console.log("❌ No agent address available");
+						console.log("❌ No agent address or nftId available");
 					}
 				} else {
 					console.log("❌ No selected agent");

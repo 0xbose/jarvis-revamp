@@ -508,7 +508,7 @@ export const useWorkflowExecution = ({
 				const onStatusUpdate = createStatusUpdateHandler(true, false);
 
 				const workflowId = await executeAgentWorkflow(
-					selectedAgent as any,
+					selectedAgent as AgentDetail,
 					message,
 					address,
 					skyBrowser,

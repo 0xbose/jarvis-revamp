@@ -5,7 +5,6 @@ import { SubnetGroup } from "@/components/common/subnet-group";
 import React, { useEffect, useState, useRef } from "react";
 import { useGlobalStore } from "@/stores/global-store";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { getAgentById } from "@/controllers/collections/collections.query";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/hooks/use-wallet";
 import { AgentDetail } from "@/types";
@@ -21,7 +20,7 @@ import {
 	getCachedChatMessages,
 	clearChatCache,
 } from "@/utils/chat-utils";
-
+import { getAgentDetailByCollectionAndNftId } from "@/controllers/agents/agents.query";
 import { ChatMsg } from "@/types/chat";
 import { useChatMessages } from "@/hooks/use-chat-messages";
 import { useChatScroll } from "@/hooks/use-chat-scroll";
@@ -45,6 +44,7 @@ export default function AgentChatPage() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const agentAddress = params.agentAddress as string;
+	const nftId = searchParams.get("nftId") as string;
 	const urlWorkflowId = searchParams.get("workflowId");
 	const compareWorkflowId = searchParams.get("compare");
 	const isComparisonMode = !!compareWorkflowId;
@@ -544,7 +544,7 @@ export default function AgentChatPage() {
 		console.log("🚀 Starting new workflow for agent:", selectedAgent.name, "message:", message);
 		try {
 			await executeNewWorkflow(
-				selectedAgent as AgentDetail,
+				selectedAgent as any, // Type assertion to handle different agent types
 				message,
 				address,
 				skyBrowser,
@@ -633,7 +633,8 @@ export default function AgentChatPage() {
 
 		const canAutoSubmit =
 			selectedAgent &&
-			(selectedAgent.agent_address === agentAddress || 
+			(('collection_address' in selectedAgent && selectedAgent.collection_address === agentAddress) ||
+			 ('collection_id' in selectedAgent && selectedAgent.collection_id === agentAddress) ||
 			 ('nft_address' in selectedAgent && selectedAgent.nft_address === agentAddress)) &&
 			prompt &&
 			prompt.trim().length > 0 &&
@@ -668,15 +669,36 @@ export default function AgentChatPage() {
 			
 			if (
 				!selectedAgent ||
-				(selectedAgent.agent_address !== agentAddress && 
-				 !('nft_address' in selectedAgent && selectedAgent.nft_address === agentAddress)) ||
+				!((('collection_address' in selectedAgent && selectedAgent.collection_address === agentAddress) ||
+				  ('collection_id' in selectedAgent && selectedAgent.collection_id === agentAddress) ||
+				  ('nft_address' in selectedAgent && selectedAgent.nft_address === agentAddress))) ||
 				lastLoadedAgentId.current !== agentAddress
 			) {
 				setIsLoading(true);
 				try {
-					const response = await getAgentById(agentAddress);
+					// If nftId is not in URL, try to get it from the original payload
+					let currentNftId = nftId;
+					if (!currentNftId && urlWorkflowId && skyBrowser && address) {
+						try {
+							const originalPayload = await getOriginalPayload(
+								urlWorkflowId,
+								skyBrowser as SkyMainBrowser,
+								{ address } as Web3Context
+							);
+							currentNftId = originalPayload?.originalRequestPayload?.accountNFT?.nftID;
+							console.log("🔍 Extracted nftId from original payload:", currentNftId);
+						} catch (payloadError) {
+							console.warn("Failed to get nftId from original payload:", payloadError);
+						}
+					}
+
+					if (!currentNftId) {
+						throw new Error("nftId is required but not found in URL or original payload");
+					}
+
+					const response = await getAgentDetailByCollectionAndNftId(agentAddress, currentNftId);
 					console.log("🔄 Fetching agent:", response);
-					const agent = response?.data;
+					const agent = response;
 					if (isMounted) {
 						if (agent) {
 							setSelectedAgent(agent);
@@ -702,7 +724,7 @@ export default function AgentChatPage() {
 		return () => {
 			isMounted = false;
 		};
-	}, [agentAddress, selectedAgent]);
+	}, [agentAddress, selectedAgent, nftId, urlWorkflowId, skyBrowser, address]);
 
 	if (isLoading) {
 		return (
@@ -768,7 +790,7 @@ export default function AgentChatPage() {
 				agentId={agentAddress}
 				primaryWorkflowId={urlWorkflowId}
 				compareWorkflowId={compareWorkflowId}
-				selectedAgent={selectedAgent}
+				selectedAgent={selectedAgent as any}
 			/>
 		);
 	}
@@ -784,7 +806,7 @@ export default function AgentChatPage() {
 			pendingNotifications={pendingNotifications}
 			pollingStoppedAt={pollingStoppedAt}
 			isShowingCachedMessages={isShowingCachedMessages}
-			selectedAgent={selectedAgent}
+			selectedAgent={selectedAgent as any}
 			
 			// Callbacks
 			onNotificationYes={handleNotificationYes}
