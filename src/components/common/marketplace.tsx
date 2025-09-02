@@ -9,7 +9,7 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Plus, StoreIcon, XIcon, Loader2 } from "lucide-react";
+import { Plus, StoreIcon, XIcon, Loader2, BotIcon } from "lucide-react";
 import { useGlobalStore } from "@/stores/global-store";
 import { useWallet } from "@/hooks/use-wallet";
 import { checkAgentNFTOwnership } from "@/utils/skynetHelper";
@@ -61,7 +61,7 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
       });
     },
     enabled: !!address && !!skyBrowser,
-    staleTime: 60 * 1000,
+    staleTime: 0,
   });
 
   // Defensive fallback for agents array
@@ -136,7 +136,7 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
         setIsOpen(false);
         toast.success(`Selected ${agent.agent_name || agent.name}`);
       } else {
-        await handleMintAgentNft(agent);
+        await handleMintAgentNft(agent as any);
         setSelectedAgent(agent);
         setIsOpen(false);
       }
@@ -173,7 +173,7 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
           } overflow-hidden text-truncate whitespace-nowrap transition-colors`}
           title={
             isUserAgentCollection(selectedAgent)
-              ? selectedAgent.agent_name || selectedAgent.name
+              ? selectedAgent.name || selectedAgent.agent_name
               : selectedAgent && "name" in selectedAgent
               ? selectedAgent.name
               : undefined
@@ -181,7 +181,7 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
         >
           {isUserAgentCollection(selectedAgent) ? (
             <span className="block w-full overflow-hidden text-ellipsis text-xs">
-              {selectedAgent.agent_name || selectedAgent.name}
+              {selectedAgent.name || selectedAgent.agent_name}
             </span>
           ) : selectedAgent && "name" in selectedAgent ? (
             <span className="block w-full overflow-hidden text-ellipsis text-xs">
@@ -194,9 +194,10 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
       </DialogTrigger>
       <DialogContent className="!w-[92vw] !h-[90svh] !max-h-[900px] !max-w-6xl flex flex-col border-none rounded-3xl pb-6 ">
         <DialogHeader className="absolute top-0 left-0 w-full rounded-t-3xl bg-background z-10 h-16 px-10 flex justify-center">
-          <DialogTitle className="flex items-center gap-2">
-            <StoreIcon />
-            <span className="text-foreground">Marketplace</span>
+          <DialogTitle className="flex items-center gap-3">
+            {/* <StoreIcon /> */}
+            <BotIcon />
+            <span className="text-foreground">User Agents</span>
           </DialogTitle>
           <DialogClose className="absolute right-10">
             <XIcon className="size-6" />
@@ -219,7 +220,7 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
                   {selectedAgent && agents.length === 0 && (
                     <span className="ml-2 text-sm text-muted-foreground">
                       {isUserAgentCollection(selectedAgent)
-                        ? `Loading agents for ${selectedAgent.agent_name || selectedAgent.name}...`
+                        ? `Loading agents for ${selectedAgent.name || selectedAgent.name}...`
                         : selectedAgent && "name" in selectedAgent
                         ? `Loading agents for ${selectedAgent.name}...`
                         : "Loading agents..."}
@@ -247,7 +248,8 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
                   return (
                     <AgentCard
                       key={agent.id}	
-                      name={agent.agent_name || agent.name}
+                      name={agent.name}
+                      agentName={agent.agent_name}
                       description={agent.agent_description || agent.description}
                       collectionAddress={agent.collection_address}
                       isSelected={isSelected}

@@ -67,5 +67,9 @@ export interface AgentDetailResponse {
   layout: AgentLayout;
   isVerified: boolean;
   image: string | null;
+  nft_id: string;
+  agent_isverified: boolean;
+  agent_uuid: string;
+  agent_name: string;
   // Optionally, add more fields as needed
 }

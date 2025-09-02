@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 
 interface AgentCardProps {
 	name: string;
+	agentName: string;
 	description: string;
 	collectionAddress?: string;
 	isSelected?: boolean;
@@ -16,6 +17,7 @@ interface AgentCardProps {
 
 export default function AgentCard({
 	name,
+	agentName,
 	description,
 	collectionAddress,
 	isSelected = false,
@@ -32,9 +34,12 @@ export default function AgentCard({
 					: "bg-muted"
 			}`}
 		>
-			<div className="flex items-center gap-2 mb-1">
+			<div className="flex flex-col mb-1">
 				<span className="font-semibold text-base text-foreground">
 					{name}
+				</span>
+				<span className="font-normal text-sm text-muted-foreground">
+					{agentName}
 				</span>
 			</div>
 			<div className="flex flex-col gap-y-4 h-full">

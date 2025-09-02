@@ -49,6 +49,8 @@ export interface AgentDetail extends Agent {
 	nft_address: string;
 	agentNFTId?: string;
 	image?: string;
+	nft_id?: string;
+	agent_uuid?: string;
 }
 
 export interface AgentLayout {

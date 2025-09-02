@@ -1,14 +1,14 @@
 "use client"
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { Label } from "@/components/ui/label"
-import Image from "next/image"
-import { Clock, Activity, Settings, Zap, Copy, Pencil, Check, X } from "lucide-react"
+import { Clock, Activity, Settings, Zap, Copy, Pencil, Check, X, ExternalLink } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { useParams, useSearchParams } from "next/navigation"
 import { getAgentDetailByCollectionAndNftId } from "@/controllers/agents/agents.query"
 import { updateUserAgent } from "@/controllers/agents/agent.mutations"
 import { AgentImage } from "@/components/market-place/agent-image"
+import Link from "next/link"
 
 // Custom hooks for better separation of concerns
 const useAgentData = (agentAddress: string, nftId: string) => {
@@ -196,7 +196,7 @@ export default function Page() {
         // Build the payload with only the changed field and required previous data
         const payload = {
           collection_address: agentData.collection_id || agentAddress,
-          nft_id: agentData.id || nftId,
+          nft_id: nftId,
           name: updates.name !== undefined ? updates.name : agentData.name || "",
           description: updates.description !== undefined ? updates.description : agentData.description || "",
           image: agentData.image || "",
@@ -261,7 +261,7 @@ export default function Page() {
       },
       {
         icon: <Settings className="w-4 h-4" />,
-        text: `${agentData?.subnet_list?.length || 0} subnets configured`,
+        text: `Cordinates with ${agentData?.subnet_list?.length || 0} agent${(agentData?.subnet_list?.length === 1) ? "" : "s"}`,
       },
     ],
     [agentData?.is_deployed, agentData?.subnet_list?.length, formattedDate]
@@ -270,13 +270,6 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-6 py-12 max-w-7xl flex flex-col gap-8">
-        {/* Error Display */}
-        {updateError && (
-          <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg">
-            {updateError}
-          </div>
-        )}
-
         <div className="flex flex-col md:flex-row gap-12 items-start justify-between">
           <div className="flex flex-col md:flex-row gap-8 items-start flex-1">
             <AgentImage
@@ -287,7 +280,8 @@ export default function Page() {
 
             <div className="flex-1 space-y-6">
               <div className="space-y-4">
-                <EditableInput
+                <div className="flex flex-col gap-3">
+                  <EditableInput
                   value={nameField.value}
                   draft={nameField.draft}
                   isEditing={nameField.isEditing}
@@ -297,7 +291,12 @@ export default function Page() {
                   onEdit={nameField.startEdit}
                   className="text-4xl font-bold text-foreground tracking-tight"
                   placeholder="Agent Name"
-                />
+                  />
+                  <Link href={`/marketplace/${agentAddress}`} className="text-sm text-muted-foreground flex items-center gap-1 group">
+                    <span className="group-hover:underline underline-offset-2 ">{agentData?.agent_name}</span>
+                    <ExternalLink className="w-4 h-4 mb-0.5" />
+                  </Link>
+                </div>
 
                 <div className="flex items-center gap-6 text-sm text-muted-foreground">
                   {statusInfo.map((info, index) => (
@@ -314,7 +313,7 @@ export default function Page() {
                 />
                 <AddressInfo
                   label="Agent ID"
-                  value={agentData?.id}
+                  value={agentData?.nft_id}
                   onCopy={handleCopyAddress}
                 />
               </div>

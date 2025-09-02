@@ -8,7 +8,6 @@ import {
 } from "@/types";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
 import { Web3Context } from "@/types/wallet";
-import { getUserAgentNFTIds } from "@/utils/skynetHelper";
 
 export class WorkflowExecutor {
 	private static instance: WorkflowExecutor;
@@ -710,12 +709,14 @@ export class WorkflowExecutor {
 		// Get authentication data
 		const authData = await this.getAuthData(skyBrowser, userAddress);
 
-		// Get user's actual NFT ID from the specific agent collection
-		const userAgentNFTId = await this.getUserNFTId(
-			agentDetail,
-			userAddress,
-			skyBrowser
-		);
+		// // Get user's actual NFT ID from the specific agent collection
+		// const userAgentNFTId = await this.getUserNFTId(
+		// 	agentDetail,
+		// 	userAddress,
+		// 	skyBrowser
+		// );
+
+		const userAgentNFTId = agentDetail.nft_id;
 
 		// Transform subnet_list to workflow format
 		const workflow = agentDetail.subnet_list.map((subnet) => ({
@@ -749,30 +750,28 @@ export class WorkflowExecutor {
 		skyBrowser: SkyMainBrowser
 	): Promise<string> {
 		try {
-			const agentAddress =
-				agentDetail.nft_address || agentDetail.collection_id;
-			if (!agentAddress) {
-				console.warn("No agent NFT address found, using fallback");
-				return agentDetail.agentNFTId || "0";
+			// Use the NFT ID from the API response instead of fetching from blockchain
+			// The agentDetail should contain the NFT ID from the /api/agents/{collectionAddress}/{nftId} endpoint
+			if (agentDetail.id) {
+				console.log("✅ Using NFT ID from API response:", agentDetail.id);
+				return agentDetail.id;
 			}
 
-			const userAgentNFTIds = await getUserAgentNFTIds(
-				agentAddress,
-				userAddress,
-				skyBrowser
-			);
-
-			if (userAgentNFTIds && userAgentNFTIds.length > 0) {
-				return userAgentNFTIds[0];
+			// Fallback to agentNFTId if available
+			if (agentDetail.agentNFTId) {
+				console.log("⚠️ Using fallback agentNFTId:", agentDetail.agentNFTId);
+				return agentDetail.agentNFTId;
 			}
 
-			return agentDetail.agentNFTId || "0";
+			// Last resort fallback
+			console.warn("⚠️ No NFT ID found in API response, using fallback '0'");
+			return "69";
 		} catch (error) {
 			console.warn(
-				"Failed to get user's NFT ID from agent collection:",
+				"Failed to get user's NFT ID from API response:",
 				error
 			);
-			return agentDetail.agentNFTId || "0";
+			return agentDetail.agentNFTId || "69";
 		}
 	}
 
