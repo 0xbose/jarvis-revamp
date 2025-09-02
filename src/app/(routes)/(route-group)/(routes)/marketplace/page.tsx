@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AgentMarketplaceCard from "@/components/market-place/agent-marketplace-card";
 import { getCollections } from "@/controllers/collections/collections.query";
+import { QUERY_KEYS } from "@/utils/query-keys";
 
 
 export default function MarketPlacePage() {
@@ -12,14 +13,13 @@ export default function MarketPlacePage() {
 		"all"
 	);
 
-
 	const {
 		data: collections = [],
 		isLoading: loading,
 		error,
 		refetch: fetchAgents,
 	} = useQuery({
-		queryKey: ["marketplace-collections", searchQuery],
+		queryKey: [QUERY_KEYS.MARKETPLACE_COLLECTIONS, searchQuery],
 		queryFn: async () => {
 			const data = await getCollections({
 				search: searchQuery,

@@ -9,11 +9,11 @@ import { getAgentDetailByCollectionAndNftId } from "@/controllers/agents/agents.
 import { updateUserAgent } from "@/controllers/agents/agent.mutations"
 import { AgentImage } from "@/components/market-place/agent-image"
 import Link from "next/link"
+import { QUERY_KEYS } from "@/utils/query-keys";
 
-// Custom hooks for better separation of concerns
 const useAgentData = (agentAddress: string, nftId: string) => {
   return useQuery({
-    queryKey: ["user-agents-collection-by-address", agentAddress, nftId],
+    queryKey: [QUERY_KEYS.USER_AGENTS_BY_ADDRESS, agentAddress, nftId],
     queryFn: async () => {
       if (!agentAddress) return null
       const data = await getAgentDetailByCollectionAndNftId(agentAddress, nftId)

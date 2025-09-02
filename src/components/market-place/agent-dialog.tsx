@@ -27,10 +27,10 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "../ui/textarea";
-import { getAgents } from "@/controllers/collections/collections.query";
 import { useWallet } from "@/hooks/use-wallet";
 import { useQuery } from "@tanstack/react-query";
 import { Label } from "../ui/label";
+import { QUERY_KEYS } from "@/utils/query-keys";
 
 interface Agent {
 	id: string;
@@ -49,29 +49,29 @@ export default function AgentDialog() {
 	const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
 	const { skyBrowser, address } = useWallet();
 
-	const {
-		data: agents = [],
-		isLoading: loading,
-		error,
-	} = useQuery({
-		queryKey: ["agents", searchQuery],
-		queryFn: async () => {
-			const data = await getAgents(
-				{
-					search: searchQuery,
-					limit: 20,
-				},
-				skyBrowser || undefined,
-				{ address } as any
-			);
-			const agents = (data?.data?.agents || []).map((agent: Agent) => ({
-				...agent,
-			}));
-			return agents as Agent[];
-		},
-		staleTime: 5 * 60 * 1000,
-		retry: 3,
-	});
+	// const {
+	// 	data: agents = [],
+	// 	isLoading: loading,
+	// 	error,
+	// } = useQuery({
+	// 	queryKey: [QUERY_KEYS.AGENTS, searchQuery],
+	// 	queryFn: async () => {
+	// 		const data = await getAgents(
+	// 			{
+	// 				search: searchQuery,
+	// 				limit: 20,
+	// 			},
+	// 			skyBrowser || undefined,
+	// 			{ address } as any
+	// 		);
+	// 		const agents = (data?.data?.agents || []).map((agent: Agent) => ({
+	// 			...agent,
+	// 		}));
+	// 		return agents as Agent[];
+	// 	},
+	// 	staleTime: 5 * 60 * 1000,
+	// 	retry: 3,
+	// });
 
 	const handleDialogOpenChange = (open: boolean) => {
 		setIsOpen(open);
@@ -141,7 +141,7 @@ export default function AgentDialog() {
 											className="border-0 border-b border-border/40 rounded-none"
 										/>
 										<CommandList className="w-full max-h-[300px] overflow-y-auto scrollbar-thin">
-											{loading ? (
+											{/* {loading ? (
 												<div className="p-4 space-y-3">
 													<Skeleton className="h-16 w-full rounded-lg" />
 													<Skeleton className="h-16 w-full rounded-lg" />
@@ -191,7 +191,7 @@ export default function AgentDialog() {
 														))}
 													</CommandGroup>
 												</>
-											)}
+											)} */}
 										</CommandList>
 									</Command>
 								</PopoverContent>

@@ -26,10 +26,9 @@ import { useChatMessages } from "@/hooks/use-chat-messages";
 import { useChatScroll } from "@/hooks/use-chat-scroll";
 import { useWorkflowExecution } from "@/hooks/use-workflow-execution";
 import { useFeedback } from "@/hooks/use-feedback";
-import { useMessageGrouping } from "@/hooks/use-message-grouping";
 import { ChatMessagesContainer } from "@/components/common/chat-messages-container";
-import { ChatMessagesGrouped } from "@/components/common/chat-messages-grouped";
 import { ComparisonView } from "@/components/common/comparison-view";
+import { QUERY_KEYS } from "@/utils/query-keys";
 
 export default function AgentChatPage() {
 	const {
@@ -63,7 +62,7 @@ export default function AgentChatPage() {
 	// Function to refetch chat sidebar history data
 	const refetchHistory = () => {
 		console.log("🔄 Refetching chat sidebar history after feedback submission");
-		queryClient.invalidateQueries({ queryKey: ["history"] });
+		queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.HISTORY] });
 	};
 
 	const { currentExecution, updateExecutionStatus } = useWorkflowExecutionStore();
@@ -80,10 +79,6 @@ export default function AgentChatPage() {
 		resetFeedbackState,
 		setWorkflowId,
 	} = useChatMessages();
-
-	const { groupMessagesBySubnet } = useMessageGrouping();
-
-
 
 	useEffect(() => {
 		if (urlWorkflowId && queryClient) {
@@ -159,7 +154,6 @@ export default function AgentChatPage() {
 	const lastQuestionRef = useRef<string | null>(null);
 	const previousWorkflowId = useRef<string | null>(null);
 	const isLoadingExistingWorkflow = useRef(false);
-	const initializedWorkflowRef = useRef<string | null>(null);
 
 	useScrollOnNewMessages(chatMessages.length);
 

@@ -20,6 +20,7 @@ import AgentCard from "./agent-card";
 import { getUserMintedAgents } from "@/controllers/agents/agents.query";
 import { useQuery } from "@tanstack/react-query";
 import { UserAgentCollection } from "@/types/agents";
+import { QUERY_KEYS } from "@/utils/query-keys";
 
 interface MarketplaceProps {
   disabled?: boolean;
@@ -51,7 +52,7 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
     error,
     refetch: refetchAgents,
   } = useQuery({
-    queryKey: ["userMintedAgents", address],
+    queryKey: [QUERY_KEYS.USER_MINTED_AGENTS, address],
     queryFn: async () => {
       if (!address) return { user_collections: [] };
       return await getUserMintedAgents({

@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ImageQuickSelect } from "@/components/common/image-select";
 import { IMAGES } from "@/constants/images";
 import { AgentImage } from "@/components/market-place/agent-image";
+import { QUERY_KEYS } from "@/utils/query-keys";
 
 // Types
 interface MintFormData {
@@ -34,7 +35,7 @@ const useAgentAddress = (params: any) => {
 
 const useAgentData = (agentAddress: string, skyBrowser: any, web3Auth: any) => {
   return useQuery({
-    queryKey: ["marketplace-collection-by-address", agentAddress],
+    queryKey: [QUERY_KEYS.MARKETPLACE_COLLECTION_BY_ADDRESS, agentAddress],
     queryFn: async () => {
       if (!agentAddress) return null;
       const data = await getCollectionsByAddress(agentAddress, skyBrowser, web3Auth);
@@ -42,7 +43,7 @@ const useAgentData = (agentAddress: string, skyBrowser: any, web3Auth: any) => {
     },
     enabled: !!agentAddress && !!skyBrowser && !!web3Auth,
     staleTime: 30000, // Cache for 30 seconds
-    gcTime: 60000, // Keep in cache for 1 minute
+    gcTime: 30000, // Keep in cache for 1 minute
     retry: 3,
   });
 };
@@ -259,7 +260,15 @@ export default function Page() {
   const { skyBrowser, address } = useWallet();
   const { web3Auth } = useWeb3AuthSafe();
 
-  const { data: agentData, isLoading } = useAgentData(agentAddress, skyBrowser, web3Auth);
+  // --- Fix: Track if query has ever been called and finished ---
+  const {
+    data: agentData,
+    isLoading,
+    isFetching,
+    isError,
+    isFetched,
+    isSuccess,
+  } = useAgentData(agentAddress, skyBrowser, web3Auth);
 
   // Memoized values
   const formattedDate = useMemo(() => {
@@ -368,8 +377,7 @@ export default function Page() {
     }
   }, [mintLoading]);
 
-  // Loading state
-  if (isLoading) {
+  if (isLoading || isFetching || !isFetched) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -380,8 +388,7 @@ export default function Page() {
     );
   }
 
-  // Error state
-  if (!agentData && !isLoading) {
+  if (!agentData && isFetched && !isLoading && !isFetching) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">

@@ -56,6 +56,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getHistory } from "@/controllers/requests/requests.query";
 import { prefetchChatData } from "@/utils/chat-utils";
 import { STORAGE_KEYS } from "@/config/constants";
+import { QUERY_KEYS } from "@/utils/query-keys";
 
 const CHAT_OPTIONS = [1, 5, 10, 15, 20] as const;
 
@@ -337,7 +338,7 @@ const ChatSidebar = React.memo(() => {
 	};
 
 	const { data, refetch, isRefetching, isLoading, error } = useQuery({
-		queryKey: ["history", chatCount, address],
+		queryKey: [QUERY_KEYS.HISTORY, chatCount, address],
 		queryFn: async () => {
 			const response = await getHistory(
 				{ limit: chatCount },

@@ -1,12 +1,12 @@
 "use client";
 
 import SearchAndCategories from "@/components/market-place/agent-search";
-import AgentDialog from "@/components/market-place/agent-dialog";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AgentMarketplaceCard from "@/components/market-place/agent-marketplace-card";
 import { getUserMintedAgents } from "@/controllers/agents/agents.query";
 import { useWallet } from "@/hooks/use-wallet";
+import { QUERY_KEYS } from "@/utils/query-keys";
 
 
 export default function UserAgentsPage() {
@@ -22,7 +22,7 @@ export default function UserAgentsPage() {
 		error,
 		refetch: fetchAgents,
 	} = useQuery({
-		queryKey: ["user-agents", searchQuery],
+		queryKey: [QUERY_KEYS.USER_AGENTS, searchQuery],
 		queryFn: async () => {
 			const data = await getUserMintedAgents({
 				address: address!,
@@ -34,7 +34,8 @@ export default function UserAgentsPage() {
 			}));
 			return collections;
 		},
-		staleTime: 5 * 60 * 1000,
+		staleTime: 30000,
+		gcTime: 30000,
 		retry: 3,
 	});
 
@@ -58,9 +59,9 @@ export default function UserAgentsPage() {
 								View and manage your personal AI agents.
 							</p>
 						</div>
-						<div className="flex-shrink-0">
+						{/* <div className="flex-shrink-0">
 							<AgentDialog />
-						</div>
+						</div> */}
 					</div>
 				</div>
 			</div>
@@ -106,7 +107,7 @@ export default function UserAgentsPage() {
 									Get started by creating your first AI agent. Deploy it across multiple platforms 
 									and watch it work for you 24/7.
 								</p>
-								<AgentDialog />
+								{/* <AgentDialog /> */}
 							</div>
 						) : (
 							<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

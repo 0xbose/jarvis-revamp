@@ -29,6 +29,7 @@ import { useChatStore } from "@/stores/chat-store";
 import { useWorkflowExecutionStore } from "@/stores/workflow-execution-store";
 import ChatSidebar from "./chat-sidebar";
 import { useQueryClient } from "@tanstack/react-query";
+import { QUERY_KEYS } from "@/utils/query-keys";
 
 const navItems = [
 	{
@@ -122,7 +123,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 													href={item.url}
 													className="font-medium hover:text-primary-foreground"
 													onClick={() => {
-														queryClient.invalidateQueries({ queryKey: ["history"] });
+														queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.HISTORY] });
 													}}
 												>
 													{item.icon}
