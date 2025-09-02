@@ -1,9 +1,9 @@
 "use client";
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
-import { Clock, Activity, Settings, Zap, Copy, Rocket, X } from "lucide-react";
+import { Clock, Activity, Settings, Zap, Copy, Rocket, X, AlertCircle } from "lucide-react";
 import { getCollectionsByAddress } from "@/controllers/collections/collections.query";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -15,112 +15,233 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageQuickSelect } from "@/components/common/image-select";
 import { IMAGES } from "@/constants/images";
+import { AgentImage } from "@/components/market-place/agent-image";
 
-interface MintAgentDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onMint: (fields: { name: string; description: string; image: string }) => void;
-  defaultName?: string;
-  defaultDescription?: string;
-  defaultImage?: string;
-  loading?: boolean;
+// Types
+interface MintFormData {
+  name: string;
+  description: string;
+  image: string;
 }
+
+const useAgentAddress = (params: any) => {
+  return useMemo(() => {
+    if (typeof params?.agentAddress === "string") return params.agentAddress;
+    if (Array.isArray(params?.agentAddress)) return params.agentAddress[0];
+    return "";
+  }, [params?.agentAddress]);
+};
+
+const useAgentData = (agentAddress: string, skyBrowser: any, web3Auth: any) => {
+  return useQuery({
+    queryKey: ["marketplace-collection-by-address", agentAddress],
+    queryFn: async () => {
+      if (!agentAddress) return null;
+      const data = await getCollectionsByAddress(agentAddress, skyBrowser, web3Auth);
+      return data?.data || null;
+    },
+    enabled: !!agentAddress && !!skyBrowser && !!web3Auth,
+    staleTime: 30000, // Cache for 30 seconds
+    gcTime: 60000, // Keep in cache for 1 minute
+    retry: 3,
+  });
+};
+
+const useMintForm = (defaultData?: Partial<MintFormData>) => {
+  const [formData, setFormData] = useState<MintFormData>({
+    name: defaultData?.name || "",
+    description: defaultData?.description || "",
+    image: defaultData?.image || "",
+  });
+  const [error, setError] = useState<string | null>(null);
+
+  const updateField = useCallback((field: keyof MintFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value.trim() }));
+    if (error) setError(null);
+  }, [error]);
+
+  const validateForm = useCallback((): boolean => {
+    if (!formData.name.trim()) {
+      setError("Agent name is required.");
+      return false;
+    }
+    if (!formData.description.trim()) {
+      setError("Agent description is required.");
+      return false;
+    }
+    if (!formData.image.trim()) {
+      setError("Please select or enter an image URL.");
+      return false;
+    }
+    
+    // Validate URL format
+    try {
+      new URL(formData.image.trim());
+    } catch {
+      setError("Please enter a valid image URL.");
+      return false;
+    }
+    
+    setError(null);
+    return true;
+  }, [formData]);
+
+  const resetForm = useCallback((newData?: Partial<MintFormData>) => {
+    setFormData({
+      name: newData?.name || "",
+      description: newData?.description || "",
+      image: newData?.image || "",
+    });
+    setError(null);
+  }, []);
+
+  return {
+    formData,
+    error,
+    updateField,
+    validateForm,
+    resetForm,
+    setError
+  };
+};
+
+const StatusInfo = React.memo(({ icon, text }: { icon: React.ReactNode; text: string }) => (
+  <div className="flex items-center gap-2">
+    {icon}
+    <span>{text}</span>
+  </div>
+));
+
+const ErrorMessage = React.memo(({ message }: { message: string }) => (
+  <div className="flex items-center gap-2 text-red-500 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
+    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+    <span>{message}</span>
+  </div>
+));
 
 const MintAgentDialog = React.memo(function MintAgentDialog({
   open,
   onClose,
   onMint,
-  defaultName,
-  defaultDescription,
-  defaultImage,
+  defaultData,
   loading,
-}: MintAgentDialogProps) {
-  const [name, setName] = useState(defaultName || "");
-  const [description, setDescription] = useState(defaultDescription || "");
-  const [imageUrl, setImageUrl] = useState(defaultImage || "");
-  const [error, setError] = useState<string | null>(null);
+}: {
+  open: boolean;
+  onClose: () => void;
+  onMint: (data: MintFormData) => void;
+  defaultData?: Partial<MintFormData>;
+  loading?: boolean;
+}) {
+  const { formData, error, updateField, validateForm, resetForm } = useMintForm(defaultData);
 
   useEffect(() => {
     if (open) {
-      setName(defaultName || "");
-      setDescription(defaultDescription || "");
-      setImageUrl(defaultImage || "");
-      setError(null);
+      resetForm(defaultData);
     }
-  }, [open, defaultName, defaultDescription, defaultImage]);
+  }, [open, defaultData, resetForm]);
+
+  // Handle ESC key
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !loading) {
+        onClose();
+      }
+    };
+    
+    if (open) {
+      document.addEventListener("keydown", handleEsc);
+      return () => document.removeEventListener("keydown", handleEsc);
+    }
+  }, [open, onClose, loading]);
+
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateForm()) {
+      onMint(formData);
+    }
+  }, [validateForm, formData, onMint]);
 
   if (!open) return null;
 
-  const handleMint = () => {
-    if (!name.trim() || !description.trim() || !imageUrl.trim()) {
-      setError("All fields are required.");
-      return;
-    }
-    try {
-      new URL(imageUrl.trim());
-    } catch {
-      setError("Please enter a valid image URL.");
-      return;
-    }
-    setError(null);
-    onMint({ name: name.trim(), description: description.trim(), image: imageUrl.trim() });
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-background rounded-2xl shadow-2xl p-12 w-full max-w-2xl relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-background rounded-2xl shadow-2xl p-8 w-full max-w-2xl mx-4 relative max-h-[90vh] overflow-y-auto">
         <button
-          className="absolute top-10 right-8 text-muted-foreground hover:text-foreground"
+          className="absolute top-6 right-6 text-muted-foreground hover:text-foreground transition-colors"
           onClick={onClose}
-          aria-label="Close"
+          disabled={loading}
+          aria-label="Close dialog"
         >
           <X className="w-5 h-5" />
         </button>
-        <h2 className="text-3xl font-bold mb-6">Mint Agent NFT</h2>
-        <div className="space-y-6">
+        
+        <h2 className="text-2xl font-bold mb-6">Mint Agent NFT</h2>
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="mint-name" className="block">
-              Name
-            </Label>
+            <Label htmlFor="mint-name">Name *</Label>
             <Input
               id="mint-name"
-              type="text"
-              className="w-full border border-border/60 rounded px-3 py-2 bg-background"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Agent Name"
+              value={formData.name}
+              onChange={(e) => updateField("name", e.target.value)}
+              placeholder="Enter agent name"
               disabled={loading}
+              required
             />
           </div>
+          
           <div className="space-y-2">
-            <Label htmlFor="mint-description" className="block">
-              Description
-            </Label>
+            <Label htmlFor="mint-description">Description *</Label>
             <Textarea
               id="mint-description"
-              className="w-full border border-border/60 rounded px-3 py-2 bg-background min-h-[80px]"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Agent Description"
+              value={formData.description}
+              onChange={(e) => updateField("description", e.target.value)}
+              placeholder="Describe your agent"
               disabled={loading}
+              required
+              className="min-h-[100px] resize-none"
             />
           </div>
+          
           <ImageQuickSelect
             options={IMAGES}
-            value={imageUrl}
-            onChange={setImageUrl}
-            label="Choose an image"
+            value={formData.image}
+            onChange={(value) => updateField("image", value)}
+            label="Choose an image *"
             showUrlInput
           />
-          {error && <div className="text-red-500 text-sm">{error}</div>}
-          <Button
-            className="w-full bg-green-500 hover:bg-green-600 text-black"
-            onClick={handleMint}
-            disabled={loading}
-          >
-            {loading ? "Minting..." : "Mint & Save Agent"}
-          </Button>
-        </div>
+          
+          {error && <ErrorMessage message={error} />}
+          
+          <div className="flex gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={loading}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-green-500 hover:bg-green-600 text-black"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin mr-2" />
+                  Minting...
+                </>
+              ) : (
+                <>
+                  <Rocket className="w-4 h-4 mr-2" />
+                  Mint & Save Agent
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -128,14 +249,9 @@ const MintAgentDialog = React.memo(function MintAgentDialog({
 
 export default function Page() {
   const params = useParams();
-  const agentAddress = useMemo(() => {
-    if (typeof params?.agentAddress === "string") return params.agentAddress;
-    if (Array.isArray(params?.agentAddress)) return params.agentAddress[0];
-    return "";
-  }, [params?.agentAddress]);
+  const router = useRouter();
+  const agentAddress = useAgentAddress(params);
 
-  const [agentName, setAgentName] = useState("");
-  const [description, setDescription] = useState("");
   const [mintDialogOpen, setMintDialogOpen] = useState(false);
   const [mintLoading, setMintLoading] = useState(false);
   const [mintError, setMintError] = useState<string | null>(null);
@@ -143,53 +259,60 @@ export default function Page() {
   const { skyBrowser, address } = useWallet();
   const { web3Auth } = useWeb3AuthSafe();
 
-  const { data: agentData, refetch: fetchAgent } = useQuery({
-    queryKey: ["marketplace-collection-by-address", agentAddress],
-    queryFn: async () => {
-      if (!agentAddress) return null;
-      const data = await getCollectionsByAddress(agentAddress, skyBrowser, web3Auth);
-      return data?.data || null;
+  const { data: agentData, isLoading } = useAgentData(agentAddress, skyBrowser, web3Auth);
+
+  // Memoized values
+  const formattedDate = useMemo(() => {
+    if (!agentData?.updated_at) return "Unknown";
+    return new Date(agentData.updated_at).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  }, [agentData?.updated_at]);
+
+  const canMint = useMemo(() => 
+    canMintAgent(agentData as any, skyBrowser), 
+    [agentData, skyBrowser]
+  );
+
+  const statusInfo = useMemo(() => [
+    {
+      icon: <Activity className="w-4 h-4 text-green-500" />,
+      text: agentData?.is_deployed ? "Deployed" : "Not Deployed"
     },
-    enabled: !!agentAddress,
-    staleTime: 0,
-    gcTime: 0,
-    retry: 3,
-  });
-
-  useEffect(() => {
-    if (agentData) {
-      setAgentName(agentData.name || "");
-      setDescription(agentData.description || "");
+    {
+      icon: <Clock className="w-4 h-4" />,
+      text: `Updated ${formattedDate}`
+    },
+    {
+      icon: <Settings className="w-4 h-4" />,
+      text: `${agentData?.subnet_list?.length || 0} subnets configured`
     }
-  }, [agentData]);
+  ], [agentData?.is_deployed, agentData?.subnet_list?.length, formattedDate]);
 
+  // Event handlers
   const handleMintAndSave = useCallback(
-    async ({
-      name,
-      description,
-      image,
-    }: {
-      name: string;
-      description: string;
-      image: string;
-    }) => {
+    async (formData: MintFormData) => {
+      if (!skyBrowser || !address || !web3Auth) {
+        setMintError("Wallet not connected.");
+        return;
+      }
+      if (!agentData) {
+        setMintError("Agent data not available.");
+        return;
+      }
+
       setMintLoading(true);
       setMintError(null);
 
       try {
-        if (!skyBrowser || !address || !web3Auth) {
-          setMintError("Wallet not connected.");
-          return;
-        }
-        if (!agentData) {
-          setMintError("Agent data not available.");
-          return;
-        }
-
         const agentForMinting = {
           id: agentAddress,
-          name,
-          description,
+          name: formData.name,
+          description: formData.description,
           agent_address: agentAddress,
           is_deployed: agentData.is_deployed || false,
           created_at: agentData.created_at || new Date().toISOString(),
@@ -205,32 +328,38 @@ export default function Page() {
         );
 
         if (!mintResult.success || !mintResult.agentId) {
-          setMintError(mintResult.error || "Failed to mint NFT.");
-          return;
+          throw new Error(mintResult.error || "Failed to mint NFT.");
         }
 
         await createUserAgent(address, {
           collection_address: agentAddress,
           nft_id: mintResult.agentId,
-          name,
-          description,
-          image,
+          name: formData.name,
+          description: formData.description,
+          image: formData.image,
         });
 
         setMintDialogOpen(false);
-        setMintError(null);
-
-        setTimeout(() => {
-          fetchAgent();
-        }, 500);
+        router.push(`/user-agents/${agentAddress}?nftid=${mintResult.agentId}`);
       } catch (err: any) {
+        console.error("Minting error:", err);
         setMintError(err?.message || "Failed to mint and save agent.");
       } finally {
         setMintLoading(false);
       }
     },
-    [skyBrowser, address, web3Auth, agentData, agentAddress, fetchAgent]
+    [skyBrowser, address, web3Auth, agentData, agentAddress, router]
   );
+
+  const handleCopyAddress = useCallback(() => {
+    const addressToCopy = agentData?.collection_id || agentData?.id || agentAddress;
+    navigator.clipboard.writeText(addressToCopy);
+  }, [agentData?.collection_id, agentData?.id, agentAddress]);
+
+  const handleOpenDialog = useCallback(() => {
+    setMintDialogOpen(true);
+    setMintError(null);
+  }, []);
 
   const handleCloseDialog = useCallback(() => {
     if (!mintLoading) {
@@ -239,14 +368,31 @@ export default function Page() {
     }
   }, [mintLoading]);
 
-  const handleOpenDialog = useCallback(() => {
-    setMintDialogOpen(true);
-  }, []);
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">Loading agent data...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const handleCopyAddress = useCallback(() => {
-    const addressToCopy = agentData?.collection_id || agentData?.id || "";
-    navigator.clipboard.writeText(addressToCopy);
-  }, [agentData?.collection_id, agentData?.id]);
+  // Error state
+  if (!agentData && !isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
+          <h2 className="text-xl font-semibold">Agent Not Found</h2>
+          <p className="text-muted-foreground">The agent you're looking for doesn't exist.</p>
+          <Button onClick={() => router.back()}>Go Back</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -254,76 +400,56 @@ export default function Page() {
         open={mintDialogOpen}
         onClose={handleCloseDialog}
         onMint={handleMintAndSave}
-        defaultName={agentName}
-        defaultDescription={description}
-        defaultImage=""
+        defaultData={{
+          name: agentData?.name || "",
+          description: agentData?.description || "",
+          image: ""
+        }}
         loading={mintLoading}
       />
+      
       <div className="container mx-auto px-6 py-12 max-w-7xl flex flex-col gap-8">
+        {/* Global Error Display */}
+        {mintError && (
+          <ErrorMessage message={mintError} />
+        )}
+
         <div className="flex flex-col md:flex-row gap-12 items-start justify-between">
           <div className="flex flex-col md:flex-row gap-8 items-start flex-1">
-            <div className="relative group">
-              <div className="w-48 h-48 relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-border/40 shadow-xl">
-                <Image
-                  src={agentData?.image || "/agent-mock.webp"}
-                  alt="Agent"
-                  fill
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </div>
-              <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-background shadow-lg flex items-center justify-center">
-                <Zap className="w-4 h-4 text-white" />
-              </div>
-            </div>
+            <AgentImage 
+              src={agentData?.image} 
+              alt="Agent" 
+              isVerified={agentData?.isVerified} 
+            />
+            
             <div className="flex-1 space-y-6">
               <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <h1 className="text-4xl font-bold text-foreground tracking-tight">{agentName}</h1>
-                </div>
+                <h1 className="text-4xl font-bold text-foreground tracking-tight">
+                  {agentData?.name || "Unnamed Agent"}
+                </h1>
+                
                 <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-green-500" />
-                    <span>{agentData?.is_deployed ? "Deployed" : "Not Deployed"}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    <span className="capitalize">
-                      Updated{" "}
-                      {agentData?.updated_at
-                        ? new Date(agentData.updated_at).toLocaleString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          })
-                        : "Unknown"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Settings className="w-4 h-4" />
-                    <span>{agentData?.subnet_list?.length || 0} subnets configured</span>
-                  </div>
+                  {statusInfo.map((info, index) => (
+                    <StatusInfo key={index} icon={info.icon} text={info.text} />
+                  ))}
                 </div>
               </div>
+              
               <div className="space-y-3 pt-3">
                 <div className="flex flex-col">
-                  <Label
-                    htmlFor="collection-id"
-                    className="font-medium text-muted-foreground tracking-wide"
-                  >
+                  <Label className="font-medium text-muted-foreground tracking-wide">
                     Collection Address
                   </Label>
                   <div className="flex items-center gap-1">
                     <code className="text-sm font-mono text-foreground">
-                      {agentData?.collection_id || agentData?.id || "N/A"}
+                      {agentData?.collection_id || agentData?.id || agentAddress || "N/A"}
                     </code>
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={handleCopyAddress}
                       className="h-8 w-8 p-0 hover:bg-background/80 active:scale-80 transition-transform duration-100"
+                      title="Copy address"
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
@@ -332,27 +458,32 @@ export default function Page() {
               </div>
             </div>
           </div>
+          
           <div className="space-y-3">
             <Button
-              className="w-fit hover:bg-green-500/80 bg-green-500 text-black cursor-pointer"
               onClick={handleOpenDialog}
-              disabled={!canMintAgent(agentData as any, skyBrowser) || mintLoading}
+              disabled={!canMint || mintLoading}
+              className="w-fit hover:bg-green-500/80 bg-green-500 text-black disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Rocket className="w-4 h-4 mr-2" />
               {mintLoading ? "Minting..." : "Mint Agent"}
             </Button>
-            {mintError && <div className="text-red-500 text-sm mt-2">{mintError}</div>}
+            
+            {!canMint && !mintLoading && (
+              <p className="text-xs text-muted-foreground">
+                Minting not available for this agent
+              </p>
+            )}
           </div>
         </div>
+        
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="description" className="text-lg font-semibold text-foreground">
-              Agent Description
-            </Label>
-          </div>
+          <Label className="text-lg font-semibold text-foreground">
+            Agent Description
+          </Label>
           <div className="relative">
             <div className="min-h-[140px] bg-background/50 border border-border/60 rounded-xl p-6 text-base leading-relaxed">
-              {description || "No description provided for this agent."}
+              {agentData?.description || "No description provided for this agent."}
             </div>
           </div>
         </div>
