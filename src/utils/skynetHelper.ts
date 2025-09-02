@@ -1349,24 +1349,15 @@ export const getNftIdByAgentAddress = async (
 	skyBrowser: SkyMainBrowser
 ) => {
 	try {
-		// Connect to the specific agent collection
-		const signer = skyBrowser.contractService.signer;
-		const NFTContract = NFT__factory.connect(
-			agentAddress as string,
-			signer
+		// Use getAllAgentTokenIds to get the most recent (highest) token ID
+		const tokenIds = await getAllAgentTokenIds(
+			agentAddress,
+			userAddress,
+			skyBrowser
 		);
 
-		// Check if user owns any NFTs from this specific agent collection
-		const balance = await NFTContract.balanceOf(userAddress);
-
-		if (balance && balance > 0) {
-			// Get the first NFT the user owns from this collection
-			const tokenId = await NFTContract.tokenOfOwnerByIndex(
-				userAddress,
-				0
-			);
-
-			return tokenId.toString();
+		if (tokenIds && tokenIds.length > 0) {
+			return tokenIds[0]; // This is now the most recent (highest) token ID
 		}
 
 		console.log("User does not own any NFTs from this agent collection");
@@ -1460,7 +1451,7 @@ export const getAllAgentTokenIds = async (
 
 			// Sort token IDs numerically
 			tokenIds.sort((a, b) =>
-				BigInt(a) < BigInt(b) ? -1 : BigInt(a) > BigInt(b) ? 1 : 0
+				BigInt(a) > BigInt(b) ? -1 : BigInt(a) < BigInt(b) ? 1 : 0
 			);
 
 			return tokenIds;
@@ -1544,7 +1535,7 @@ export const getAgentIdByAgentAddress = async (
 			}
 			// Fallback: use the lowest token ID
 			tokenIds.sort((a, b) =>
-				BigInt(a) < BigInt(b) ? -1 : BigInt(a) > BigInt(b) ? 1 : 0
+				BigInt(a) > BigInt(b) ? -1 : BigInt(a) < BigInt(b) ? 1 : 0
 			);
 			return tokenIds[0];
 		}
@@ -1756,7 +1747,7 @@ export const getUserAgentNFTIds = async (
 
 		// Sort token IDs numerically
 		return tokenIds.sort((a, b) =>
-			BigInt(a) < BigInt(b) ? -1 : BigInt(a) > BigInt(b) ? 1 : 0
+			BigInt(a) > BigInt(b) ? -1 : BigInt(a) < BigInt(b) ? 1 : 0
 		);
 	} catch (error) {
 		console.error("Error getting user agent NFT IDs:", error);
