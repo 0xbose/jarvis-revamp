@@ -1,5 +1,5 @@
+import { AgentDetailResponse, UserAgentCollectionsResponse } from "@/types/agents";
 import axios from "axios";
-import { AgentResponse, AgentDetailResponse } from "@/types";
 
 
 export const getUserMintedAgents = async (
@@ -8,12 +8,12 @@ export const getUserMintedAgents = async (
     limit?: number;
     offset?: number;
   }
-): Promise<AgentResponse> => {
+): Promise<UserAgentCollectionsResponse> => {
   if (!params.address) {
     throw new Error("User address is required");
   }
   const response = await axios.get(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/agents/${params.address}`,
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/agents/user/${params.address}`,
     {
       params: {
         limit: params.limit ?? 10,
@@ -24,7 +24,7 @@ export const getUserMintedAgents = async (
       },
     }
   );
-  return response.data;
+  return response.data.data;
 };
 
 export const getAgentDetailByCollectionAndNftId = async (
@@ -42,5 +42,5 @@ export const getAgentDetailByCollectionAndNftId = async (
       },
     }
   );
-  return response.data;
+  return response.data.data;
 };

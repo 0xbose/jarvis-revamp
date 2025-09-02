@@ -1,8 +1,8 @@
 "use client";
+
 import SearchAndCategories from "@/components/market-place/agent-search";
 import AgentDialog from "@/components/market-place/agent-dialog";
-import { useState } from "react";
-import { getAgents, getUserAgents } from "@/controllers/collections/collections.query";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AgentMarketplaceCard from "@/components/market-place/agent-marketplace-card";
 import { getUserMintedAgents } from "@/controllers/agents/agents.query";
@@ -29,7 +29,7 @@ export default function UserAgentsPage() {
 				limit: 20,
 				offset: 0,
 			});
-			const collections = (data?.data?.agents || []).map((collection: any) => ({
+			const collections = (data?.user_collections || []).map((collection: any) => ({
 				...collection,
 			}));
 			return collections;
@@ -37,6 +37,12 @@ export default function UserAgentsPage() {
 		staleTime: 5 * 60 * 1000,
 		retry: 3,
 	});
+
+	useEffect(() => {
+		if (address) {
+			fetchAgents();
+		}
+	}, [address, fetchAgents]);
 
 	return (
 		<div className="h-full w-full bg-background">
@@ -46,10 +52,10 @@ export default function UserAgentsPage() {
 					<div className="flex flex-col lg:flex-row items-start justify-between gap-8">
 						<div className="space-y-4">
 							<h1 className="text-4xl font-bold text-foreground tracking-tight">
-								Marketplace
+								AI Agent Fleet
 							</h1>
 							<p className="text-muted-foreground text-lg max-w-2xl">
-								Explore and Mint Agents from the Marketplace.
+								View and manage your personal AI agents.
 							</p>
 						</div>
 						<div className="flex-shrink-0">
@@ -105,7 +111,7 @@ export default function UserAgentsPage() {
 						) : (
 							<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 									{collections.map((collection) => (
-									<AgentMarketplaceCard key={collection.id} agent={collection} />
+									<AgentMarketplaceCard key={collection.id} agent={collection} isUserAgent={true} />
 								))}
 							</div>
 						)}

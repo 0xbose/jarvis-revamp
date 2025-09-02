@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 interface AgentCardProps {
 	name: string;
 	description: string;
-	owned?: boolean;
+	collectionAddress?: string;
 	isSelected?: boolean;
 	onMint?: () => void;
 	onSelect?: () => void;
@@ -17,7 +17,7 @@ interface AgentCardProps {
 export default function AgentCard({
 	name,
 	description,
-	owned = false,
+	collectionAddress,
 	isSelected = false,
 	onMint,
 	onSelect,

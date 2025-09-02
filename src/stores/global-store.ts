@@ -1,6 +1,7 @@
+import { AgentDetailResponse, UserAgentCollection } from "@/types/agents";
+import { Agent } from "@/types";
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
-import { Agent, AgentDetail } from "@/types";
 
 // Global Store State
 interface GlobalStore {
@@ -11,7 +12,7 @@ interface GlobalStore {
 	// Mode and Agent Management
 	mode: "chat" | "agent";
 	prompt: string;
-	selectedAgent: Agent | AgentDetail | null;
+	selectedAgent: AgentDetailResponse | UserAgentCollection | null;
 
 	// Auto Mode
 	autoMode: boolean;
@@ -22,7 +23,7 @@ interface GlobalStore {
 
 	setMode: (mode: "chat" | "agent") => void;
 	setPrompt: (prompt: string) => void;
-	setSelectedAgent: (agent: Agent | AgentDetail | null) => void;
+	setSelectedAgent: (agent: AgentDetailResponse | UserAgentCollection | null) => void;
 
 	reset: () => void;
 }

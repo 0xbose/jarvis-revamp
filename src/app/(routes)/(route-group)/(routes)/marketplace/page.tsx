@@ -1,10 +1,9 @@
 "use client";
 import SearchAndCategories from "@/components/market-place/agent-search";
-import AgentDialog from "@/components/market-place/agent-dialog";
 import { useState } from "react";
-import { getAgents } from "@/controllers/collections/collections.query";
 import { useQuery } from "@tanstack/react-query";
 import AgentMarketplaceCard from "@/components/market-place/agent-marketplace-card";
+import { getCollections } from "@/controllers/collections/collections.query";
 
 
 export default function MarketPlacePage() {
@@ -22,7 +21,7 @@ export default function MarketPlacePage() {
 	} = useQuery({
 		queryKey: ["marketplace-collections", searchQuery],
 		queryFn: async () => {
-			const data = await getAgents({
+			const data = await getCollections({
 				search: searchQuery,
 				limit: 20,
 				offset: 0,
@@ -32,7 +31,8 @@ export default function MarketPlacePage() {
 			}));
 			return collections;
 		},
-		staleTime: 5 * 60 * 1000,
+		staleTime: 0,
+		gcTime: 0,
 		retry: 3,
 	});
 
@@ -51,7 +51,6 @@ export default function MarketPlacePage() {
 							</p>
 						</div>
 						<div className="flex-shrink-0">
-							<AgentDialog />
 						</div>
 					</div>
 				</div>
@@ -98,12 +97,11 @@ export default function MarketPlacePage() {
 									Get started by creating your first AI agent. Deploy it across multiple platforms 
 									and watch it work for you 24/7.
 								</p>
-								<AgentDialog />
 							</div>
 						) : (
 							<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 									{collections.map((collection) => (
-									<AgentMarketplaceCard key={collection.id} agent={collection} />
+									<AgentMarketplaceCard key={collection.id} agent={collection} isUserAgent={false} />
 								))}
 							</div>
 						)}

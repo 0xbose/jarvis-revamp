@@ -3,21 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Zap } from "lucide-react";
+import { UserAgentCollection } from "@/types/agents";
+import { CollectionAgent } from "@/types/collection";
 
-type Agent = {
-  id: string;
-  name: string;
-  description: string;
-  is_deployed: boolean;
-  created_at: string;
-  updated_at: string;
-  agent_address: string;
-  isVerified: boolean;
-  image: string | null;
-};
-
-export default function AgentMarketplaceCard({ agent }: { agent: Agent }) {
-  // Format date as e.g. "Jun 8, 2025"
+export default function AgentMarketplaceCard({ agent, isUserAgent }: { agent: UserAgentCollection | CollectionAgent, isUserAgent: boolean }) {
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
@@ -29,7 +18,13 @@ export default function AgentMarketplaceCard({ agent }: { agent: Agent }) {
   };
 
   return (
-    <Link href={`/marketplace/${agent.agent_address}`}>
+    <Link
+      href={
+        isUserAgent
+          ? `/user-agents/${agent?.collection_address || agent?.agent_address}?nftid=${agent?.nft_id}`
+          : `/marketplace/${agent?.collection_address || agent?.agent_address}`
+      }
+    >
       <div className="group relative bg-background/50 border border-border/40 rounded-xl overflow-hidden h-80 flex flex-col transition-all duration-300 hover:border-border/60 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1">
         {/* Agent Image */}
         <div className="relative aspect-video w-full overflow-hidden flex-shrink-0">
@@ -46,11 +41,11 @@ export default function AgentMarketplaceCard({ agent }: { agent: Agent }) {
             <div className="flex items-center gap-1 px-2 py-1 bg-background/90 backdrop-blur-sm rounded-full text-xs">
               <div
                 className={`w-2 h-2 rounded-full ${
-                  agent.isVerified ? "bg-green-500 animate-pulse" : "bg-gray-400"
+                  agent.agent_isverified ? "bg-green-500 animate-pulse" : "bg-gray-400"
                 }`}
               />
               <span className="text-foreground font-medium">
-                {agent.isVerified ? "Verified" : "Unverified"}
+                {agent.agent_isverified ? "Verified" : "Unverified"}
               </span>
             </div>
           </div>

@@ -1,18 +1,15 @@
-import { getAxiosInstanceWithApiKey } from "@/lib/axios";
-import { AgentResponse, AgentDetailResponse } from "@/types";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
 import { Web3Context } from "@/types/wallet";
 import axios from "axios";
+import { CollectionAgentsResponse, CollectionDetailResponse } from "@/types/collection";
 
-export const getAgents = async (
+export const getCollections = async (
 	params?: {
 		search?: string;
 		limit?: number;
 		offset?: number;
-	},
-	skyBrowser?: SkyMainBrowser,
-	web3Context?: Web3Context
-): Promise<AgentResponse> => {
+	}
+): Promise<CollectionAgentsResponse> => {
 	const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections`, {
 		params: {
 			search: params?.search,
@@ -26,16 +23,14 @@ export const getAgents = async (
 	return response.data;
 };
 
-export const getUserAgents = async (
+export const getUserCollections = async (
 	params: {
 		search?: string;
 		limit?: number;
 		offset?: number;
 		address: string;
-	},
-	skyBrowser?: SkyMainBrowser,
-	web3Context?: Web3Context
-): Promise<AgentResponse> => {
+	}
+): Promise<CollectionAgentsResponse> => {
 	
 	const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections`, {
 		params: {
@@ -51,16 +46,15 @@ export const getUserAgents = async (
 	return response.data;
 };
 
-export const getAgentById = async (
+export const getCollectionsByAddress = async (
 	agentAddress: string,
 	skyBrowser?: SkyMainBrowser,
 	web3Context?: Web3Context
-): Promise<AgentDetailResponse> => {
-	const axiosInstance = await getAxiosInstanceWithApiKey(
-		process.env.NEXT_PUBLIC_NFT_USER_AGENT_URL || "",
-		skyBrowser,
-		web3Context
-	);
-	const response = await axiosInstance.get(`/collections/${agentAddress}`);
+): Promise<CollectionDetailResponse> => {
+	const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections/${agentAddress}`, {
+		headers: {
+			"x-api-key": `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+		},
+	});
 	return response.data;
 };
