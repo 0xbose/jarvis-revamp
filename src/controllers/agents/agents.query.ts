@@ -5,6 +5,7 @@ import axios from "axios";
 export const getUserMintedAgents = async (
   params: {
     address: string;
+    search?: string;
     limit?: number;
     offset?: number;
   }
@@ -16,6 +17,7 @@ export const getUserMintedAgents = async (
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/agents/user/${params.address}`,
     {
       params: {
+        search: params.search ?? "",
         limit: params.limit ?? 10,
         offset: params.offset ?? 0,
       },

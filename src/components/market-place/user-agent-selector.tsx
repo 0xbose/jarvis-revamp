@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,14 +9,14 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Plus, StoreIcon, XIcon, Loader2, BotIcon } from "lucide-react";
+import { Plus, XIcon, Loader2, BotIcon } from "lucide-react";
 import { useGlobalStore } from "@/stores/global-store";
 import { useWallet } from "@/hooks/use-wallet";
 import { checkAgentNFTOwnership } from "@/utils/skynetHelper";
 import { createMintingHandler, MintingState } from "@/utils/agent-minting";
 import { toast } from "sonner";
-import SearchBar from "./search";
-import AgentCard from "./agent-card";
+import SearchBar from "../common/search";
+import AgentCard from "../common/agent-card";
 import { getUserMintedAgents } from "@/controllers/agents/agents.query";
 import { useQuery } from "@tanstack/react-query";
 import { UserAgentCollection } from "@/types/agents";
@@ -37,31 +37,32 @@ function isUserAgentCollection(obj: any): obj is UserAgentCollection {
 }
 
 export default function Marketplace({ disabled = false }: MarketplaceProps) {
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { setSelectedAgent, selectedAgent, mode } = useGlobalStore();
   const { skyBrowser, address } = useWallet();
   const [selectedAgentNFTId, setSelectedAgentNFTId] = useState<string>("");
   const [minting, setMinting] = useState<MintingState>({});
 
-  // Fetch agents
+  // Fetch agents with search param
   const {
     data: agentsData,
     isLoading: loading,
     error,
     refetch: refetchAgents,
   } = useQuery({
-    queryKey: [QUERY_KEYS.USER_MINTED_AGENTS, address],
+    queryKey: [QUERY_KEYS.USER_MINTED_AGENTS, address, searchQuery],
     queryFn: async () => {
       if (!address) return { user_collections: [] };
       return await getUserMintedAgents({
         address,
+        search: searchQuery,
         limit: 21,
         offset: 0,
       });
     },
-    enabled: !!address && !!skyBrowser,
+    enabled: !!address && !!skyBrowser && isOpen,
     staleTime: 0,
   });
 
@@ -92,33 +93,13 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
   }, [agents]);
 
   // Search handlers
-  const handleSearchChange = (value: string) => setSearch(value);
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+  };
 
-  const handleSearch = useCallback(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-    debounceTimerRef.current = setTimeout(() => {
-      refetchAgents();
-    }, 800);
-  }, [refetchAgents]);
-
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
-
-  // Filter agents by search
-  const filteredAgents: UserAgentCollection[] = search
-    ? agents.filter(
-        (agent) =>
-          agent.agent_name?.toLowerCase().includes(search.toLowerCase()) ||
-          agent.agent_description?.toLowerCase().includes(search.toLowerCase())
-      )
-    : agents;
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+  };
 
   // Agent selection logic
   const handleAgentSelect = async (agent: UserAgentCollection) => {
@@ -207,7 +188,7 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
         <div className="mt-7 px-4 w-full flex flex-col gap-y-4 relative flex-1 min-h-0 overflow-y-auto scrollbar-thin pr-2">
           <div className="flex flex-col gap-y-4 h-full max-h-full mt-3 pt-5">
             <SearchBar
-              value={search}
+              value={searchInput}
               onChange={handleSearchChange}
               onSearch={handleSearch}
               className="w-96 mx-auto"
@@ -233,14 +214,14 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
                   {(error as Error).message ||
                     "Failed to load agents. Please try again."}
                 </div>
-              ) : filteredAgents.length === 0 ? (
+              ) : agents.length === 0 ? (
                 <div className="col-span-full text-center text-muted-foreground py-8">
-                  {search
+                  {searchQuery
                     ? "No agents found matching your search."
                     : "No agents available."}
                 </div>
               ) : (
-                filteredAgents.map((agent: UserAgentCollection) => {
+                agents.map((agent: UserAgentCollection) => {
                   const isSelected =
                     !!(selectedAgent &&
                       (selectedAgent.id === agent.id ||

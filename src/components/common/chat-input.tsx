@@ -6,7 +6,7 @@ import { LucideArrowUp, Square, Play } from "lucide-react";
 import { ChatInputProps } from "@/types/types";
 import { useGlobalStore } from "@/stores/global-store";
 import { useRouter } from "next/navigation";
-import Marketplace from "./marketplace";
+import Marketplace from "../market-place/user-agent-selector";
 
 export default function ChatInput({
 	onSend,

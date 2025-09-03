@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "../ui/input";
 import { SearchIcon } from "lucide-react";
@@ -17,22 +17,26 @@ const SearchBar: React.FC<SearchProps> = ({
 	className = "",
 	value,
 	onChange,
-	debounceTime = 500,
+	debounceTime = 800,
 	onSearch,
 }) => {
+	const timeoutRef = useRef<NodeJS.Timeout>();
+
 	const handleChange = useCallback(
 		(e: React.ChangeEvent<HTMLInputElement>) => {
 			const newValue = e.target.value;
 			onChange(newValue);
 
+			// Clear previous timeout
+			if (timeoutRef.current) {
+				clearTimeout(timeoutRef.current);
+			}
+
 			// If onSearch is provided and debounceTime > 0, use debouncing
 			if (onSearch && debounceTime > 0) {
-				const timer = setTimeout(() => {
+				timeoutRef.current = setTimeout(() => {
 					onSearch(newValue);
 				}, debounceTime);
-
-				// Cleanup timer on next change
-				return () => clearTimeout(timer);
 			} else if (onSearch) {
 				// If no debounce, call immediately
 				onSearch(newValue);
@@ -40,6 +44,15 @@ const SearchBar: React.FC<SearchProps> = ({
 		},
 		[onChange, onSearch, debounceTime]
 	);
+
+	// Cleanup on unmount
+	useEffect(() => {
+		return () => {
+			if (timeoutRef.current) {
+				clearTimeout(timeoutRef.current);
+			}
+		};
+	}, []);
 
 	return (
 		<div className={cn("w-full relative ml-auto rounded-md", className)}>
