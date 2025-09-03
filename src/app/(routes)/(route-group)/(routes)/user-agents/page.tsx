@@ -8,6 +8,7 @@ import { QUERY_KEYS } from "@/utils/query-keys";
 import AgentMarketplaceCard from "@/components/market-place/agent-marketplace-card";
 import SearchAndCategories from "@/components/market-place/agent-search";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function UserAgentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -19,13 +20,14 @@ export default function UserAgentsPage() {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: [QUERY_KEYS.USER_AGENTS, searchQuery],
+    queryKey: [QUERY_KEYS.USER_AGENTS, searchQuery, selectedCategory],
     queryFn: async () => {
       const data = await getUserMintedAgents({
         address: address!,
         search: searchQuery,
         limit: 20,
         offset: 0,
+        isVerified: selectedCategory === "verified" ? true : selectedCategory === "unverified" ? false : undefined,
       });
       return (data?.user_collections || []).map((collection: any) => ({
         ...collection,
@@ -61,7 +63,7 @@ export default function UserAgentsPage() {
 
       <div className="container mx-auto px-6 py-6 max-w-7xl">
         <div className="space-y-6">
-          <div className="space-y-4">
+          <div className="space-y-4 flex items-center justify-between">
             <SearchAndCategories
               onSearch={setSearchQuery}
               onCategorySelect={setSelectedCategory}

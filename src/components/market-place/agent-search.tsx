@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 
 const categories: { id: any | "all"; label: string }[] = [
   { id: "all", label: "All" },
-  { id: "jarvis", label: "Jarvis" },
-  { id: "1xup", label: "1XUP" },
+  { id: "verified", label: "Verified" },
+  { id: "unverified", label: "Unverified" },
 ];
 
 interface SearchAndCategoriesProps {
@@ -72,7 +72,7 @@ export default function SearchAndCategories({
         />
       </div>
 
-      {/* <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
         {categories.map((category) => (
           <Button
             key={category.id}
@@ -87,7 +87,7 @@ export default function SearchAndCategories({
             {category.label}
           </Button>
         ))}
-      </div> */}
+      </div>
     </div>
   );
 }
