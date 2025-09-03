@@ -1,69 +1,67 @@
-"use client"
-import { useEffect, useState, useCallback, useMemo } from "react"
-import { Label } from "@/components/ui/label"
-import { Clock, Activity, Settings, Zap, Copy, Pencil, Check, X, ExternalLink } from "lucide-react"
-import { useQuery } from "@tanstack/react-query"
-import { Button } from "@/components/ui/button"
-import { useParams, useSearchParams } from "next/navigation"
-import { getAgentDetailByCollectionAndNftId } from "@/controllers/agents/agents.query"
-import { updateUserAgent } from "@/controllers/agents/agent.mutations"
-import { AgentImage } from "@/components/market-place/agent-image"
-import Link from "next/link"
+"use client";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { Label } from "@/components/ui/label";
+import { Clock, Activity, Settings, Copy, Pencil, Check, X, ExternalLink } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { useParams, useSearchParams } from "next/navigation";
+import { getAgentDetailByCollectionAndNftId } from "@/controllers/agents/agents.query";
+import { updateUserAgent } from "@/controllers/agents/agent.mutations";
+import { AgentImage } from "@/components/market-place/agent-image";
+import Link from "next/link";
 import { QUERY_KEYS } from "@/utils/query-keys";
+import { MarketplaceLoaderSkeleton } from "@/components/market-place/loader-skeleton";
 
 const useAgentData = (agentAddress: string, nftId: string) => {
   return useQuery({
     queryKey: [QUERY_KEYS.USER_AGENTS_BY_ADDRESS, agentAddress, nftId],
     queryFn: async () => {
-      if (!agentAddress) return null
-      const data = await getAgentDetailByCollectionAndNftId(agentAddress, nftId)
-      return data || null
+      if (!agentAddress) return null;
+      const data = await getAgentDetailByCollectionAndNftId(agentAddress, nftId);
+      return data || null;
     },
     enabled: !!agentAddress,
     staleTime: 0,
     gcTime: 0,
     retry: 3,
-  })
-}
+  });
+};
 
 const useEditableField = (initialValue: string, onSave: (value: string) => Promise<void>) => {
-  const [value, setValue] = useState(initialValue)
-  const [isEditing, setIsEditing] = useState(false)
-  const [draft, setDraft] = useState(initialValue)
+  const [value, setValue] = useState(initialValue);
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(initialValue);
 
   const startEdit = useCallback(() => {
-    setDraft(value)
-    setIsEditing(true)
-  }, [value])
+    setDraft(value);
+    setIsEditing(true);
+  }, [value]);
 
   const cancelEdit = useCallback(() => {
-    setDraft(value)
-    setIsEditing(false)
-  }, [value])
+    setDraft(value);
+    setIsEditing(false);
+  }, [value]);
 
   const saveEdit = useCallback(async () => {
     if (draft === value) {
-      setIsEditing(false)
-      return
+      setIsEditing(false);
+      return;
     }
-    
     try {
-      await onSave(draft)
-      setValue(draft)
-      setIsEditing(false)
+      await onSave(draft);
+      setValue(draft);
+      setIsEditing(false);
     } catch (error) {
-      // Error handling is done in the parent component
-      throw error
+      throw error;
     }
-  }, [draft, value, onSave])
+  }, [draft, value, onSave]);
 
-  // Update local state when initial value changes
   useEffect(() => {
-    setValue(initialValue)
+    setValue(initialValue);
     if (!isEditing) {
-      setDraft(initialValue)
+      setDraft(initialValue);
     }
-  }, [initialValue, isEditing])
+  }, [initialValue, isEditing]);
 
   return {
     value,
@@ -72,40 +70,40 @@ const useEditableField = (initialValue: string, onSave: (value: string) => Promi
     setDraft,
     startEdit,
     cancelEdit,
-    saveEdit
-  }
-}
+    saveEdit,
+  };
+};
 
-const EditableInput = ({ 
-  value, 
-  draft, 
-  isEditing, 
-  onChange, 
-  onSave, 
-  onCancel, 
+const EditableInput = ({
+  value,
+  draft,
+  isEditing,
+  onChange,
+  onSave,
+  onCancel,
   onEdit,
   className = "",
   placeholder = "",
-  multiline = false
+  multiline = false,
 }: {
-  value: string
-  draft: string
-  isEditing: boolean
-  onChange: (value: string) => void
-  onSave: () => void
-  onCancel: () => void
-  onEdit: () => void
-  className?: string
-  placeholder?: string
-  multiline?: boolean
+  value: string;
+  draft: string;
+  isEditing: boolean;
+  onChange: (value: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onEdit: () => void;
+  className?: string;
+  placeholder?: string;
+  multiline?: boolean;
 }) => {
   if (isEditing) {
-    const InputComponent = multiline ? "textarea" : "input"
+    const InputComponent = multiline ? "textarea" : "input";
     return (
       <div className="flex items-start gap-2">
         <InputComponent
           value={draft}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e: any) => onChange(e.target.value)}
           className={`bg-transparent border-b border-border focus:outline-none focus:border-primary ${className}`}
           placeholder={placeholder}
           autoFocus
@@ -120,7 +118,7 @@ const EditableInput = ({
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -130,30 +128,36 @@ const EditableInput = ({
         <Pencil className="h-4 w-4" />
       </Button>
     </div>
-  )
-}
+  );
+};
 
-const StatusInfo = ({ icon, text, className = "" }: { 
-  icon: React.ReactNode, 
-  text: string, 
-  className?: string 
+const StatusInfo = ({
+  icon,
+  text,
+  className = "",
+}: {
+  icon: React.ReactNode;
+  text: string;
+  className?: string;
 }) => (
   <div className={`flex items-center gap-2 ${className}`}>
     {icon}
     <span>{text}</span>
   </div>
-)
+);
 
-const AddressInfo = ({ label, value, onCopy }: { 
-  label: string, 
-  value?: string, 
-  onCopy: () => void 
+const AddressInfo = ({
+  label,
+  value,
+  onCopy,
+}: {
+  label: string;
+  value?: string;
+  onCopy: () => void;
 }) => (
   <div className="space-y-3">
     <div className="flex flex-col">
-      <Label className="font-medium text-muted-foreground tracking-wide">
-        {label}
-      </Label>
+      <Label className="font-medium text-muted-foreground tracking-wide">{label}</Label>
       <div className="flex items-center gap-1">
         <code className="text-sm font-mono text-foreground">
           {value && typeof value === "string" && value.length > 10
@@ -171,83 +175,60 @@ const AddressInfo = ({ label, value, onCopy }: {
       </div>
     </div>
   </div>
-)
+);
 
 export default function Page() {
-  const params = useParams<{ agentAddress: string }>()
-  const agentAddress = params.agentAddress
-  const searchParams = useSearchParams()
-  const nftId = searchParams.get("nftid") || ""
+  const params = useParams<{ agentAddress: string }>();
+  const agentAddress = params.agentAddress;
+  const searchParams = useSearchParams();
+  const nftId = searchParams.get("nftid") || "";
 
-  const [updateLoading, setUpdateLoading] = useState(false)
-  const [updateError, setUpdateError] = useState<string | null>(null)
+  const [updateLoading, setUpdateLoading] = useState(false);
 
-  const { data: agentData, refetch } = useAgentData(agentAddress, nftId)
+  const { data: agentData, refetch, isLoading, isFetching, isFetched } = useAgentData(agentAddress, nftId);
 
-  // The updateAgent function now only passes the changed field along with required previous data
   const updateAgent = useCallback(
     async (updates: Partial<{ name: string; description: string }>) => {
-      if (!agentData) return
-
-      setUpdateLoading(true)
-      setUpdateError(null)
-
+      if (!agentData) return;
+      setUpdateLoading(true);
       try {
-        // Build the payload with only the changed field and required previous data
         const payload = {
           collection_address: agentData.collection_id || agentAddress,
           nft_id: nftId,
           name: updates.name !== undefined ? updates.name : agentData.name || "",
           description: updates.description !== undefined ? updates.description : agentData.description || "",
           image: agentData.image || "",
-        }
-
-        // Debug log
-        console.log('Updating agent with payload:', payload)
-
-        // Use user_address if available, otherwise fallback to empty string
-        await updateUserAgent(agentData.user_address || "", payload)
-        
-        await refetch()
-      } catch (err: any) {
-        console.error('Update error:', err) // Debug log
-        const errorMessage = err?.message || `Failed to update agent ${Object.keys(updates)[0]}.`
-        setUpdateError(errorMessage)
-        throw err
+        };
+        await updateUserAgent(agentData.user_address || "", payload);
+        await refetch();
       } finally {
-        setUpdateLoading(false)
+        setUpdateLoading(false);
       }
     },
     [agentData, agentAddress, nftId, refetch]
-  )
+  );
 
-  const updateName = useCallback((name: string) => {
-    return updateAgent({ name })
-  }, [updateAgent])
+  const updateName = useCallback((name: string) => updateAgent({ name }), [updateAgent]);
+  const updateDescription = useCallback((description: string) => updateAgent({ description }), [updateAgent]);
 
-  const updateDescription = useCallback((description: string) => {
-    return updateAgent({ description })
-  }, [updateAgent])
-
-  const nameField = useEditableField(agentData?.name || "", updateName)
-  const descriptionField = useEditableField(agentData?.description || "", updateDescription)
+  const nameField = useEditableField(agentData?.name || "", updateName);
+  const descriptionField = useEditableField(agentData?.description || "", updateDescription);
 
   const handleCopyAddress = useCallback(() => {
-    const addressToCopy = agentData?.collection_id || agentData?.id || ""
-    navigator.clipboard.writeText(addressToCopy)
-  }, [agentData?.collection_id, agentData?.id])
+    const addressToCopy = agentData?.collection_id || agentData?.id || "";
+    navigator.clipboard.writeText(addressToCopy);
+  }, [agentData?.collection_id, agentData?.id]);
 
-  // Memoize formatted date to prevent recalculation
   const formattedDate = useMemo(() => {
-    if (!agentData?.updated_at) return "Unknown"
+    if (!agentData?.updated_at) return "Unknown";
     return new Date(agentData.updated_at).toLocaleString("en-US", {
       month: "short",
       day: "numeric",
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
-    })
-  }, [agentData?.updated_at])
+    });
+  }, [agentData?.updated_at]);
 
   const statusInfo = useMemo(
     () => [
@@ -261,11 +242,26 @@ export default function Page() {
       },
       {
         icon: <Settings className="w-4 h-4" />,
-        text: `Cordinates with ${agentData?.subnet_list?.length || 0} agent${(agentData?.subnet_list?.length === 1) ? "" : "s"}`,
+        text: `Cordinates with ${agentData?.subnet_list?.length || 0} agent${agentData?.subnet_list?.length === 1 ? "" : "s"}`,
       },
     ],
     [agentData?.is_deployed, agentData?.subnet_list?.length, formattedDate]
-  )
+  );
+
+  if (isLoading || isFetching || !isFetched) {
+    return <MarketplaceLoaderSkeleton />;
+  }
+
+  if (!agentData && isFetched && !isLoading && !isFetching) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h2 className="text-xl font-semibold">Agent Not Found</h2>
+          <p className="text-muted-foreground">The agent you're looking for doesn't exist.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -277,34 +273,36 @@ export default function Page() {
               alt="Agent"
               isVerified={agentData?.isVerified}
             />
-
             <div className="flex-1 space-y-6">
               <div className="space-y-4">
                 <div className="flex flex-col gap-3">
                   <EditableInput
-                  value={nameField.value}
-                  draft={nameField.draft}
-                  isEditing={nameField.isEditing}
-                  onChange={nameField.setDraft}
-                  onSave={nameField.saveEdit}
-                  onCancel={nameField.cancelEdit}
-                  onEdit={nameField.startEdit}
-                  className="text-4xl font-bold text-foreground tracking-tight"
-                  placeholder="Agent Name"
+                    value={nameField.value}
+                    draft={nameField.draft}
+                    isEditing={nameField.isEditing}
+                    onChange={nameField.setDraft}
+                    onSave={nameField.saveEdit}
+                    onCancel={nameField.cancelEdit}
+                    onEdit={nameField.startEdit}
+                    className="text-4xl font-bold text-foreground tracking-tight"
+                    placeholder="Agent Name"
                   />
-                  <Link href={`/marketplace/${agentAddress}`} className="text-sm text-muted-foreground flex items-center gap-1 group">
-                    <span className="group-hover:underline underline-offset-2 ">{agentData?.agent_name}</span>
+                  <Link
+                    href={`/marketplace/${agentAddress}`}
+                    className="text-sm text-muted-foreground flex items-center gap-1 group"
+                  >
+                    <span className="group-hover:underline underline-offset-2 ">
+                      {agentData?.agent_name}
+                    </span>
                     <ExternalLink className="w-4 h-4 mb-0.5" />
                   </Link>
                 </div>
-
                 <div className="flex items-center gap-6 text-sm text-muted-foreground">
                   {statusInfo.map((info, index) => (
                     <StatusInfo key={index} icon={info.icon} text={info.text} />
                   ))}
                 </div>
               </div>
-
               <div className="flex gap-x-10">
                 <AddressInfo
                   label="Collection Address"
@@ -320,7 +318,6 @@ export default function Page() {
             </div>
           </div>
         </div>
-
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label className="text-lg font-semibold text-foreground">
@@ -338,7 +335,6 @@ export default function Page() {
               </Button>
             )}
           </div>
-
           <div className="relative">
             <div className="min-h-[140px] bg-background/50 border border-border/60 rounded-xl p-6 text-base leading-relaxed">
               {descriptionField.isEditing ? (
@@ -381,5 +377,5 @@ export default function Page() {
         </div>
       </div>
     </div>
-  )
+  );
 }

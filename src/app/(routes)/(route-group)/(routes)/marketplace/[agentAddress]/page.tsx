@@ -2,7 +2,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Label } from "@/components/ui/label";
-import Image from "next/image";
 import { Clock, Activity, Settings, Zap, Copy, Rocket, X, AlertCircle } from "lucide-react";
 import { getCollectionsByAddress } from "@/controllers/collections/collections.query";
 import { useQuery } from "@tanstack/react-query";
@@ -17,6 +16,7 @@ import { ImageQuickSelect } from "@/components/common/image-select";
 import { IMAGES } from "@/constants/images";
 import { AgentImage } from "@/components/market-place/agent-image";
 import { QUERY_KEYS } from "@/utils/query-keys";
+import { MarketplaceLoaderSkeleton } from "@/components/market-place/loader-skeleton";
 
 // Types
 interface MintFormData {
@@ -42,8 +42,8 @@ const useAgentData = (agentAddress: string, skyBrowser: any, web3Auth: any) => {
       return data?.data || null;
     },
     enabled: !!agentAddress && !!skyBrowser && !!web3Auth,
-    staleTime: 30000, // Cache for 30 seconds
-    gcTime: 30000, // Keep in cache for 1 minute
+    staleTime: 30000,
+    gcTime: 30000,
     retry: 3,
   });
 };
@@ -379,12 +379,7 @@ export default function Page() {
 
   if (isLoading || isFetching || !isFetched) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-muted-foreground">Loading agent data...</p>
-        </div>
-      </div>
+      <MarketplaceLoaderSkeleton />
     );
   }
 

@@ -7,8 +7,7 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Atom, XIcon, ChevronsUpDown, Sparkles, Zap } from "lucide-react";
-import { DialogClose } from "@/components/ui/dialog";
+import { ChevronsUpDown, Sparkles, Zap } from "lucide-react";
 import React, { useState } from "react";
 import {
 	Popover,
@@ -17,20 +16,12 @@ import {
 } from "@/components/ui/popover";
 import {
 	Command,
-	CommandEmpty,
-	CommandGroup,
 	CommandInput,
-	CommandItem,
 	CommandList,
 } from "@/components/ui/command";
-import { Check } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "../ui/textarea";
 import { useWallet } from "@/hooks/use-wallet";
-import { useQuery } from "@tanstack/react-query";
 import { Label } from "../ui/label";
-import { QUERY_KEYS } from "@/utils/query-keys";
 
 interface Agent {
 	id: string;
