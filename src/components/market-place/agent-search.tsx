@@ -16,12 +16,14 @@ interface SearchAndCategoriesProps {
   onSearch: (query: string) => void;
   onCategorySelect: (category: any | "all") => void;
   isDashboard?: boolean;
+  hideCategory?: boolean;
 }
 
 export default function SearchAndCategories({
   onSearch,
   onCategorySelect,
   isDashboard = false,
+  hideCategory = false,
 }: SearchAndCategoriesProps) {
   const [selectedCategory, setSelectedCategory] = useState<any | "all">("all");
   const [searchValue, setSearchValue] = useState<string>("");
@@ -73,7 +75,7 @@ export default function SearchAndCategories({
       </div>
 
       <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
-        {categories.map((category) => (
+        {!hideCategory && categories.map((category) => (
           <Button
             key={category.id}
             onClick={() => handleCategoryClick(category.id)}

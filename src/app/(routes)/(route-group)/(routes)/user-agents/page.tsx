@@ -1,42 +1,88 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useWallet } from "@/hooks/use-wallet";
 import { getUserMintedAgents } from "@/controllers/agents/agents.query";
 import { QUERY_KEYS } from "@/utils/query-keys";
 import AgentMarketplaceCard from "@/components/market-place/agent-marketplace-card";
 import SearchAndCategories from "@/components/market-place/agent-search";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 
 export default function UserAgentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<any | "all">("all");
   const { address } = useWallet();
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const {
-    data: collections = [],
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     isLoading,
+    error,
     refetch,
-  } = useQuery({
+  } = useInfiniteQuery({
     queryKey: [QUERY_KEYS.USER_AGENTS, searchQuery, selectedCategory],
-    queryFn: async () => {
-      const data = await getUserMintedAgents({
-        address: address!,
-        search: searchQuery,
-        limit: 20,
-        offset: 0,
-        isVerified: selectedCategory === "verified" ? true : selectedCategory === "unverified" ? false : undefined,
-      });
-      return (data?.user_collections || []).map((collection: any) => ({
-        ...collection,
-      }));
+    queryFn: async ({ pageParam = 0 }) => {
+      try {
+        const data = await getUserMintedAgents({
+          address: address!,
+          search: searchQuery,
+          limit: 20,
+          offset: pageParam * 20,
+          isVerified: selectedCategory === "verified" ? true : selectedCategory === "unverified" ? false : undefined,
+        });
+        return data;
+      } catch (error) {
+        console.error('Error fetching user agents:', error);
+        throw error;
+      }
     },
+    getNextPageParam: (lastPage) => {
+      if (!lastPage) return undefined;
+      
+      const pagination = lastPage?.pagination;
+      if (pagination && pagination.hasNext) {
+        return pagination.page + 1;
+      }
+      return undefined;
+    },
+    initialPageParam: 0,
     staleTime: 30000,
     gcTime: 30000,
     retry: 3,
+    enabled: !!address,
   });
+
+  const collections = data?.pages?.flatMap(page => 
+    (page?.user_collections || []).map((collection: any) => ({
+      ...collection,
+    }))
+  ) || [];
+
+  useEffect(() => {
+    if (!hasNextPage || isFetchingNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const target = entries[0];
+        if (target.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      {
+        rootMargin: '100px',
+      }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   useEffect(() => {
     if (address) {
@@ -72,7 +118,25 @@ export default function UserAgentsPage() {
           </div>
 
           <div className="space-y-6 overflow-y-auto">
-            {isLoading ? (
+            {error ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-24 h-24 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-6">
+                  <div className="w-12 h-12 text-red-600">
+                    ⚠️
+                  </div>
+                </div>
+                <h3 className="text-xl font-semibold text-foreground mb-2">Error Loading Agents</h3>
+                <p className="text-muted-foreground mb-6">
+                  There was an error loading your agents. Please try refreshing the page.
+                </p>
+                <button
+                  onClick={() => refetch()}
+                  className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : isLoading ? (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div
@@ -106,15 +170,32 @@ export default function UserAgentsPage() {
                 </Link>
               </div>
             ) : (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {collections.map((collection) => (
-                  <AgentMarketplaceCard
-                    key={collection.id}
-                    agent={collection}
-                    isUserAgent={true}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {collections.map((collection) => (
+                    <AgentMarketplaceCard
+                      key={collection.id}
+                      agent={collection}
+                      isUserAgent={true}
+                    />
+                  ))}
+                </div>
+                
+                <div ref={loadMoreRef} className="flex justify-center py-8">
+                  {hasNextPage ? (
+                    <div
+                      onClick={() => fetchNextPage()}>
+                      {isFetchingNextPage && (
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      )}
+                    </div>
+                  ) : collections.length > 0 && (
+					<span className="text-muted-foreground text-sm">No more agents to load.</span>
+				)}
+                </div>
+              </>
             )}
           </div>
         </div>
