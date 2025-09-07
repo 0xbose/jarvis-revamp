@@ -7,6 +7,7 @@ import { Toaster } from "sonner";
 import { APP_CONFIG } from "@/config/constants";
 import QueryProviderWrapper from "@/providers/query.provider";
 import Web3ContextProvider from "@/providers/Web3ContextProvider";
+import AuthSyncInitializer from "@/components/common/auth-sync-initializer";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,15 +25,17 @@ export default function RootLayout({
 		<html lang="en">
 			<body className={inter.className} suppressHydrationWarning>
 				<QueryProviderWrapper>
-
-				<Web3AuthProvider>
-				<Web3ContextProvider>
-					<div className="min-h-screen bg-background">
-						<main className="h-full w-full">{children}</main>
-					</div>
-					<Toaster />
-				</Web3ContextProvider>	
-				</Web3AuthProvider>
+					<Web3AuthProvider>
+						<Web3ContextProvider>
+							<AuthSyncInitializer />
+							<div className="min-h-screen bg-background">
+								<main className="h-full w-full">
+									{children}
+								</main>
+							</div>
+							<Toaster />
+						</Web3ContextProvider>
+					</Web3AuthProvider>
 				</QueryProviderWrapper>
 			</body>
 		</html>

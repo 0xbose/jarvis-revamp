@@ -201,6 +201,11 @@ export class ApiKeyManager {
 				"expires at:",
 				new Date(dataWithExpiration.expiresAt).toLocaleString()
 			);
+
+			// Trigger auth sync event
+			if (typeof window !== "undefined") {
+				window.dispatchEvent(new CustomEvent("api-key-updated"));
+			}
 		} catch (error) {
 			console.error("Failed to store API key data:", error);
 		}
@@ -217,6 +222,11 @@ export class ApiKeyManager {
 			const storageKey = `${API_KEY_CONFIG.STORAGE_KEY}_${normalizedAddress}`;
 			localStorage.removeItem(storageKey);
 			console.log("🔑 Cleared API key for address:", normalizedAddress);
+
+			// Trigger auth sync event
+			if (typeof window !== "undefined") {
+				window.dispatchEvent(new CustomEvent("api-key-updated"));
+			}
 		} else {
 			// Clear all cache
 			this.cachedApiKey = null;
@@ -233,6 +243,11 @@ export class ApiKeyManager {
 
 			keysToRemove.forEach((key) => localStorage.removeItem(key));
 			console.log("🔑 Cleared all API keys");
+
+			// Trigger auth sync event
+			if (typeof window !== "undefined") {
+				window.dispatchEvent(new CustomEvent("api-key-updated"));
+			}
 		}
 	}
 }

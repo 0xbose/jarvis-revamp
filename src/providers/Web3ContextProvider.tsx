@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Address } from "viem";
 import { useWeb3AuthSafe } from "@/providers/Web3AuthProvider";
 import { Web3RPC } from "@/utils/rpc/web3RPC";
+import { authSync } from "@/utils/auth-sync";
 
 export interface IWeb3State {
 	address: string;
@@ -71,9 +72,13 @@ export function isConnectedState(
 
 const Web3ContextProvider = ({ children }: { children: React.ReactNode }) => {
 	const router = useRouter();
-	
+
 	// Use the safe hook that handles SSR gracefully
-	const { provider, logout: web3Logout, connect: web3Login } = useWeb3AuthSafe();
+	const {
+		provider,
+		logout: web3Logout,
+		connect: web3Login,
+	} = useWeb3AuthSafe();
 
 	// Create a ref for the functions to avoid circular dependency
 	const loginRef = useRef(async () => {});
@@ -109,6 +114,9 @@ const Web3ContextProvider = ({ children }: { children: React.ReactNode }) => {
 				address,
 				isAuthenticated: true,
 			}));
+
+			// Sync auth state to cookies for middleware
+			authSync.syncAuthToCookies();
 		} catch (err: unknown) {
 			const error = err as Error;
 			setConnectState((prev) => ({
@@ -137,6 +145,10 @@ const Web3ContextProvider = ({ children }: { children: React.ReactNode }) => {
 				status: CONNECT_STATES.IDLE,
 				isAuthenticated: false,
 			}));
+
+			// Clear auth cookies for middleware
+			authSync.clearAuthCookies();
+
 			router.push("/");
 		} catch (error) {
 			console.error("Logout failed:", error);
@@ -170,6 +182,9 @@ const Web3ContextProvider = ({ children }: { children: React.ReactNode }) => {
 					login: async () => loginRef.current(),
 					logout: async () => logoutRef.current(),
 				});
+
+				// Sync auth state to cookies for middleware
+				authSync.syncAuthToCookies();
 			} catch (error) {
 				console.error("Failed to initialize user:", error);
 			}
