@@ -1,6 +1,7 @@
 import { CHAIN_NAMESPACES, WEB3AUTH_NETWORK } from "@web3auth/base";
 import { Web3AuthOptions } from "@web3auth/modal";
 import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
+import { NETWORK_CONFIG } from "./constants";
 
 export type ChainType = "mainnet";
 
@@ -13,8 +14,6 @@ interface ChainConfig {
 	tickerName: string;
 }
 
-import { NETWORK_CONFIG } from "./constants";
-
 // Chain configuration for Skynet
 const CHAIN_CONFIG: ChainConfig = {
 	chainId: NETWORK_CONFIG.SKYNET.CHAIN_ID_HEX,
@@ -25,7 +24,7 @@ const CHAIN_CONFIG: ChainConfig = {
 	tickerName: NETWORK_CONFIG.SKYNET.TICKER_NAME,
 };
 
-const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID || "";
+const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID;
 
 // EVM Chain Config
 const chainConfig = {
@@ -33,7 +32,7 @@ const chainConfig = {
 	...CHAIN_CONFIG,
 };
 
-// Web3Auth Options with adapter settings to prevent MetaMask conflicts
+// Web3Auth Options
 const web3AuthOptions: Web3AuthOptions = {
 	clientId: clientId || "", // Fallback client ID
 	web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_MAINNET,
@@ -41,17 +40,32 @@ const web3AuthOptions: Web3AuthOptions = {
 	privateKeyProvider: new EthereumPrivateKeyProvider({
 		config: { chainConfig },
 	}),
-	// Add adapter settings to prevent conflicts with MetaMask
-	adapterSettings: {
-		// Disable automatic provider injection to prevent conflicts
-		enableLogging: false,
-		// Use a custom provider name to avoid conflicts
-		providerName: "Web3Auth",
+	// UI Configuration (simplified for base plan)
+	uiConfig: {
+		loginMethodsOrder: [
+			"google",
+			"facebook",
+			"twitter",
+			"reddit",
+			"discord",
+			"twitch",
+			"apple",
+			"line",
+			"github",
+			"kakao",
+			"linkedin",
+			"weibo",
+			"wechat",
+			"email_passwordless",
+		],
+		defaultLanguage: "en",
+		loginGridCol: 3,
+		primaryButton: "externalLogin",
 	},
-	// Disable automatic chain switching to prevent conflicts
-	enableLogging: false,
-	// Add session management to prevent provider conflicts
-	sessionTime: 24 * 60 * 60, // 24 hours
+	// Session Management
+	sessionTime: 86400, // 24 hours
+	// Additional Configuration for better error handling
+	enableLogging: true,
 };
 
 export const web3AuthConfig = {

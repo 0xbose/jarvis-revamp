@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
+import createMDX from "@next/mdx";
 
 const nextConfig: NextConfig = {
+	// Enable standalone output for Docker
+	output: "standalone",
 	webpack: (config, { isServer }) => {
 		// Enable WebAssembly support
 		config.experiments = {
@@ -38,9 +41,8 @@ const nextConfig: NextConfig = {
 	},
 	// Enable experimental features
 	experimental: {
-		// Removed esmExternals as it's not recommended
+		esmExternals: "loose",
 	},
-	// Configure images to allow base64 data URLs
 	images: {
 		remotePatterns: [
 			{
@@ -50,26 +52,13 @@ const nextConfig: NextConfig = {
 		],
 		unoptimized: true,
 	},
-	// Add error handling for client-side exceptions
-	onDemandEntries: {
-		// Period (in ms) where the server will keep pages in the buffer
-		maxInactiveAge: 25 * 1000,
-		// Number of pages that should be kept simultaneously without being disposed
-		pagesBufferLength: 2,
-	},
-	// Handle client-side errors gracefully
-	typescript: {
-		// !! WARN !!
-		// Dangerously allow production builds to successfully complete even if
-		// your project has type errors.
-		// !! WARN !!
-		ignoreBuildErrors: true,
-	},
-	eslint: {
-		// Warning: This allows production builds to successfully complete even if
-		// your project has ESLint errors.
-		ignoreDuringBuilds: true,
-	},
+	// Configure pageExtensions to include md and mdx files
+	pageExtensions: ["js", "jsx", "md", "mdx", "ts", "tsx"],
 };
 
-export default nextConfig;
+// Merge MDX config with Next.js config
+const withMDX = createMDX({
+	// Add markdown plugins here, as desired
+});
+
+export default withMDX(nextConfig);

@@ -1,4 +1,30 @@
+/* eslint-disable */
+
 import { AgentResponse } from "@/types/chat";
+
+// Helper function to check if URL needs proxying
+const needsProxying = (url: string): boolean => {
+	if (typeof window === "undefined") {
+		// Server-side: check if it's an external domain that needs proxying
+		try {
+			const urlObj = new URL(url);
+			const externalDomains = [
+				"redisagent-c0n639.stackos.io",
+				"stackos.io",
+			];
+			return externalDomains.some(
+				(domain) =>
+					urlObj.hostname === domain ||
+					urlObj.hostname.endsWith(`.${domain}`)
+			);
+		} catch {
+			return false;
+		}
+	} else {
+		// Client-side: check if it's external to current origin
+		return url.startsWith("http") && !url.includes(window.location.origin);
+	}
+};
 
 export const createContentHash = (data: any): string => {
 	if (!data) return "";
@@ -14,86 +40,52 @@ export const parseAgentResponse = (subnetData: string): AgentResponse => {
 	try {
 		const parsed = JSON.parse(subnetData);
 
-		if (parsed?.contentType) {
-			const contentType = parsed.contentType.toLowerCase();
+		// Handle fileUrl format (imagegen, etc.)
+		if (parsed?.fileUrl && typeof parsed.fileUrl === "string") {
+			const contentType = parsed.contentType || "image/jpeg";
+
+			let imageUrl = parsed.fileUrl;
+
+			// Check if this is an external URL that needs proxying
+			if (needsProxying(imageUrl)) {
+				// Use our proxy API to bypass CORS issues
+				imageUrl = `/api/image/proxy?url=${encodeURIComponent(
+					imageUrl
+				)}`;
+			}
 
 			if (contentType.startsWith("image/")) {
-				let imageData = "";
-
-				if (parsed?.fileData && typeof parsed.fileData === "string") {
-					imageData = parsed.fileData;
-				} else if (parsed?.data && typeof parsed.data === "string") {
-					imageData = parsed.data;
-				}
-
-				if (imageData) {
-					return {
-						content: `${contentType
-							.split("/")[1]
-							.toUpperCase()} image generated successfully`,
-						imageData: imageData,
-						isImage: true,
-						contentType: contentType,
-					};
-				}
-			} else if (
-				contentType.startsWith("application/") ||
-				contentType.startsWith("text/")
-			) {
-				let fileData = "";
-
-				if (parsed?.fileData && typeof parsed.fileData === "string") {
-					fileData = parsed.fileData;
-				} else if (parsed?.data && typeof parsed.data === "string") {
-					fileData = parsed.data;
-				}
-
-				if (fileData) {
-					return {
-						content: `${contentType} file generated successfully`,
-						imageData: fileData,
-						isImage: false,
-						contentType: contentType,
-					};
-				}
+				return {
+					content: `${contentType
+						.split("/")[1]
+						.toUpperCase()} image generated successfully`,
+					imageData: imageUrl,
+					isImage: true,
+					contentType: contentType,
+				};
+			} else {
+				return {
+					content: `${contentType} file generated successfully`,
+					imageData: imageUrl,
+					isImage: false,
+					contentType: contentType,
+				};
 			}
 		}
 
 		if (
-			parsed?.data &&
-			typeof parsed.data === "string" &&
-			parsed.data.startsWith("/9j/")
+			parsed?.data?.data?.ipfsLinks &&
+			typeof parsed.data.data.ipfsLinks === "string"
 		) {
+			// Extract the message content from IPFS response
+			const message =
+				parsed.data?.message || "File uploaded to IPFS successfully";
 			return {
-				content: "JPEG image generated successfully",
-				imageData: parsed.data,
-				isImage: true,
-				contentType: "image/jpeg",
+				content: message,
 			};
 		}
 
-		if (parsed?.fileData && typeof parsed.fileData === "string") {
-			if (parsed.fileData.startsWith("/9j/")) {
-				return {
-					content: "JPEG image generated successfully",
-					imageData: parsed.fileData,
-					isImage: true,
-					contentType: "image/jpeg",
-				};
-			} else if (parsed.fileData.startsWith("data:image/")) {
-				const mimeType =
-					parsed.fileData.match(/data:(.*?);/)?.[1] || "image/jpeg";
-				return {
-					content: `${mimeType
-						.split("/")[1]
-						.toUpperCase()} image generated successfully`,
-					imageData: parsed.fileData,
-					isImage: true,
-					contentType: mimeType,
-				};
-			}
-		}
-
+		// Handle text responses
 		if (parsed?.data?.data?.choices?.[0]?.message?.content) {
 			return { content: parsed.data.data.choices[0].message.content };
 		}

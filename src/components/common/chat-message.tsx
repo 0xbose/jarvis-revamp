@@ -1,6 +1,5 @@
 "use client";
 
-import { base64ToDataUrl } from "@/lib/utils";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import {
@@ -88,11 +87,13 @@ export function ChatMessage({
 	onRetrySubnet,
 	retryingSubnetIndex,
 }: ChatMessageProps) {
-	
 	// Debug logging for retry functionality
-	if (message.subnetStatus === "failed" || 
+	if (
+		message.subnetStatus === "failed" ||
 		(message.content && message.content.toLowerCase().includes("failed")) ||
-		(message.content && message.content.toLowerCase().includes("retry subnet execution"))) {
+		(message.content &&
+			message.content.toLowerCase().includes("retry subnet execution"))
+	) {
 		console.log("🔍 ChatMessage received for retry-eligible message:", {
 			id: message.id,
 			type: message.type,
@@ -100,13 +101,17 @@ export function ChatMessage({
 			subnetIndex: message.subnetIndex,
 			toolName: message.toolName,
 			onRetrySubnet: !!onRetrySubnet,
-			isFeedbackHistoryRetry: message.content?.toLowerCase().includes("retry subnet execution"),
-			content: message.content?.slice(0, 100)
+			isFeedbackHistoryRetry: message.content
+				?.toLowerCase()
+				.includes("retry subnet execution"),
+			content: message.content?.slice(0, 100),
 		});
 	}
 	// Create unique state keys based on message ID and workflow context to prevent state mixing
-	const messageStateKey = `${message.id}_${message.sourceId || message.toolName || 'default'}`;
-	
+	const messageStateKey = `${message.id}_${
+		message.sourceId || message.toolName || "default"
+	}`;
+
 	const [showFeedbackInput, setShowFeedbackInput] = useState(false);
 	const [feedbackText, setFeedbackText] = useState("");
 	const [hideAuthButton, setHideAuthButton] = useState(false);
@@ -189,10 +194,14 @@ export function ChatMessage({
 
 	const isWorkflowActivelyExecuting = () => {
 		// Don't consider workflow as executing if it's completed, failed, or stopped
-		if (workflowStatus === "completed" || workflowStatus === "failed" || workflowStatus === "stopped") {
+		if (
+			workflowStatus === "completed" ||
+			workflowStatus === "failed" ||
+			workflowStatus === "stopped"
+		) {
 			return false;
 		}
-		
+
 		return (
 			workflowStatus === "running" ||
 			workflowStatus === "in_progress" ||
@@ -263,17 +272,20 @@ export function ChatMessage({
 			message.type === "question" &&
 			message.questionData?.type === "feedback"
 		) {
-			console.log(`🔍 shouldHideFeedbackButtons for feedback question (agent: ${message.toolName}):`, {
-				messageId: message.id,
-				toolName: message.toolName,
-				sourceId: message.sourceId,
-				hideFeedbackButtons,
-				feedbackProcessed,
-				workflowStatus,
-				questionText: message.questionData?.text?.slice(0, 30),
-				finalResult: hideFeedbackButtons // Only hide if explicitly set to hide
-			});
-			
+			console.log(
+				`🔍 shouldHideFeedbackButtons for feedback question (agent: ${message.toolName}):`,
+				{
+					messageId: message.id,
+					toolName: message.toolName,
+					sourceId: message.sourceId,
+					hideFeedbackButtons,
+					feedbackProcessed,
+					workflowStatus,
+					questionText: message.questionData?.text?.slice(0, 30),
+					finalResult: hideFeedbackButtons, // Only hide if explicitly set to hide
+				}
+			);
+
 			return hideFeedbackButtons; // Only hide if explicitly set to hide, ignore interactive elements logic
 		}
 
@@ -288,12 +300,23 @@ export function ChatMessage({
 	// Reset button states when workflow completes or is no longer actively executing
 	useEffect(() => {
 		if (!isWorkflowActivelyExecuting()) {
-			console.log("🔄 Workflow no longer executing for agent:", message.toolName, "message:", message.id, "resetting button states");
+			console.log(
+				"🔄 Workflow no longer executing for agent:",
+				message.toolName,
+				"message:",
+				message.id,
+				"resetting button states"
+			);
 			setClickedButtonType(null);
 			setIsButtonPending(false);
 			// When workflow completes, hide the buttons that were interacted with
 			if (clickedButtonType) {
-				console.log("🔄 Hiding buttons based on clicked type:", clickedButtonType, "for agent:", message.toolName);
+				console.log(
+					"🔄 Hiding buttons based on clicked type:",
+					clickedButtonType,
+					"for agent:",
+					message.toolName
+				);
 				if (clickedButtonType.includes("notification")) {
 					setHideNotificationButtons(true);
 				}
@@ -330,16 +353,24 @@ export function ChatMessage({
 
 	// Debug logging for retry button
 	useEffect(() => {
-		if (message.subnetStatus === "failed" && message.type === "workflow_subnet") {
+		if (
+			message.subnetStatus === "failed" &&
+			message.type === "workflow_subnet"
+		) {
 			console.log("🔍 Debug retry button conditions:", {
 				subnetStatus: message.subnetStatus,
 				type: message.type,
 				toolName: message.toolName,
 				subnetIndex: message.subnetIndex,
-				shouldShow: true
+				shouldShow: true,
 			});
 		}
-	}, [message.subnetStatus, message.type, message.toolName, message.subnetIndex]);
+	}, [
+		message.subnetStatus,
+		message.type,
+		message.toolName,
+		message.subnetIndex,
+	]);
 
 	if (message.type === "user") {
 		return (
@@ -352,47 +383,40 @@ export function ChatMessage({
 						<div className="mt-3">
 							{message.isImage ? (
 								<div className="relative w-fit ">
-								<Image
-									src={base64ToDataUrl(
-										message.imageData,
-										message.contentType || "image/jpeg"
-									)}
-									alt="Generated image"
-									width={400}
-									height={400}
-									className="rounded-lg border border-border max-w-fit h-auto"
-									onError={(e) => {
-										console.error(
-											"Failed to load image:",
-											e
-										);
-									}}
-									/>
-								<div className="absolute top-2 right-2">
-									<Button
-										size="icon"
-										className="p-1 bg-background/80"
-										onClick={() => {
-											const link =
-												document.createElement("a");
-											link.href = base64ToDataUrl(
-												message.imageData!,
-												message.contentType ||
-													"image/jpeg"
+									<Image
+										src={message.imageData}
+										alt="Generated image"
+										width={400}
+										height={400}
+										className="rounded-lg border border-border max-w-fit h-auto"
+										onError={(e) => {
+											console.error(
+												"Failed to load image:",
+												e
 											);
-											link.download =
-												"generated_image." +
-												((message.contentType &&
-													message.contentType.split(
-														"/"
-													)[1]) ||
-													"jpg");
-											link.click();
 										}}
-									>
-										<DownloadIcon className="w-3 h-3 text-foreground" />
-									</Button>
-								</div>
+									/>
+									<div className="absolute top-2 right-2">
+										<Button
+											size="icon"
+											className="p-1 bg-background/80"
+											onClick={() => {
+												const link =
+													document.createElement("a");
+												link.href = message.imageData!;
+												link.download =
+													"generated_image." +
+													((message.contentType &&
+														message.contentType.split(
+															"/"
+														)[1]) ||
+														"jpg");
+												link.click();
+											}}
+										>
+											<DownloadIcon className="w-3 h-3 text-foreground" />
+										</Button>
+									</div>
 								</div>
 							) : (
 								<div className="p-4 border border-border rounded-lg bg-muted/20">
@@ -430,11 +454,7 @@ export function ChatMessage({
 											onClick={() => {
 												const link =
 													document.createElement("a");
-												link.href = base64ToDataUrl(
-													message.imageData!,
-													message.contentType ||
-														"application/octet-stream"
-												);
+												link.href = message.imageData!;
 												link.download = `generated_file.${
 													message.contentType?.split(
 														"/"
@@ -472,9 +492,8 @@ export function ChatMessage({
 							) : (
 								convertUrlsToLinks(message.content)
 							)}
-
 						</div>
-						
+
 						{/* Interactive Elements Section - Moved to Bottom */}
 						{isPendingNotification &&
 							onNotificationYes &&
@@ -486,17 +505,25 @@ export function ChatMessage({
 											if (shouldDisableButtons()) return;
 
 											if (isWorkflowActivelyExecuting()) {
-												setClickedButtonType("notification-yes");
+												setClickedButtonType(
+													"notification-yes"
+												);
 												setIsButtonPending(true);
 											} else {
-												setHideNotificationButtons(true);
+												setHideNotificationButtons(
+													true
+												);
 											}
 
 											onNotificationYes(message);
 										}}
 										variant="outline"
 										size="sm"
-										disabled={shouldDisableButtons() && clickedButtonType !== "notification-yes"}
+										disabled={
+											shouldDisableButtons() &&
+											clickedButtonType !==
+												"notification-yes"
+										}
 										className={getButtonClassName(
 											"flex items-center gap-2 text-green-500 hover:text-green-400 bg-green-950/60 hover:bg-green-950/70 border border-green-800/50 hover:border-green-800/70",
 											"notification-yes"
@@ -509,19 +536,26 @@ export function ChatMessage({
 										onClick={() => {
 											if (shouldDisableButtons()) return;
 
-
 											if (isWorkflowActivelyExecuting()) {
-												setClickedButtonType("notification-no");
+												setClickedButtonType(
+													"notification-no"
+												);
 												setIsButtonPending(true);
 											} else {
-												setHideNotificationButtons(true);
+												setHideNotificationButtons(
+													true
+												);
 											}
 
 											onNotificationNo(message);
 										}}
 										variant="outline"
 										size="sm"
-										disabled={shouldDisableButtons() && clickedButtonType !== "notification-no"}
+										disabled={
+											shouldDisableButtons() &&
+											clickedButtonType !==
+												"notification-no"
+										}
 										className={getButtonClassName(
 											"flex items-center gap-2 text-red-500 hover:text-red-400 bg-red-950/60 hover:bg-red-950/70 border border-red-800/50 hover:border-red-800/70",
 											"notification-no"
@@ -532,8 +566,8 @@ export function ChatMessage({
 									</Button>
 								</div>
 							)}
+					</div>
 				</div>
-			</div>
 			</div>
 		);
 	}
@@ -546,7 +580,6 @@ export function ChatMessage({
 				<div className="flex-1 min-w-0 p-4 w-fit flex justify-start">
 					<div className="flex justify-center items-start gap-3 flex-row w-fit">
 						<div className="flex-shrink-0 size-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
-
 							{isAuthentication ? (
 								<LucideCircleQuestionMark className="size-5 text-primary" />
 							) : (
@@ -570,284 +603,537 @@ export function ChatMessage({
 							{/* Interactive Elements Section - Moved to Bottom */}
 							<div className="mt-4 space-y-3">
 								{/* Feedback buttons */}
-								{showFeedbackButtons && !shouldHideFeedbackButtons() && (
-									<div className="p-3 border border-border bg-background/15 rounded-lg">
-										{!showFeedbackInput ? (
-											<div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-												<Button
-													onClick={async () => {
-														if (shouldDisableButtons()) return;
-
-														console.log("💬 Feedback proceed clicked for agent:", message.toolName, "message:", message.id);
-
-														if (isWorkflowActivelyExecuting()) {
-															setClickedButtonType("feedback-proceed");
-															setIsButtonPending(true);
-														}
-
-														setFeedbackProcessed(true);
-
-														try {
-															if (onFeedbackProceed && message.questionData?.text) {
-																console.log("💬 Calling onFeedbackProceed for agent:", message.toolName, "with question:", message.questionData.text);
-																await onFeedbackProceed(
-																	message.questionData.text,
-																	"Yes, proceed"
-																);
-															}
-														} catch (error) {
-															console.error("💬 Error proceeding with feedback for agent:", message.toolName, error);
-															setFeedbackProcessed(false);
-															setClickedButtonType(null);
-															setIsButtonPending(false);
-														}
-													}}
-													variant="outline"
-													size="sm"
-													disabled={shouldDisableButtons() && clickedButtonType !== "feedback-proceed"}
-													className={getButtonClassName(
-														"flex-1 sm:flex-initial flex items-center justify-center gap-2 h-9 px-4 text-green-400 hover:text-green-300 bg-green-950/40 hover:bg-green-950/60 border-green-800/40 hover:border-green-700/60 transition-all duration-200",
-														"feedback-proceed"
-													)}
-												>
-													<Check className="w-4 h-4" />
-													Yes, proceed
-												</Button>
-												<Button
-													onClick={() => {
-														if (shouldDisableButtons()) return;
-														setShowFeedbackInput(true);
-													}}
-													variant="outline"
-													size="sm"
-													disabled={shouldDisableButtons() && clickedButtonType !== "feedback-input"}
-													className={getButtonClassName(
-														"flex-1 sm:flex-initial flex items-center justify-center gap-2 h-9 px-4 text-blue-400 hover:text-blue-300 bg-blue-950/40 hover:bg-blue-950/60 border-blue-800/40 hover:border-blue-700/60 transition-all duration-200",
-														"feedback-input"
-													)}
-												>
-													<MessageSquare className="w-4 h-4" />
-													Provide feedback
-												</Button>
-											</div>
-										) : (
-											<div className="space-y-3">
-												<div>
-													<Input
-														value={feedbackText}
-														onChange={(e) => setFeedbackText(e.target.value)}
-														placeholder="Type your feedback here..."
-														className="w-full h-10 border border-border placeholder:text-muted-foreground text-muted-foreground"
-														onKeyDown={(e) => {
-															if (e.key === 'Enter' && !e.shiftKey && feedbackText.trim()) {
-																e.preventDefault();
-																const submitButton = e.currentTarget.parentElement?.nextElementSibling?.querySelector('button:last-child') as HTMLButtonElement;
-																submitButton?.click();
-															}
-														}}
-													/>
-												</div>
-												<div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
-													<Button
-														onClick={() => {
-															setShowFeedbackInput(false);
-															setFeedbackText("");
-															setClickedButtonType(null);
-															setIsButtonPending(false);
-														}}
-														variant="outline"
-														size="sm"
-														disabled={shouldDisableButtons() && clickedButtonType !== "feedback-cancel"}
-														className={getButtonClassName(
-															"flex-1 sm:flex-initial h-9 px-4 text-muted-foreground hover:text-muted-foreground/80 bg-background/10 hover:bg-background/20 border border-border hover:border-border/70 transition-all duration-200",
-															"feedback-cancel"
-														)}
-													>
-														Cancel
-													</Button>
+								{showFeedbackButtons &&
+									!shouldHideFeedbackButtons() && (
+										<div className="p-3 border border-border bg-background/15 rounded-lg">
+											{!showFeedbackInput ? (
+												<div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
 													<Button
 														onClick={async () => {
-															if (!feedbackText.trim()) return;
-															if (isButtonPending && clickedButtonType !== "feedback-submit") return;
+															if (
+																shouldDisableButtons()
+															)
+																return;
 
-															console.log("💬 Feedback submit clicked for agent:", message.toolName, "message:", message.id, "feedback:", feedbackText.trim());
+															console.log(
+																"💬 Feedback proceed clicked for agent:",
+																message.toolName,
+																"message:",
+																message.id
+															);
+
+															if (
+																isWorkflowActivelyExecuting()
+															) {
+																setClickedButtonType(
+																	"feedback-proceed"
+																);
+																setIsButtonPending(
+																	true
+																);
+															}
+
+															setFeedbackProcessed(
+																true
+															);
 
 															try {
-																if (isWorkflowActivelyExecuting()) {
-																	setClickedButtonType("feedback-submit");
-																	setIsButtonPending(true);
-																}
-
-																setFeedbackProcessed(true);
-
-																if (onFeedbackSubmit && message.questionData?.text) {
-																	console.log("💬 Calling onFeedbackSubmit for agent:", message.toolName, "with feedback:", feedbackText.trim());
-																	await onFeedbackSubmit(
-																		message.questionData.text,
-																		"User feedback",
-																		feedbackText.trim()
+																if (
+																	onFeedbackProceed &&
+																	message
+																		.questionData
+																		?.text
+																) {
+																	console.log(
+																		"💬 Calling onFeedbackProceed for agent:",
+																		message.toolName,
+																		"with question:",
+																		message
+																			.questionData
+																			.text
 																	);
-
-																	setFeedbackText("");
-																	setShowFeedbackInput(false);
+																	await onFeedbackProceed(
+																		message
+																			.questionData
+																			.text,
+																		"Yes, proceed"
+																	);
 																}
 															} catch (error) {
-																console.error("💬 Error submitting feedback for agent:", message.toolName, error);
-																setFeedbackProcessed(false);
-															} finally {
-																setClickedButtonType(null);
-																setIsButtonPending(false);
+																console.error(
+																	"💬 Error proceeding with feedback for agent:",
+																	message.toolName,
+																	error
+																);
+																setFeedbackProcessed(
+																	false
+																);
+																setClickedButtonType(
+																	null
+																);
+																setIsButtonPending(
+																	false
+																);
 															}
 														}}
 														variant="outline"
 														size="sm"
-														disabled={!feedbackText.trim() || (isButtonPending && clickedButtonType !== "feedback-submit")}
+														disabled={
+															shouldDisableButtons() &&
+															clickedButtonType !==
+																"feedback-proceed"
+														}
 														className={getButtonClassName(
-															"flex-1 sm:flex-initial flex items-center justify-center gap-2 h-9 px-4 text-blue-400 hover:text-blue-300 bg-blue-950/40 hover:bg-blue-950/60 border-blue-800/40 hover:border-blue-700/60 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200",
-															"feedback-submit"
+															"flex-1 sm:flex-initial flex items-center justify-center gap-2 h-9 px-4 text-green-400 hover:text-green-300 bg-green-950/40 hover:bg-green-950/60 border-green-800/40 hover:border-green-700/60 transition-all duration-200",
+															"feedback-proceed"
+														)}
+													>
+														<Check className="w-4 h-4" />
+														Yes, proceed
+													</Button>
+													<Button
+														onClick={() => {
+															if (
+																shouldDisableButtons()
+															)
+																return;
+															setShowFeedbackInput(
+																true
+															);
+														}}
+														variant="outline"
+														size="sm"
+														disabled={
+															shouldDisableButtons() &&
+															clickedButtonType !==
+																"feedback-input"
+														}
+														className={getButtonClassName(
+															"flex-1 sm:flex-initial flex items-center justify-center gap-2 h-9 px-4 text-blue-400 hover:text-blue-300 bg-blue-950/40 hover:bg-blue-950/60 border-blue-800/40 hover:border-blue-700/60 transition-all duration-200",
+															"feedback-input"
 														)}
 													>
 														<MessageSquare className="w-4 h-4" />
-														Submit
+														Provide feedback
 													</Button>
 												</div>
-											</div>
-										)}
-									</div>
-								)}
+											) : (
+												<div className="space-y-3">
+													<div>
+														<Input
+															value={feedbackText}
+															onChange={(e) =>
+																setFeedbackText(
+																	e.target
+																		.value
+																)
+															}
+															placeholder="Type your feedback here..."
+															className="w-full h-10 border border-border placeholder:text-muted-foreground text-muted-foreground"
+															onKeyDown={(e) => {
+																if (
+																	e.key ===
+																		"Enter" &&
+																	!e.shiftKey &&
+																	feedbackText.trim()
+																) {
+																	e.preventDefault();
+																	const submitButton =
+																		e.currentTarget.parentElement?.nextElementSibling?.querySelector(
+																			"button:last-child"
+																		) as HTMLButtonElement;
+																	submitButton?.click();
+																}
+															}}
+														/>
+													</div>
+													<div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+														<Button
+															onClick={() => {
+																setShowFeedbackInput(
+																	false
+																);
+																setFeedbackText(
+																	""
+																);
+																setClickedButtonType(
+																	null
+																);
+																setIsButtonPending(
+																	false
+																);
+															}}
+															variant="outline"
+															size="sm"
+															disabled={
+																shouldDisableButtons() &&
+																clickedButtonType !==
+																	"feedback-cancel"
+															}
+															className={getButtonClassName(
+																"flex-1 sm:flex-initial h-9 px-4 text-muted-foreground hover:text-muted-foreground/80 bg-background/10 hover:bg-background/20 border border-border hover:border-border/70 transition-all duration-200",
+																"feedback-cancel"
+															)}
+														>
+															Cancel
+														</Button>
+														<Button
+															onClick={async () => {
+																if (
+																	!feedbackText.trim()
+																)
+																	return;
+																if (
+																	isButtonPending &&
+																	clickedButtonType !==
+																		"feedback-submit"
+																)
+																	return;
+
+																console.log(
+																	"💬 Feedback submit clicked for agent:",
+																	message.toolName,
+																	"message:",
+																	message.id,
+																	"feedback:",
+																	feedbackText.trim()
+																);
+
+																try {
+																	if (
+																		isWorkflowActivelyExecuting()
+																	) {
+																		setClickedButtonType(
+																			"feedback-submit"
+																		);
+																		setIsButtonPending(
+																			true
+																		);
+																	}
+
+																	setFeedbackProcessed(
+																		true
+																	);
+
+																	if (
+																		onFeedbackSubmit &&
+																		message
+																			.questionData
+																			?.text
+																	) {
+																		console.log(
+																			"💬 Calling onFeedbackSubmit for agent:",
+																			message.toolName,
+																			"with feedback:",
+																			feedbackText.trim()
+																		);
+																		await onFeedbackSubmit(
+																			message
+																				.questionData
+																				.text,
+																			"User feedback",
+																			feedbackText.trim()
+																		);
+
+																		setFeedbackText(
+																			""
+																		);
+																		setShowFeedbackInput(
+																			false
+																		);
+																	}
+																} catch (error) {
+																	console.error(
+																		"💬 Error submitting feedback for agent:",
+																		message.toolName,
+																		error
+																	);
+																	setFeedbackProcessed(
+																		false
+																	);
+																} finally {
+																	setClickedButtonType(
+																		null
+																	);
+																	setIsButtonPending(
+																		false
+																	);
+																}
+															}}
+															variant="outline"
+															size="sm"
+															disabled={
+																!feedbackText.trim() ||
+																(isButtonPending &&
+																	clickedButtonType !==
+																		"feedback-submit")
+															}
+															className={getButtonClassName(
+																"flex-1 sm:flex-initial flex items-center justify-center gap-2 h-9 px-4 text-blue-400 hover:text-blue-300 bg-blue-950/40 hover:bg-blue-950/60 border-blue-800/40 hover:border-blue-700/60 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200",
+																"feedback-submit"
+															)}
+														>
+															<MessageSquare className="w-4 h-4" />
+															Submit
+														</Button>
+													</div>
+												</div>
+											)}
+										</div>
+									)}
 
 								{/* Authentication button */}
-								{isAuthentication && !shouldHideAuthButton() && (
-									<div className="space-y-2">
-										<Button
-											onClick={() => {
-												if (shouldDisableButtons()) return;
-
-												if (isWorkflowActivelyExecuting()) {
-													console.log("🔐 Setting authenticate button state for agent:", message.toolName, "message:", message.id);
-													setClickedButtonType("authenticate");
-													setIsButtonPending(true);
-												}
-
-												const authUrl = message.questionData?.authUrl;
-												
-												if (authUrl) {
-													console.log("🔐 Opening auth URL from questionData for agent:", message.toolName, "URL:", authUrl);
-													window.open(authUrl, "_blank", "noopener,noreferrer");
-												} else {
-													console.log("🔐 No authUrl in questionData for agent:", message.toolName, "falling back to text parsing");
-													
-													const questionText = message.questionData?.text || message.content;
-													const urlMatch = questionText.match(/https?:\/\/[^\s]+/);
-													if (urlMatch) {
-														console.log("🔐 Found URL in text for agent:", message.toolName, "URL:", urlMatch[0]);
-														window.open(urlMatch[0], "_blank", "noopener,noreferrer");
-													} else {
-														console.log("🔐 No URL found in text content for agent:", message.toolName);
-													}
-												}
-
-												console.log("🔐 Setting showAuthConfirmation to true for agent:", message.toolName, "message:", message.id);
-												setShowAuthConfirmation(true);
-												if (!isWorkflowActivelyExecuting()) {
-													setHideAuthButton(true);
-												}
-											}}
-											variant="outline"
-											size="sm"
-											disabled={shouldDisableButtons() && clickedButtonType !== "authenticate"}
-											className={getButtonClassName(
-												"flex items-center gap-2 text-foreground hover:text-foreground/80 bg-background/10 hover:bg-background/20 border border-border hover:border-border/70",
-												"authenticate"
-											)}
-										>
-											<ExternalLinkIcon className="w-4 h-4" />
-											Authenticate
-										</Button>
-									</div>
-								)}
-
-								{/* Authentication Confirmation UI */}
-								{showAuthConfirmation && message.questionData?.type === "authentication" && (
-									<div className="space-y-3 p-3 border border-border/50 rounded-lg bg-background/30">
-										<div className="flex items-center gap-2 text-foreground mb-2">
-											<AlertCircle className="w-4 h-4" />
-											<span className="text-sm font-medium">
-												Authentication Required
-											</span>
-											{message.toolName && (
-												<span className="text-xs text-gray-400 bg-gray-800/50 px-2 py-1 rounded">
-													{message.toolName}
-												</span>
-											)}
-										</div>
-										<p className="text-gray-300 text-sm mb-3">
-											Have you completed the authentication process in the new tab?
-										</p>
-										<div className="flex gap-3">
-											<Button
-												onClick={async () => {
-													console.log("🔐 Yes, Authenticated button clicked for agent:", message.toolName, "message:", message.id);
-													
-													if (isWorkflowActivelyExecuting()) {
-														console.log("🔐 Setting auth-confirm button state for:", messageStateKey);
-														setClickedButtonType("auth-confirm");
-														setIsButtonPending(true);
-													}
-
-													setShowAuthConfirmation(false);
-
-													if (onFeedbackProceed && message.questionData?.text) {
-														console.log("🔐 Calling onFeedbackProceed for agent:", message.toolName, "with:", {
-															question: message.questionData.text,
-															answer: "Yes, I have authenticated successfully",
-															messageId: message.id,
-															sourceId: message.sourceId
-														});
-														
-														await onFeedbackProceed(
-															message.questionData.text,
-															"Yes, I have authenticated successfully"
-														);
-
-														setFeedbackProcessed(true);
-													} else {
-														console.log("🔐 onFeedbackProceed or questionData.text not available for agent:", message.toolName, {
-															onFeedbackProceed: !!onFeedbackProceed,
-															questionData: message.questionData,
-															questionText: message.questionData?.text,
-															messageId: message.id
-														});
-													}
-												}}
-												variant="outline"
-												size="sm"
-												disabled={false}
-												className="flex items-center gap-2 text-green-500 hover:text-green-400 bg-green-950/60 hover:bg-green-950/70 border border-green-800/50 hover:border-green-800/70"
-											>
-												<Check className="w-4 h-4" />
-												Yes, Authenticated
-											</Button>
+								{isAuthentication &&
+									!shouldHideAuthButton() && (
+										<div className="space-y-2">
 											<Button
 												onClick={() => {
-													console.log("🔐 Cancel button clicked for agent:", message.toolName, "message:", message.id);
-													
-													setShowAuthConfirmation(false);
-													setHideAuthButton(false);
-													setClickedButtonType(null);
-													setIsButtonPending(false);
+													if (shouldDisableButtons())
+														return;
+
+													if (
+														isWorkflowActivelyExecuting()
+													) {
+														console.log(
+															"🔐 Setting authenticate button state for agent:",
+															message.toolName,
+															"message:",
+															message.id
+														);
+														setClickedButtonType(
+															"authenticate"
+														);
+														setIsButtonPending(
+															true
+														);
+													}
+
+													const authUrl =
+														message.questionData
+															?.authUrl;
+
+													if (authUrl) {
+														console.log(
+															"🔐 Opening auth URL from questionData for agent:",
+															message.toolName,
+															"URL:",
+															authUrl
+														);
+														window.open(
+															authUrl,
+															"_blank",
+															"noopener,noreferrer"
+														);
+													} else {
+														console.log(
+															"🔐 No authUrl in questionData for agent:",
+															message.toolName,
+															"falling back to text parsing"
+														);
+
+														const questionText =
+															message.questionData
+																?.text ||
+															message.content;
+														const urlMatch =
+															questionText.match(
+																/https?:\/\/[^\s]+/
+															);
+														if (urlMatch) {
+															console.log(
+																"🔐 Found URL in text for agent:",
+																message.toolName,
+																"URL:",
+																urlMatch[0]
+															);
+															window.open(
+																urlMatch[0],
+																"_blank",
+																"noopener,noreferrer"
+															);
+														} else {
+															console.log(
+																"🔐 No URL found in text content for agent:",
+																message.toolName
+															);
+														}
+													}
+
+													console.log(
+														"🔐 Setting showAuthConfirmation to true for agent:",
+														message.toolName,
+														"message:",
+														message.id
+													);
+													setShowAuthConfirmation(
+														true
+													);
+													if (
+														!isWorkflowActivelyExecuting()
+													) {
+														setHideAuthButton(true);
+													}
 												}}
 												variant="outline"
 												size="sm"
-												disabled={false}
-												className="text-gray-400 hover:text-gray-300 bg-gray-950/60 hover:bg-gray-950/70 border border-gray-800/50 hover:border-gray-800/70"
+												disabled={
+													shouldDisableButtons() &&
+													clickedButtonType !==
+														"authenticate"
+												}
+												className={getButtonClassName(
+													"flex items-center gap-2 text-foreground hover:text-foreground/80 bg-background/10 hover:bg-background/20 border border-border hover:border-border/70",
+													"authenticate"
+												)}
 											>
-												<X className="w-4 h-4" />
-												Cancel
+												<ExternalLinkIcon className="w-4 h-4" />
+												Authenticate
 											</Button>
 										</div>
-									</div>
-								)}
+									)}
+
+								{/* Authentication Confirmation UI */}
+								{showAuthConfirmation &&
+									message.questionData?.type ===
+										"authentication" && (
+										<div className="space-y-3 p-3 border border-border/50 rounded-lg bg-background/30">
+											<div className="flex items-center gap-2 text-foreground mb-2">
+												<AlertCircle className="w-4 h-4" />
+												<span className="text-sm font-medium">
+													Authentication Required
+												</span>
+												{message.toolName && (
+													<span className="text-xs text-gray-400 bg-gray-800/50 px-2 py-1 rounded">
+														{message.toolName}
+													</span>
+												)}
+											</div>
+											<p className="text-gray-300 text-sm mb-3">
+												Have you completed the
+												authentication process in the
+												new tab?
+											</p>
+											<div className="flex gap-3">
+												<Button
+													onClick={async () => {
+														console.log(
+															"🔐 Yes, Authenticated button clicked for agent:",
+															message.toolName,
+															"message:",
+															message.id
+														);
+
+														if (
+															isWorkflowActivelyExecuting()
+														) {
+															console.log(
+																"🔐 Setting auth-confirm button state for:",
+																messageStateKey
+															);
+															setClickedButtonType(
+																"auth-confirm"
+															);
+															setIsButtonPending(
+																true
+															);
+														}
+
+														setShowAuthConfirmation(
+															false
+														);
+
+														if (
+															onFeedbackProceed &&
+															message.questionData
+																?.text
+														) {
+															console.log(
+																"🔐 Calling onFeedbackProceed for agent:",
+																message.toolName,
+																"with:",
+																{
+																	question:
+																		message
+																			.questionData
+																			.text,
+																	answer: "Yes, I have authenticated successfully",
+																	messageId:
+																		message.id,
+																	sourceId:
+																		message.sourceId,
+																}
+															);
+
+															await onFeedbackProceed(
+																message
+																	.questionData
+																	.text,
+																"Yes, I have authenticated successfully"
+															);
+
+															setFeedbackProcessed(
+																true
+															);
+														} else {
+															console.log(
+																"🔐 onFeedbackProceed or questionData.text not available for agent:",
+																message.toolName,
+																{
+																	onFeedbackProceed:
+																		!!onFeedbackProceed,
+																	questionData:
+																		message.questionData,
+																	questionText:
+																		message
+																			.questionData
+																			?.text,
+																	messageId:
+																		message.id,
+																}
+															);
+														}
+													}}
+													variant="outline"
+													size="sm"
+													disabled={false}
+													className="flex items-center gap-2 text-green-500 hover:text-green-400 bg-green-950/60 hover:bg-green-950/70 border border-green-800/50 hover:border-green-800/70"
+												>
+													<Check className="w-4 h-4" />
+													Yes, Authenticated
+												</Button>
+												<Button
+													onClick={() => {
+														console.log(
+															"🔐 Cancel button clicked for agent:",
+															message.toolName,
+															"message:",
+															message.id
+														);
+
+														setShowAuthConfirmation(
+															false
+														);
+														setHideAuthButton(
+															false
+														);
+														setClickedButtonType(
+															null
+														);
+														setIsButtonPending(
+															false
+														);
+													}}
+													variant="outline"
+													size="sm"
+													disabled={false}
+													className="text-gray-400 hover:text-gray-300 bg-gray-950/60 hover:bg-gray-950/70 border border-gray-800/50 hover:border-gray-800/70"
+												>
+													<X className="w-4 h-4" />
+													Cancel
+												</Button>
+											</div>
+										</div>
+									)}
 							</div>
 						</div>
 					</div>
@@ -858,10 +1144,9 @@ export function ChatMessage({
 
 	if (message.type === "answer") {
 		// Check if this is a feedback answer with submission state
-		const isSubmittingFeedback = message.isFeedbackAnswer && message.feedbackSubmissionState;
+		const isSubmittingFeedback =
+			message.isFeedbackAnswer && message.feedbackSubmissionState;
 		const submissionState = message.feedbackSubmissionState;
-
-
 
 		return (
 			<div className="relative mb-0 w-full flex justify-end">
@@ -870,9 +1155,14 @@ export function ChatMessage({
 						<div className="flex-shrink-0 size-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
 							<User className="size-5 text-primary" />
 						</div>
-						<div className={`flex-1 min-w-0 bg-primary/5 rounded-lg p-3 border border-primary/10 w-fit relative ${
-							isSubmittingFeedback && submissionState?.status === "failed" ? "border-red-400/20" : ""
-						}`}>
+						<div
+							className={`flex-1 min-w-0 bg-primary/5 rounded-lg p-3 border border-primary/10 w-fit relative ${
+								isSubmittingFeedback &&
+								submissionState?.status === "failed"
+									? "border-red-400/20"
+									: ""
+							}`}
+						>
 							{isMarkdownContent(message.content) ? (
 								<div className="text-foreground text-sm leading-relaxed overflow-hidden">
 									<MDXRenderer content={message.content} />
@@ -884,27 +1174,30 @@ export function ChatMessage({
 							)}
 
 							{/* Show retry icon for failed feedback submissions */}
-							{isSubmittingFeedback && submissionState?.status === "failed" && submissionState.retryHandler && (
-								<Button
-									onClick={() => {
-										if (submissionState.retryHandler) {
-											submissionState.retryHandler();
-										}
-									}}
-									variant="ghost"
-									size="sm"
-									className="absolute -top-2 -right-2 h-6 w-6 p-0 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-full"
-								>
-									<RotateCcw className="size-3 text-red-400" />
-								</Button>
-							)}
-							
+							{isSubmittingFeedback &&
+								submissionState?.status === "failed" &&
+								submissionState.retryHandler && (
+									<Button
+										onClick={() => {
+											if (submissionState.retryHandler) {
+												submissionState.retryHandler();
+											}
+										}}
+										variant="ghost"
+										size="sm"
+										className="absolute -top-2 -right-2 h-6 w-6 p-0 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-full"
+									>
+										<RotateCcw className="size-3 text-red-400" />
+									</Button>
+								)}
+
 							{/* Show loading indicator for sending feedback */}
-							{isSubmittingFeedback && submissionState?.status === "sending" && (
-								<div className="absolute -top-1 -right-1">
-									<Clock className="size-3 text-blue-400 animate-pulse" />
-								</div>
-							)}
+							{isSubmittingFeedback &&
+								submissionState?.status === "sending" && (
+									<div className="absolute -top-1 -right-1">
+										<Clock className="size-3 text-blue-400 animate-pulse" />
+									</div>
+								)}
 						</div>
 					</div>
 				</div>
@@ -912,17 +1205,12 @@ export function ChatMessage({
 		);
 	}
 
-
-
 	// Workflow subnet message - shows status of individual workflow steps
 	if (message.type === "workflow_subnet") {
-
-
 		return (
 			<div className="relative mb-0">
 				<div className="relative flex items-start">
 					<div className="flex-1 min-w-0 p-4">
-						
 						{(message.content || message.showLoadingDots) && (
 							<div
 								className={`text-sm leading-relaxed ${
@@ -932,35 +1220,50 @@ export function ChatMessage({
 								}`}
 							>
 								<div className="flex items-center gap-2">
-									{message.content && (
-										isMarkdownContent(message.content) ? (
-											<MDXRenderer content={message.content} />
+									{message.content &&
+										(isMarkdownContent(message.content) ? (
+											<MDXRenderer
+												content={message.content}
+											/>
 										) : (
 											<div className="whitespace-pre-wrap break-words overflow-hidden">
-												{convertUrlsToLinks(message.content)}
+												{convertUrlsToLinks(
+													message.content
+												)}
 											</div>
-										)
-									)}
-									{message.showLoadingDots && !message.content && message.subnetStatus !== "done" && (
-										<div className="flex items-center gap-2 w-full">
-											<LoadingDots className="p-2" dotClassName="bg-gray-400 dark:bg-gray-300" />
-										</div>
-									)}
+										))}
+									{message.showLoadingDots &&
+										!message.content &&
+										message.subnetStatus !== "done" && (
+											<div className="flex items-center gap-2 w-full">
+												<LoadingDots
+													className="p-2"
+													dotClassName="bg-gray-400 dark:bg-gray-300"
+												/>
+											</div>
+										)}
 								</div>
 							</div>
 						)}
-						
-						
+
 						{/* Show retry button for failed subnets OR failed workflow messages OR feedback history retry messages */}
 						{(() => {
-							const shouldShowRetry = 
+							const shouldShowRetry =
 								// Failed subnet messages
-								(message.subnetStatus === "failed" && message.type === "workflow_subnet") || 
+								(message.subnetStatus === "failed" &&
+									message.type === "workflow_subnet") ||
 								// Failed workflow messages
-								(message.content && message.content.toLowerCase().includes("failed")) ||
+								(message.content &&
+									message.content
+										.toLowerCase()
+										.includes("failed")) ||
 								// Feedback history messages that indicate retry failures
-								(message.content && message.content.toLowerCase().includes("retry subnet execution") && message.subnetIndex !== undefined);
-							
+								(message.content &&
+									message.content
+										.toLowerCase()
+										.includes("retry subnet execution") &&
+									message.subnetIndex !== undefined);
+
 							if (shouldShowRetry) {
 								console.log("🔍 Retry button conditions met:", {
 									subnetStatus: message.subnetStatus,
@@ -968,99 +1271,190 @@ export function ChatMessage({
 									subnetIndex: message.subnetIndex,
 									content: message.content?.slice(0, 100),
 									onRetrySubnet: !!onRetrySubnet,
-									isFeedbackHistoryRetry: message.content?.toLowerCase().includes("retry subnet execution")
+									isFeedbackHistoryRetry: message.content
+										?.toLowerCase()
+										.includes("retry subnet execution"),
 								});
 							}
-							
+
 							return shouldShowRetry;
 						})() && (
 							<div className="">
 								<div>
-								<Button
-									className={`px-4 py-2 text-sm transition-colors flex items-center gap-2 ${
-										retryingSubnetIndex === message.subnetIndex || retryingSubnetIndex === (() => {
-											if (message.subnetIndex !== undefined) return message.subnetIndex;
-											if (message.content) {
-												const match = message.content.match(/index (\d+)/);
-												return match ? parseInt(match[1]) : null;
+									<Button
+										className={`px-4 py-2 text-sm transition-colors flex items-center gap-2 ${
+											retryingSubnetIndex ===
+												message.subnetIndex ||
+											retryingSubnetIndex ===
+												(() => {
+													if (
+														message.subnetIndex !==
+														undefined
+													)
+														return message.subnetIndex;
+													if (message.content) {
+														const match =
+															message.content.match(
+																/index (\d+)/
+															);
+														return match
+															? parseInt(match[1])
+															: null;
+													}
+													return null;
+												})()
+												? "bg-gray-500 cursor-not-allowed"
+												: "bg-red-500 hover:bg-red-700"
+										} text-white rounded-md`}
+										onClick={() => {
+											// Don't allow clicks while retry is in progress
+											const currentSubnetIndex =
+												message.subnetIndex !==
+												undefined
+													? message.subnetIndex
+													: message.content
+													? (() => {
+															const match =
+																message.content.match(
+																	/index (\d+)/
+																);
+															return match
+																? parseInt(
+																		match[1]
+																  )
+																: null;
+													  })()
+													: null;
+
+											if (
+												retryingSubnetIndex ===
+												currentSubnetIndex
+											) {
+												return;
 											}
-											return null;
-										})()
-											? "bg-gray-500 cursor-not-allowed" 
-											: "bg-red-500 hover:bg-red-700"
-									} text-white rounded-md`}
-									onClick={() => {
-										// Don't allow clicks while retry is in progress
-										const currentSubnetIndex = message.subnetIndex !== undefined ? message.subnetIndex : 
-											(message.content ? (() => {
-												const match = message.content.match(/index (\d+)/);
-												return match ? parseInt(match[1]) : null;
-											})() : null);
-										
-										if (retryingSubnetIndex === currentSubnetIndex) {
-											return;
-										}
-										
-										// Extract subnet index from content if not directly available
-										let subnetIndexToUse = message.subnetIndex;
-										if (subnetIndexToUse === undefined && message.content) {
-											const match = message.content.match(/index (\d+)/);
-											if (match) {
-												subnetIndexToUse = parseInt(match[1]);
-												console.log("🔍 Extracted subnet index from content:", subnetIndexToUse);
+
+											// Extract subnet index from content if not directly available
+											let subnetIndexToUse =
+												message.subnetIndex;
+											if (
+												subnetIndexToUse ===
+													undefined &&
+												message.content
+											) {
+												const match =
+													message.content.match(
+														/index (\d+)/
+													);
+												if (match) {
+													subnetIndexToUse = parseInt(
+														match[1]
+													);
+													console.log(
+														"🔍 Extracted subnet index from content:",
+														subnetIndexToUse
+													);
+												}
 											}
+
+											console.log(
+												"🔍 Retry button clicked for message:",
+												{
+													id: message.id,
+													type: message.type,
+													subnetIndex:
+														message.subnetIndex,
+													extractedSubnetIndex:
+														subnetIndexToUse,
+													toolName: message.toolName,
+													subnetStatus:
+														message.subnetStatus,
+												}
+											);
+
+											if (
+												onRetrySubnet &&
+												subnetIndexToUse !== undefined
+											) {
+												console.log(
+													"🔄 Calling onRetrySubnet with index:",
+													subnetIndexToUse
+												);
+												onRetrySubnet(subnetIndexToUse);
+												console.log(
+													"✅ onRetrySubnet called successfully"
+												);
+											} else {
+												console.warn(
+													"⚠️ Cannot retry subnet:",
+													{
+														onRetrySubnet:
+															!!onRetrySubnet,
+														subnetIndex:
+															message.subnetIndex,
+														extractedSubnetIndex:
+															subnetIndexToUse,
+													}
+												);
+											}
+										}}
+										disabled={
+											retryingSubnetIndex ===
+												message.subnetIndex ||
+											retryingSubnetIndex ===
+												(() => {
+													if (
+														message.subnetIndex !==
+														undefined
+													)
+														return message.subnetIndex;
+													if (message.content) {
+														const match =
+															message.content.match(
+																/index (\d+)/
+															);
+														return match
+															? parseInt(match[1])
+															: null;
+													}
+													return null;
+												})()
 										}
-										
-										console.log("🔍 Retry button clicked for message:", {
-											id: message.id,
-											type: message.type,
-											subnetIndex: message.subnetIndex,
-											extractedSubnetIndex: subnetIndexToUse,
-											toolName: message.toolName,
-											subnetStatus: message.subnetStatus
-										});
-										
-										if (onRetrySubnet && subnetIndexToUse !== undefined) {
-											console.log("🔄 Calling onRetrySubnet with index:", subnetIndexToUse);
-											onRetrySubnet(subnetIndexToUse);
-											console.log("✅ onRetrySubnet called successfully");
-										} else {
-											console.warn("⚠️ Cannot retry subnet:", {
-												onRetrySubnet: !!onRetrySubnet,
-												subnetIndex: message.subnetIndex,
-												extractedSubnetIndex: subnetIndexToUse
-											});
-										}
-									}}
-									disabled={retryingSubnetIndex === message.subnetIndex || retryingSubnetIndex === (() => {
-										if (message.subnetIndex !== undefined) return message.subnetIndex;
-										if (message.content) {
-											const match = message.content.match(/index (\d+)/);
-											return match ? parseInt(match[1]) : null;
-										}
-										return null;
-									})()}
-								>
-									{(() => {
-										const currentSubnetIndex = message.subnetIndex !== undefined ? message.subnetIndex : 
-											(message.content ? (() => {
-												const match = message.content.match(/index (\d+)/);
-												return match ? parseInt(match[1]) : null;
-											})() : null);
-										
-										return retryingSubnetIndex === currentSubnetIndex;
-									})() ? (
-										<>
-											<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-											Retrying...
-										</>
-									) : (
-										<>
-											<RotateCcw className="w-4 h-4" />
-											Retry
-										</>
-									)}
-								</Button>
+									>
+										{(() => {
+											const currentSubnetIndex =
+												message.subnetIndex !==
+												undefined
+													? message.subnetIndex
+													: message.content
+													? (() => {
+															const match =
+																message.content.match(
+																	/index (\d+)/
+																);
+															return match
+																? parseInt(
+																		match[1]
+																  )
+																: null;
+													  })()
+													: null;
+
+											return (
+												retryingSubnetIndex ===
+												currentSubnetIndex
+											);
+										})() ? (
+											<>
+												<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+												Retrying...
+											</>
+										) : (
+											<>
+												<RotateCcw className="w-4 h-4" />
+												Retry
+											</>
+										)}
+									</Button>
 								</div>
 							</div>
 						)}
@@ -1069,47 +1463,43 @@ export function ChatMessage({
 							<div className="mt-3">
 								{message.isImage ? (
 									<div className="relative w-fit ">
-									<Image
-										src={base64ToDataUrl(
-											message.imageData,
-											message.contentType || "image/jpeg"
-										)}
-										alt="Generated image"
-										width={400}
-										height={400}
-										className="rounded-lg border border-border max-w-fit h-auto"
-										onError={(e) => {
-											console.error(
-												"Failed to load image:",
-												e
-											);
-										}}
-										/>
-									<div className="absolute top-2 right-2">
-										<Button
-											size="icon"
-											className="p-1 bg-background/80"
-											onClick={() => {
-												const link =
-													document.createElement("a");
-												link.href = base64ToDataUrl(
-													message.imageData!,
-													message.contentType ||
-														"image/jpeg"
+										<Image
+											src={message.imageData}
+											alt="Generated image"
+											width={400}
+											height={400}
+											className="rounded-lg border border-border max-w-fit h-auto"
+											onError={(e) => {
+												console.error(
+													"Failed to load image:",
+													e
 												);
-												link.download =
-													"generated_image." +
-													((message.contentType &&
-														message.contentType.split(
-															"/"
-														)[1]) ||
-														"jpg");
-												link.click();
 											}}
-										>
-											<DownloadIcon className="w-3 h-3 text-foreground" />
-										</Button>
-									</div>
+										/>
+										<div className="absolute top-2 right-2">
+											<Button
+												size="icon"
+												className="p-1 bg-background/80"
+												onClick={() => {
+													const link =
+														document.createElement(
+															"a"
+														);
+													link.href =
+														message.imageData!;
+													link.download =
+														"generated_image." +
+														((message.contentType &&
+															message.contentType.split(
+																"/"
+															)[1]) ||
+															"jpg");
+													link.click();
+												}}
+											>
+												<DownloadIcon className="w-3 h-3 text-foreground" />
+											</Button>
+										</div>
 									</div>
 								) : (
 									<div className="p-4 border border-border rounded-lg bg-muted/20">
@@ -1149,11 +1539,8 @@ export function ChatMessage({
 														document.createElement(
 															"a"
 														);
-													link.href = base64ToDataUrl(
-														message.imageData!,
-														message.contentType ||
-															"application/octet-stream"
-													);
+													link.href =
+														message.imageData!;
 													link.download = `generated_file.${
 														message.contentType?.split(
 															"/"
@@ -1198,43 +1585,49 @@ export function ChatMessage({
 										</Button>
 									</div>
 									<p className="text-xs text-yellow-300/70 mt-2">
-										Click refresh to check for the latest updates.
+										Click refresh to check for the latest
+										updates.
 									</p>
 								</div>
 							)}
 
 							{/* Show timeout message with refresh button */}
-							{message.isTimeoutMessage && message.showRefreshButton && (
-								<div className="p-3 border border-border rounded-lg bg-muted/20">
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-2 text-yellow-400">
-											<AlertTriangleIcon className="w-4 h-4 text-yellow-400" />
-											<span className="text-sm font-medium">
-												Polling Timeout
-											</span>
+							{message.isTimeoutMessage &&
+								message.showRefreshButton && (
+									<div className="p-3 border border-border rounded-lg bg-muted/20">
+										<div className="flex items-center justify-between">
+											<div className="flex items-center gap-2 text-yellow-400">
+												<AlertTriangleIcon className="w-4 h-4 text-yellow-400" />
+												<span className="text-sm font-medium">
+													Polling Timeout
+												</span>
+											</div>
+										</div>
+										<p className="text-xs text-orange-300/70 mt-2">
+											Polling has been running for more
+											than 5 minutes. Click refresh to
+											continue monitoring the workflow.
+										</p>
+										<div className="mt-3 flex justify-end">
+											<Button
+												onClick={() => {
+													console.log(
+														"🔍 Debug: Refresh button clicked"
+													);
+													if (onRefreshPolling) {
+														onRefreshPolling();
+													}
+												}}
+												variant="outline"
+												size="sm"
+												className="flex items-center gap-2 text-gray-400 hover:text-gray-300 bg-muted/20 hover:bg-muted/30 border border-border/50 hover:border-border/70"
+											>
+												<RefreshCw className="w-4 h-4" />
+												Refresh
+											</Button>
 										</div>
 									</div>
-									<p className="text-xs text-orange-300/70 mt-2">
-										Polling has been running for more than 5 minutes. Click refresh to continue monitoring the workflow.
-									</p>
-									<div className="mt-3 flex justify-end">
-										<Button
-											onClick={() => {
-												console.log("🔍 Debug: Refresh button clicked");
-												if (onRefreshPolling) {
-													onRefreshPolling();
-												}
-											}}
-											variant="outline"
-											size="sm"
-											className="flex items-center gap-2 text-gray-400 hover:text-gray-300 bg-muted/20 hover:bg-muted/30 border border-border/50 hover:border-border/70"
-										>
-											<RefreshCw className="w-4 h-4" />
-											Refresh
-										</Button>
-									</div>
-								</div>
-							)}
+								)}
 						</div>
 					</div>
 				</div>
@@ -1247,7 +1640,6 @@ export function ChatMessage({
 			<div className="relative flex items-start bg-card rounded-lg">
 				<div className="flex-1 min-w-0 p-4 overflow-hidden">
 					<div className="text-gray-200 text-sm leading-relaxed overflow-hidden">
-
 						<div className="flex items-start gap-2">
 							<div className="flex-1 min-w-0">
 								{isMarkdownContent(message.content) ? (
@@ -1262,47 +1654,80 @@ export function ChatMessage({
 					</div>
 					{message.imageData && message.isImage && (
 						<div className="relative w-fit ">
-						<Image
-							src={base64ToDataUrl(
-								message.imageData,
-								message.contentType || "image/jpeg"
-							)}
-							alt="Generated image"
-							width={400}
-							height={400}
-							className="rounded-lg border border-border max-w-fit h-auto"
-							onError={(e) => {
-								console.error(
-									"Failed to load image:",
-									e
+							{(() => {
+								const [imageLoaded, setImageLoaded] = useState(false);
+
+								return (
+									<>
+										<Image
+											src={message.imageData}
+											alt="Generated image"
+											width={400}
+											height={400}
+											className="rounded-lg border border-border max-w-fit h-auto"
+											onLoad={() => setImageLoaded(true)}
+											onError={(e) => {
+												console.error("Failed to load image:", e);
+												// If proxied image fails, try to fallback to original URL
+												const target = e.target as HTMLImageElement;
+												if (
+													target.src.includes("/api/image/proxy")
+												) {
+													// Extract original URL from proxy URL
+													const urlParams = new URLSearchParams(
+														target.src.split("?")[1]
+													);
+													const originalUrl =
+														urlParams.get("url");
+													if (originalUrl) {
+														target.src = originalUrl;
+													}
+												}
+											}}
+										/>
+										{imageLoaded && (
+											<div className="absolute top-2 right-2">
+												<Button
+													size="icon"
+													className="p-1 bg-background/80"
+													onClick={() => {
+														const link =
+															document.createElement("a");
+														// Use original URL for download if it's a proxied URL
+														let downloadUrl = message.imageData!;
+														if (
+															downloadUrl.includes(
+																"/api/image/proxy"
+															)
+														) {
+															const urlParams =
+																new URLSearchParams(
+																	downloadUrl.split("?")[1]
+																);
+															const originalUrl =
+																urlParams.get("url");
+															if (originalUrl) {
+																downloadUrl = originalUrl;
+															}
+														}
+														link.href = downloadUrl;
+														link.download =
+															"generated_image." +
+															((message.contentType &&
+																message.contentType.split(
+																	"/"
+																)[1]) ||
+																"jpg");
+														link.click();
+													}}
+												>
+													<DownloadIcon className="w-3 h-3 text-foreground" />
+												</Button>
+											</div>
+										)}
+									</>
 								);
-							}}
-							/>
-						<div className="absolute top-2 right-2">
-							<Button
-								size="icon"
-								className="p-1 bg-background/80"
-								onClick={() => {
-									const link =
-										document.createElement("a");
-									link.href = base64ToDataUrl(
-										message.imageData!,
-										message.contentType ||
-											"image/jpeg"
-									);
-									link.download =
-										"generated_image." +
-										((message.contentType &&
-											message.contentType.split(
-												"/"
-											)[1]) ||
-											"jpg");
-									link.click();
-								}}
-							>
-								<DownloadIcon className="w-3 h-3 text-foreground" />
-							</Button>
-						</div>
+							})()}
 						</div>
 					)}
 				</div>
