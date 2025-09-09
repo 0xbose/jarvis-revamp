@@ -21,8 +21,8 @@ export default function AgentMarketplaceCard({ agent, isUserAgent }: { agent: Us
     <Link
       href={
         isUserAgent
-          ? `/user-agents/${agent?.collection_address || agent?.agent_address}?nftid=${agent?.nft_id}`
-          : `/marketplace/${agent?.collection_address || agent?.agent_address}`
+          ? `/user-agents/${"agent_address" in agent ? agent.agent_address : ""}?nftid=${"nft_id" in agent ? agent.nft_id : ""}`
+          : `/marketplace/${"agent_address" in agent ? agent.agent_address : ""}`
       }
     >
       <div className="group relative bg-background/50 border border-border/40 rounded-xl overflow-hidden h-80 flex flex-col transition-all duration-300 hover:border-border/60 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1">
@@ -41,11 +41,11 @@ export default function AgentMarketplaceCard({ agent, isUserAgent }: { agent: Us
             <div className="flex items-center gap-1 px-2 py-1 bg-background/90 backdrop-blur-sm rounded-full text-xs">
               <div
                 className={`w-2 h-2 rounded-full ${
-                  agent.agent_isverified ? "bg-green-500 animate-pulse" : "bg-gray-400"
+                  ("isVerified" in agent ? agent.isVerified : false) ? "bg-green-500 animate-pulse" : "bg-gray-400"
                 }`}
               />
               <span className="text-foreground font-medium">
-                {agent.agent_isverified ? "Verified" : "Unverified"}
+                {("isVerified" in agent ? agent.isVerified : false) ? "Verified" : "Unverified"}
               </span>
             </div>
           </div>

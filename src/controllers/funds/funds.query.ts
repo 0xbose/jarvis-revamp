@@ -9,7 +9,6 @@ import {
 } from "@/types/wallet";
 import { PublicKey } from "@solana/web3.js";
 import { getQuote, ChainId } from "@lifi/sdk";
-import toast from "react-hot-toast";
 
 export async function fetchTokenBalance({
 	selectedWallet,
