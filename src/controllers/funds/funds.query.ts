@@ -63,7 +63,7 @@ export async function fetchTokenBalance({
 				const publicKey = await solanaProvider.getPublicKey();
 				const connection = solanaProvider.getConnection();
 				const tokenAccounts =
-					await connection.getParsedTokenAccountsByOwner(publicKey, {
+					await connection.getParsedTokenAccountsByOwner(publicKey as any, {
 						mint: new PublicKey(token.address),
 					});
 				if (tokenAccounts.value.length > 0) {

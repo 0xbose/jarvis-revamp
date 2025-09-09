@@ -162,7 +162,7 @@ export class PhantomProvider implements SolanaWalletProvider {
 		}
 	}
 
-	async getPublicKey(): Promise<PublicKey> {
+	async getPublicKey(): Promise<any> {
 		if (!this.provider || !this.connected) {
 			throw new Error("Phantom wallet not connected");
 		}

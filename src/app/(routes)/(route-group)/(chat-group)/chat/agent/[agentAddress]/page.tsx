@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+
+import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useGlobalStore } from "@/stores/global-store";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ import { ChatMessagesContainer } from "@/components/common/chat-messages-contain
 import { ComparisonView } from "@/components/common/comparison-view";
 import { QUERY_KEYS } from "@/utils/query-keys";
 
-export default function AgentChatPage() {
+function AgentChatPageContent() {
 	const {
 		mode,
 		setMode,
@@ -225,7 +226,6 @@ export default function AgentChatPage() {
 					status === "in_progress" ||
 					status === "waiting" ||
 					status === "awaiting_response";
-
 
 				if (shouldPoll) {
 					console.log(
@@ -912,5 +912,13 @@ export default function AgentChatPage() {
 			messagesEndRef={messagesEndRef}
 			handleScroll={handleScroll}
 		/>
+	);
+}
+
+export default function AgentChatPage() {
+	return (
+		<Suspense fallback={<ChatSkeleton />}>
+			<AgentChatPageContent />
+		</Suspense>
 	);
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
 	type ColumnDef,
@@ -26,6 +26,7 @@ import SearchBar from "@/components/common/search";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { STATUS_CONFIG } from "@/constants/status-config";
 
+// Helper functions remain unchanged
 function getStatusBadge(status: string) {
 	const config =
 		STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] ||
@@ -64,7 +65,8 @@ const STATUS_OPTIONS = [
 	"pending",
 ];
 
-export default function WorkflowHistory() {
+// Move all logic that uses useSearchParams into a suspense boundary
+function WorkflowHistoryInner() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const currentPage = Number(searchParams.get("page") || "1");
@@ -390,5 +392,13 @@ export default function WorkflowHistory() {
 				</div>
 			</div>
 		</div>
+	);
+}
+
+export default function WorkflowHistory() {
+	return (
+		<Suspense fallback={<div className="p-6 text-gray-400">Loading history...</div>}>
+			<WorkflowHistoryInner />
+		</Suspense>
 	);
 }

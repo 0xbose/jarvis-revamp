@@ -12,7 +12,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "./table-components";
-import { Skeleton } from "./skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface DataTableProps<T> {
 	table: ReactTable<T>;

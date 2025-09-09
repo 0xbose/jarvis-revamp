@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { Suspense } from "react";
 import {
 	Sidebar,
 	SidebarContent,
@@ -30,6 +31,7 @@ import { useWorkflowExecutionStore } from "@/stores/workflow-execution-store";
 import ChatSidebar from "./chat-sidebar";
 import { useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/utils/query-keys";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const navItems = [
 	{
@@ -149,7 +151,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 					</SidebarFooter>
 				</Sidebar>
 
-				{isChat && <ChatSidebar />}
+				{isChat && (
+					<Suspense fallback={<Skeleton className="w-56 h-full" />}>
+						<ChatSidebar />
+					</Suspense>
+				)}
 			</Sidebar>
 		</>
 	);
