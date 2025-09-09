@@ -25,7 +25,7 @@ import { Skeleton } from "../ui/skeleton";
 import { Checkbox } from "../ui/checkbox";
 import { upsertNodeContextMemory } from "@/controllers/node-context/node-context.mutations";
 import { getNodeContextMemory } from "@/controllers/node-context/node-context.query";
-import { PlusIcon } from "lucide-react";
+import { MoreVerticalIcon, PlusIcon } from "lucide-react";
 
 function SubnetSkeletonList() {
 	return (
@@ -276,6 +276,12 @@ export default function AgentMemory({
 		refetchOnReconnect: true,
 	});
 
+	// Helper: check if agent has any subnet selected
+	const agentHasAnySubnetSelected = (agentId: string) => {
+		const set = selectedSubnetsPerAgent[agentId];
+		return set && set.size > 0;
+	};
+
 	const handleAgentToggle = (agent: any) => {
 		const selectedAgent: SelectedAgent = {
 			id: agent.id,
@@ -289,6 +295,11 @@ export default function AgentMemory({
 		setSelectedAgents((prev) => {
 			const isSelected = prev.some((a) => a.id === selectedAgent.id);
 			if (isSelected) {
+				// Only allow deselect if no subnet is selected for this agent
+				if (agentHasAnySubnetSelected(selectedAgent.id)) {
+					// Prevent deselect
+					return prev;
+				}
 				// Remove agent and its subnet selections (Remove)
 				setSelectedSubnetsPerAgent((prevSubnets) => {
 					const newSubnets = { ...prevSubnets };
@@ -399,10 +410,17 @@ export default function AgentMemory({
 								selectedAgents.map((agent) => (
 									<div
 										key={agent.id}
-										className="text-center font-medium text-sm px-2 truncate w-[120px] flex-shrink-0"
+										className="text-center font-medium text-sm pl-6 px-2 truncate w-[140px] flex-shrink-0 flex items-center "
 										title={agent.name}
 									>
-										{agent.name}
+										<span className="w-[120px] truncate">{agent.name}</span>{" "}
+										<Button
+											variant="ghost"
+											size="icon"
+											className="hover:bg-gray/80"
+										>
+											<MoreVerticalIcon />
+										</Button>
 									</div>
 								))}
 							<div className="flex justify-center w-[80px] flex-shrink-0">
@@ -457,7 +475,7 @@ export default function AgentMemory({
 												return (
 													<div
 														key={agent.id}
-														className="flex justify-center items-center min-h-[32px] w-[120px] flex-shrink-0"
+														className="flex justify-center items-center min-h-[32px] w-[140px] flex-shrink-0"
 													>
 														<Checkbox
 															checked={isChecked}
@@ -505,7 +523,7 @@ export default function AgentMemory({
 							knowledge with this agent.
 						</DialogDescription>
 					</DialogHeader>
-					<div className="mb-4">
+					<div className="">
 						<Input
 							type="text"
 							placeholder="Search minted agents..."
@@ -515,7 +533,7 @@ export default function AgentMemory({
 						/>
 					</div>
 					<div
-						className="flex-1 min-h-0 overflow-y-auto"
+						className="flex-1 min-h-0 overflow-y-auto px-1"
 						style={{
 							scrollbarWidth: "thin",
 							scrollbarColor: "#888 #222",
@@ -538,39 +556,56 @@ export default function AgentMemory({
 							mintedAgentsData.user_collections.length > 0 && (
 								<div className="flex flex-col gap-3 mt-2">
 									{mintedAgentsData.user_collections.map(
-										(agent: any) => (
-											<div
-												key={agent.id}
-												className={`border border-border rounded-lg shadow-sm hover:shadow-md transition p-4 flex bg-background cursor-pointer ${
-													selectedAgents.some(
-														(a) => a.id === agent.id
-													)
-														? "ring-2 ring-blue-500"
-														: ""
-												}`}
-												onClick={() =>
-													handleAgentToggle(agent)
-												}
-											>
-												<img
-													src={
-														agent.image
-															? agent.image
-															: "/agent-mock.webp"
-													}
-													alt={agent.name}
-													className="w-16 h-16 object-cover rounded-md mr-4"
-												/>
-												<div className="flex-1 flex flex-col justify-center">
-													<div className="font-medium text-foreground text-sm truncate">
-														{agent.name}
-													</div>
-													<div className="text-muted-foreground text-xs mt-1 line-clamp-2">
-														{agent.description}
+										(agent: any) => {
+											const isSelected = selectedAgents.some(
+												(a) => a.id === agent.id
+											);
+											const hasAnySubnet =
+												isSelected &&
+												agentHasAnySubnetSelected(agent.id);
+											return (
+												<div
+													key={agent.id}
+													className={`border border-border rounded-lg shadow-sm hover:shadow-md transition p-4 flex bg-background cursor-pointer ${
+														isSelected
+															? "ring-2 ring-blue-500"
+															: ""
+													} ${
+														isSelected && hasAnySubnet
+															? "opacity-60 cursor-not-allowed"
+															: ""
+													}`}
+													onClick={() => {
+														// Only allow deselect if no subnet is selected
+														if (
+															isSelected &&
+															hasAnySubnet
+														) {
+															return;
+														}
+														handleAgentToggle(agent);
+													}}
+												>
+													<img
+														src={
+															agent.image
+																? agent.image
+																: "/agent-mock.webp"
+														}
+														alt={agent.name}
+														className="w-16 h-16 object-cover rounded-md mr-4"
+													/>
+													<div className="flex-1 flex flex-col justify-center">
+														<div className="font-medium text-foreground text-sm truncate">
+															{agent.name}
+														</div>
+														<div className="text-muted-foreground text-xs mt-1 line-clamp-2">
+															{agent.description}
+														</div>
 													</div>
 												</div>
-											</div>
-										)
+											);
+										}
 									)}
 								</div>
 							)}
