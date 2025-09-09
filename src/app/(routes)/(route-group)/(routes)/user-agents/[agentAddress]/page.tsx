@@ -20,9 +20,8 @@ import { AgentImage } from "@/components/market-place/agent-image";
 import Link from "next/link";
 import { QUERY_KEYS } from "@/utils/query-keys";
 import { MarketplaceLoaderSkeleton } from "@/components/market-place/loader-skeleton";
-import { Tabs, TabsList, TabsContent, TabsTrigger } from "@/components/ui/tabs";
-import AgentHistory from "@/components/user-agents/agent-history";
 import AgentTabs from "@/components/user-agents/agent-tabs";
+import { AgentDetailResponse } from "@/types/agents";
 
 const useAgentData = (agentAddress: string, nftId: string) => {
 	return useQuery({
@@ -36,8 +35,8 @@ const useAgentData = (agentAddress: string, nftId: string) => {
 			return data || null;
 		},
 		enabled: !!agentAddress,
-		staleTime: 0,
-		gcTime: 0,
+		staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+		gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
 		retry: 3,
 	});
 };
@@ -401,6 +400,7 @@ export default function Page() {
 				</div>
 				<div>
 					<AgentTabs
+						agentData={agentData as AgentDetailResponse}
 						agentAddress={agentAddress}
 						nftId={nftId}
 						descriptionField={descriptionField}

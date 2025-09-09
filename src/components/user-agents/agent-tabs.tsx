@@ -4,6 +4,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Pencil, Check, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import AgentMemory from "./agent-memory";
+import { AgentDetailResponse } from "@/types/agents";
 
 // Lazy load the AgentHistory component to improve initial tab switching performance
 const AgentHistory = lazy(() => import("./agent-history"));
@@ -15,6 +17,7 @@ const TABS = [
 ];
 
 interface AgentTabsProps {
+	agentData: AgentDetailResponse;
 	agentAddress: string;
 	nftId: string;
 	descriptionField: {
@@ -30,6 +33,7 @@ interface AgentTabsProps {
 }
 
 export default function AgentTabs({
+	agentData,
 	agentAddress,
 	nftId,
 	descriptionField,
@@ -171,9 +175,11 @@ export default function AgentTabs({
 					</TabsContent>
 					<TabsContent value="knowledge" className="h-full">
 						{loadedTabs.has("knowledge") && (
-							<div className="flex items-center justify-center h-32 text-muted-foreground">
-								Memory content coming soon...
-							</div>
+							<Suspense
+								fallback={<div>Loading...</div>}
+							>
+								<AgentMemory agentData={agentData} />
+							</Suspense>
 						)}
 					</TabsContent>
 				</div>

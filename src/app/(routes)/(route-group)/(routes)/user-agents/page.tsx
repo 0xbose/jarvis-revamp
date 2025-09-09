@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useWallet } from "@/hooks/use-wallet";
 import { getUserMintedAgents } from "@/controllers/agents/agents.query";
-import { QUERY_KEYS } from "@/utils/query-keys";
+import { QUERY_KEYS } from "@/utils/query-keys/index";
 import AgentMarketplaceCard from "@/components/market-place/agent-marketplace-card";
 import SearchAndCategories from "@/components/market-place/agent-search";
 import Link from "next/link";
@@ -29,7 +29,7 @@ export default function UserAgentsPage() {
 		refetch,
 		isFetched,
 	} = useInfiniteQuery({
-		queryKey: [QUERY_KEYS.USER_AGENTS, searchQuery, selectedCategory],
+		queryKey: [QUERY_KEYS.USER_MINTED_AGENTS, searchQuery, selectedCategory],
 		queryFn: async ({ pageParam = 0 }) => {
 			try {
 				const data = await getUserMintedAgents({
@@ -126,7 +126,7 @@ export default function UserAgentsPage() {
 				</div>
 			</div>
 
-			<div className="container mx-auto px-6 py-6 max-w-7xl">
+			<div className="container mx-auto px-6 pt-6 max-w-7xl">
 				<div className="space-y-6">
 					<div className="space-y-4">
 						<SearchAndCategories
