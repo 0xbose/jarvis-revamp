@@ -277,7 +277,6 @@ export interface UIState {
 // Global Window Types
 declare global {
 	interface Window {
-		ethereum?: Record<string, unknown>;
 		solana?: Record<string, unknown>;
 	}
 }

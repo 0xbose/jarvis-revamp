@@ -1,13 +1,9 @@
 "use client";
-import ChatInput from "@/components/common/chat-input";
-import { ChatMessage } from "@/components/common/chat-message";
-import { SubnetGroup } from "@/components/common/subnet-group";
 import React, { useEffect, useState, useRef } from "react";
 import { useGlobalStore } from "@/stores/global-store";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/hooks/use-wallet";
-import { AgentDetail } from "@/types";
 import { useWorkflowExecutionStore } from "@/stores/workflow-execution-store";
 import { Skeleton } from "@/components/ui/skeleton";
 import ChatSkeleton from "@/components/common/chat-skeleton";
@@ -18,7 +14,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	setCachedChatMessages,
 	getCachedChatMessages,
-	clearChatCache,
 } from "@/utils/chat-utils";
 import { getAgentDetailByCollectionAndNftId } from "@/controllers/agents/agents.query";
 import { ChatMsg } from "@/types/chat";
@@ -50,27 +45,26 @@ export default function AgentChatPage() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [isInFeedbackMode, setIsInFeedbackMode] = useState(false);
-	const [isPolling, setIsPolling] = useState(false);
 	const [isShowingCachedMessages, setIsShowingCachedMessages] =
 		useState(false);
-	const [hasCachedMessagesLoaded, setHasCachedMessagesLoaded] =
-		useState(false);
-	const [completedFeedback, setCompletedFeedback] = useState<Set<number>>(new Set());
+
 	const { skyBrowser, address } = useWallet();
 	const queryClient = useQueryClient();
 
 	// Function to refetch chat sidebar history data
 	const refetchHistory = () => {
-		console.log("🔄 Refetching chat sidebar history after feedback submission");
+		console.log(
+			"🔄 Refetching chat sidebar history after feedback submission"
+		);
 		queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.HISTORY] });
 	};
 
-	const { currentExecution, updateExecutionStatus } = useWorkflowExecutionStore();
+	const { currentExecution, updateExecutionStatus } =
+		useWorkflowExecutionStore();
 
 	const {
 		chatMessages,
 		setChatMessages,
-		safeSetChatMessages,
 		setChatMessagesWithWorkflowCheck,
 		pendingNotifications,
 		setPendingNotifications,
@@ -82,7 +76,10 @@ export default function AgentChatPage() {
 
 	useEffect(() => {
 		if (urlWorkflowId && queryClient) {
-			const cachedMessages = getCachedChatMessages(urlWorkflowId, queryClient);
+			const cachedMessages = getCachedChatMessages(
+				urlWorkflowId,
+				queryClient
+			);
 			if (cachedMessages && cachedMessages.length > 0) {
 				console.log(
 					`📋 Loading cached messages for workflow: ${urlWorkflowId}`
@@ -110,7 +107,6 @@ export default function AgentChatPage() {
 				);
 
 				setIsShowingCachedMessages(true);
-				setHasCachedMessagesLoaded(true);
 				setChatMessagesWithWorkflowCheck(
 					sortedCachedMessages,
 					urlWorkflowId
@@ -123,13 +119,15 @@ export default function AgentChatPage() {
 					`📋 No cached messages found for workflow: ${urlWorkflowId}`
 				);
 				setIsShowingCachedMessages(false);
-				setHasCachedMessagesLoaded(false);
 			}
 		}
-		
+
 		// Also preload cached messages for comparison workflow if in comparison mode
 		if (compareWorkflowId && queryClient && isComparisonMode) {
-			const compareMessages = getCachedChatMessages(compareWorkflowId, queryClient);
+			const compareMessages = getCachedChatMessages(
+				compareWorkflowId,
+				queryClient
+			);
 			if (compareMessages && compareMessages.length > 0) {
 				console.log(
 					`📋 Preloading cached messages for comparison workflow: ${compareWorkflowId}`
@@ -140,7 +138,13 @@ export default function AgentChatPage() {
 				);
 			}
 		}
-	}, [urlWorkflowId, compareWorkflowId, isComparisonMode, setWorkflowId, queryClient]);
+	}, [
+		urlWorkflowId,
+		compareWorkflowId,
+		isComparisonMode,
+		setWorkflowId,
+		queryClient,
+	]);
 
 	const {
 		messagesEndRef,
@@ -208,19 +212,20 @@ export default function AgentChatPage() {
 				currentWorkflowData.requestId || currentWorkflowData.workflowId;
 			if (workflowId === urlWorkflowId) {
 				const status = currentWorkflowData.workflowStatus;
-				
+
 				// Ensure workflow status is synchronized with currentWorkflowData
 				if (status !== workflowStatus) {
-					console.log(`🔄 Syncing workflow status: ${workflowStatus} -> ${status}`);
+					console.log(
+						`🔄 Syncing workflow status: ${workflowStatus} -> ${status}`
+					);
 					setWorkflowStatus(status);
 				}
-				
+
 				const shouldPoll =
 					status === "in_progress" ||
 					status === "waiting" ||
 					status === "awaiting_response";
 
-				setIsPolling(shouldPoll);
 
 				if (shouldPoll) {
 					console.log(
@@ -247,7 +252,6 @@ export default function AgentChatPage() {
 					isLoadingExistingWorkflow.current &&
 					!isShowingCachedMessages;
 
-				
 				if (
 					isShowingCachedMessages &&
 					isLoadingExistingWorkflow.current
@@ -264,9 +268,9 @@ export default function AgentChatPage() {
 							currentWorkflowData,
 							lastQuestionRef,
 							{
-								includeHistory: false, 
-								isExistingWorkflow: true, 
-								initializeCacheOnly: true, 
+								includeHistory: false,
+								isExistingWorkflow: true,
+								initializeCacheOnly: true,
 							}
 						);
 					}
@@ -296,7 +300,13 @@ export default function AgentChatPage() {
 				);
 			}
 		}
-	}, [currentWorkflowData, urlWorkflowId, isShowingCachedMessages, workflowStatus, setWorkflowStatus]);
+	}, [
+		currentWorkflowData,
+		urlWorkflowId,
+		isShowingCachedMessages,
+		workflowStatus,
+		setWorkflowStatus,
+	]);
 
 	useEffect(() => {
 		return () => {
@@ -344,7 +354,9 @@ export default function AgentChatPage() {
 		if (urlWorkflowId && urlWorkflowId.trim().length > 0) {
 			// Prevent duplicate initialization
 			if (currentWorkflowId === urlWorkflowId) {
-				console.log(`🔄 Already initialized workflow: ${urlWorkflowId}`);
+				console.log(
+					`🔄 Already initialized workflow: ${urlWorkflowId}`
+				);
 				return;
 			}
 
@@ -352,14 +364,21 @@ export default function AgentChatPage() {
 
 			// Clear previous workflow if different
 			if (currentWorkflowId && currentWorkflowId !== urlWorkflowId) {
-				console.log(`🛑 Stopping polling for previous workflow: ${currentWorkflowId}`);
+				console.log(
+					`🛑 Stopping polling for previous workflow: ${currentWorkflowId}`
+				);
 				clearWorkflow();
 			}
 
 			// Check for cached messages first
-			const cachedMessages = getCachedChatMessages(urlWorkflowId, queryClient);
+			const cachedMessages = getCachedChatMessages(
+				urlWorkflowId,
+				queryClient
+			);
 			if (cachedMessages && cachedMessages.length > 0) {
-				console.log(`📋 Loading cached messages for workflow: ${urlWorkflowId}`);
+				console.log(
+					`📋 Loading cached messages for workflow: ${urlWorkflowId}`
+				);
 
 				clearMessages();
 				resetFeedbackState();
@@ -367,16 +386,16 @@ export default function AgentChatPage() {
 				setPendingNotifications([]);
 
 				setIsShowingCachedMessages(true);
-				setHasCachedMessagesLoaded(true);
 				setChatMessagesWithWorkflowCheck(cachedMessages, urlWorkflowId);
 
 				// Set the workflow ID to ensure proper tracking
 				setWorkflowId(urlWorkflowId);
 				isLoadingExistingWorkflow.current = false;
 			} else {
-				console.log(`📋 No cached messages found for workflow: ${urlWorkflowId}`);
+				console.log(
+					`📋 No cached messages found for workflow: ${urlWorkflowId}`
+				);
 				setIsShowingCachedMessages(false);
-				setHasCachedMessagesLoaded(false);
 				resetFeedbackState();
 				isLoadingExistingWorkflow.current = true;
 			}
@@ -384,7 +403,9 @@ export default function AgentChatPage() {
 			// Start polling only once
 			startPollingExistingWorkflow(urlWorkflowId, skyBrowser, address);
 		} else if (currentWorkflowId && !urlWorkflowId && !isExecuting) {
-			console.log(`🔄 No workflow ID in URL and not executing, clearing current workflow`);
+			console.log(
+				`🔄 No workflow ID in URL and not executing, clearing current workflow`
+			);
 			clearWorkflow();
 			clearMessages();
 			resetFeedbackState();
@@ -392,7 +413,6 @@ export default function AgentChatPage() {
 			setChatMessages([]);
 			setPendingNotifications([]);
 			setIsShowingCachedMessages(false);
-			setHasCachedMessagesLoaded(false);
 		}
 	}, [
 		isLoading,
@@ -528,14 +548,24 @@ export default function AgentChatPage() {
 			isInFeedbackMode ||
 			currentWorkflowData?.workflowStatus === "awaiting_response"
 		) {
-			console.log("🔄 Handling feedback response for agent:", selectedAgent.name, "message:", message);
+			console.log(
+				"🔄 Handling feedback response for agent:",
+				selectedAgent.name,
+				"message:",
+				message
+			);
 			await handleFeedbackResponse(message);
 			return;
 		}
 
 		if (isExecuting) return;
 
-		console.log("🚀 Starting new workflow for agent:", selectedAgent.name, "message:", message);
+		console.log(
+			"🚀 Starting new workflow for agent:",
+			selectedAgent.name,
+			"message:",
+			message
+		);
 		try {
 			await executeNewWorkflow(
 				selectedAgent as any, // Type assertion to handle different agent types
@@ -545,7 +575,11 @@ export default function AgentChatPage() {
 				{ address }
 			);
 		} catch (error) {
-			console.error("Error executing workflow for agent:", selectedAgent.name, error);
+			console.error(
+				"Error executing workflow for agent:",
+				selectedAgent.name,
+				error
+			);
 		}
 	};
 
@@ -560,7 +594,14 @@ export default function AgentChatPage() {
 	};
 
 	const handleNotificationYes = async (notification: ChatMsg) => {
-		console.log("✅ Notification Yes for agent:", selectedAgent?.name, "notification:", notification.id, "tool:", notification.toolName);
+		console.log(
+			"✅ Notification Yes for agent:",
+			selectedAgent?.name,
+			"notification:",
+			notification.id,
+			"tool:",
+			notification.toolName
+		);
 		setPendingNotifications((prev) =>
 			prev.filter((n) => n.id !== notification.id)
 		);
@@ -569,7 +610,14 @@ export default function AgentChatPage() {
 	};
 
 	const handleNotificationNo = async (notification: ChatMsg) => {
-		console.log("❌ Notification No for agent:", selectedAgent?.name, "notification:", notification.id, "tool:", notification.toolName);
+		console.log(
+			"❌ Notification No for agent:",
+			selectedAgent?.name,
+			"notification:",
+			notification.id,
+			"tool:",
+			notification.toolName
+		);
 		setPendingNotifications((prev) =>
 			prev.filter((n) => n.id !== notification.id)
 		);
@@ -600,7 +648,8 @@ export default function AgentChatPage() {
 		) {
 			const inProgressSubnet = currentWorkflowData.subnets.find(
 				(subnet: any) =>
-					subnet.status === "in_progress" || subnet.status === "waiting"
+					subnet.status === "in_progress" ||
+					subnet.status === "waiting"
 			);
 
 			if (inProgressSubnet) {
@@ -627,9 +676,12 @@ export default function AgentChatPage() {
 
 		const canAutoSubmit =
 			selectedAgent &&
-			(('collection_address' in selectedAgent && selectedAgent.collection_address === agentAddress) ||
-			 ('collection_id' in selectedAgent && selectedAgent.collection_id === agentAddress) ||
-			 ('nft_address' in selectedAgent && selectedAgent.nft_address === agentAddress)) &&
+			(("collection_address" in selectedAgent &&
+				selectedAgent.collection_address === agentAddress) ||
+				("collection_id" in selectedAgent &&
+					selectedAgent.collection_id === agentAddress) ||
+				("nft_address" in selectedAgent &&
+					selectedAgent.nft_address === agentAddress)) &&
 			prompt &&
 			prompt.trim().length > 0 &&
 			skyBrowser &&
@@ -660,37 +712,59 @@ export default function AgentChatPage() {
 	useEffect(() => {
 		let isMounted = true;
 		const fetchAgent = async () => {
-			
 			if (
 				!selectedAgent ||
-				!((('collection_address' in selectedAgent && selectedAgent.collection_address === agentAddress) ||
-				  ('collection_id' in selectedAgent && selectedAgent.collection_id === agentAddress) ||
-				  ('nft_address' in selectedAgent && selectedAgent.nft_address === agentAddress))) ||
+				!(
+					("collection_address" in selectedAgent &&
+						selectedAgent.collection_address === agentAddress) ||
+					("collection_id" in selectedAgent &&
+						selectedAgent.collection_id === agentAddress) ||
+					("nft_address" in selectedAgent &&
+						selectedAgent.nft_address === agentAddress)
+				) ||
 				lastLoadedAgentId.current !== agentAddress
 			) {
 				setIsLoading(true);
 				try {
 					// If nftId is not in URL, try to get it from the original payload
 					let currentNftId = nftId;
-					if (!currentNftId && urlWorkflowId && skyBrowser && address) {
+					if (
+						!currentNftId &&
+						urlWorkflowId &&
+						skyBrowser &&
+						address
+					) {
 						try {
 							const originalPayload = await getOriginalPayload(
 								urlWorkflowId,
 								skyBrowser as SkyMainBrowser,
 								{ address } as Web3Context
 							);
-							currentNftId = originalPayload?.originalRequestPayload?.accountNFT?.nftID;
-							console.log("🔍 Extracted nftId from original payload:", currentNftId);
+							currentNftId =
+								originalPayload?.originalRequestPayload
+									?.accountNFT?.nftID;
+							console.log(
+								"🔍 Extracted nftId from original payload:",
+								currentNftId
+							);
 						} catch (payloadError) {
-							console.warn("Failed to get nftId from original payload:", payloadError);
+							console.warn(
+								"Failed to get nftId from original payload:",
+								payloadError
+							);
 						}
 					}
 
 					if (!currentNftId) {
-						throw new Error("nftId is required but not found in URL or original payload");
+						throw new Error(
+							"nftId is required but not found in URL or original payload"
+						);
 					}
 
-					const response = await getAgentDetailByCollectionAndNftId(agentAddress, currentNftId);
+					const response = await getAgentDetailByCollectionAndNftId(
+						agentAddress,
+						currentNftId
+					);
 					console.log("🔄 Fetching agent:", response);
 					const agent = response;
 					if (isMounted) {
@@ -718,7 +792,14 @@ export default function AgentChatPage() {
 		return () => {
 			isMounted = false;
 		};
-	}, [agentAddress, selectedAgent, nftId, urlWorkflowId, skyBrowser, address]);
+	}, [
+		agentAddress,
+		selectedAgent,
+		nftId,
+		urlWorkflowId,
+		skyBrowser,
+		address,
+	]);
 
 	if (isLoading) {
 		return (
@@ -793,15 +874,14 @@ export default function AgentChatPage() {
 		<ChatMessagesContainer
 			// Core data
 			chatMessages={chatMessages}
-			urlWorkflowId={urlWorkflowId}
+			urlWorkflowId={urlWorkflowId || undefined}
 			currentWorkflowData={currentWorkflowData}
 			workflowStatus={workflowStatus}
-			completedFeedback={completedFeedback}
+			completedFeedback={new Set()}
 			pendingNotifications={pendingNotifications}
 			pollingStoppedAt={pollingStoppedAt}
 			isShowingCachedMessages={isShowingCachedMessages}
 			selectedAgent={selectedAgent as any}
-			
 			// Callbacks
 			onNotificationYes={handleNotificationYes}
 			onNotificationNo={handleNotificationNo}
@@ -812,25 +892,21 @@ export default function AgentChatPage() {
 			onStop={handleStopExecution}
 			onResume={handleResumeExecution}
 			onRetrySubnet={handleRetrySubnet}
-			
 			// Chat input state
 			mode={mode}
 			setMode={handleModeChange}
 			prompt={prompt}
 			setPrompt={setPrompt}
-			
 			// Execution state
 			isExecuting={isExecuting}
 			isSubmittingFeedback={isSubmittingFeedback}
 			currentExecution={currentExecution}
 			retryingSubnetIndex={retryingSubnetIndex}
-			
 			// UI options
 			showChatInput={true}
 			showSkeleton={true}
 			shouldShowSkeleton={shouldShowSkeleton}
 			isReadOnly={false}
-			
 			// Scroll handling
 			chatContainerRef={chatContainerRef}
 			messagesEndRef={messagesEndRef}

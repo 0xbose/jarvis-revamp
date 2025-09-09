@@ -32,11 +32,18 @@ export default function ChatInput({
 				return;
 			}
 
-			const agentAddress = selectedAgent.collection_address || 
-				('nft_address' in selectedAgent ? selectedAgent.nft_address : null);
-			
+			const agentAddress =
+				("collection_address" in selectedAgent
+					? selectedAgent.collection_address
+					: null) ||
+				("nft_address" in selectedAgent
+					? selectedAgent.nft_address
+					: null);
+
 			if (agentAddress) {
-				router.push(`/chat/agent/${agentAddress}?nftId=${selectedAgent.nft_id}`);
+				router.push(
+					`/chat/agent/${agentAddress}?nftId=${selectedAgent.nft_id}`
+				);
 
 				// Call onSend to execute the workflow
 				if (onSend) {

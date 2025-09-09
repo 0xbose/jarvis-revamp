@@ -19,7 +19,6 @@ interface ChatMessagesGroupedProps {
   onFeedbackProceed: (question: string, answer: string) => Promise<void>;
   onFeedbackSubmit: (question: string, answer: string, feedback: string) => Promise<void>;
   onRefreshPolling: () => void;
-  isShowingCachedMessages: boolean;
   selectedAgent?: any;
   isReadOnly?: boolean;
   onRetrySubnet?: (subnetIndex: number) => Promise<void>;
@@ -39,7 +38,6 @@ export function ChatMessagesGrouped({
   onFeedbackProceed,
   onFeedbackSubmit,
   onRefreshPolling,
-  isShowingCachedMessages,
   selectedAgent,
   isReadOnly = false,
   onRetrySubnet,
