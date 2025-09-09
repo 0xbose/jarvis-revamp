@@ -20,6 +20,9 @@ import { AgentImage } from "@/components/market-place/agent-image";
 import Link from "next/link";
 import { QUERY_KEYS } from "@/utils/query-keys";
 import { MarketplaceLoaderSkeleton } from "@/components/market-place/loader-skeleton";
+import { Tabs, TabsList, TabsContent, TabsTrigger } from "@/components/ui/tabs";
+import AgentHistory from "@/components/user-agents/agent-history";
+import AgentTabs from "@/components/user-agents/agent-tabs";
 
 const useAgentData = (agentAddress: string, nftId: string) => {
 	return useQuery({
@@ -320,155 +323,91 @@ export default function Page() {
 		);
 	}
 
+	if (isLoading || isFetching || !isFetched) {
+		return <MarketplaceLoaderSkeleton />;
+	}
+
+	if (!agentData && isFetched && !isLoading && !isFetching) {
+		return (
+			<div className="min-h-screen bg-background flex items-center justify-center">
+				<div className="text-center space-y-4">
+					<h2 className="text-xl font-semibold">Agent Not Found</h2>
+					<p className="text-muted-foreground">
+						The agent you're looking for doesn't exist.
+					</p>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className="container mx-auto px-6 py-12 max-w-7xl flex flex-col gap-8">
-			{" "}
-			{isLoading || isFetching || !isFetched ? (
-				<div className="">
-					<MarketplaceLoaderSkeleton />
-				</div>
-			) : !agentData && isFetched && !isLoading && !isFetching ? (
-				<div className="min-h-screen bg-background flex items-center justify-center">
-					<div className="text-center space-y-4">
-						<h2 className="text-xl font-semibold">
-							Agent Not Found
-						</h2>
-						<p className="text-muted-foreground">
-							The agent you&apos;re looking for doesn&apos;t
-							exist.
-						</p>
-					</div>
-				</div>
-			) : (
-				<div className="p-6 flex flex-col gap-8 h-[calc(100dvh-4rem)] overflow-y-auto">
-					<div className="flex flex-col md:flex-row gap-12 items-start justify-between">
-						<div className="flex flex-col md:flex-row gap-8 items-start flex-1">
-							<AgentImage
-								src={agentData?.image || ""}
-								alt="Agent"
-								isVerified={agentData?.isVerified}
-							/>
-							<div className="flex-1 space-y-6">
-								<div className="space-y-4">
-									<div className="flex flex-col gap-3">
-										<EditableInput
-											value={nameField.value}
-											draft={nameField.draft}
-											isEditing={nameField.isEditing}
-											onChange={nameField.setDraft}
-											onSave={nameField.saveEdit}
-											onCancel={nameField.cancelEdit}
-											onEdit={nameField.startEdit}
-											className="text-4xl font-bold text-foreground tracking-tight"
-											placeholder="Agent Name"
-										/>
-										<Link
-											href={`/marketplace/${agentAddress}`}
-											className="text-sm text-muted-foreground flex items-center gap-1 group"
-										>
-											<span className="group-hover:underline underline-offset-2 ">
-												{agentData?.agent_name}
-											</span>
-											<ExternalLink className="w-4 h-4 mb-0.5" />
-										</Link>
-									</div>
-									<div className="flex items-center gap-6 text-sm text-muted-foreground">
-										{statusInfo.map((info, index) => (
-											<StatusInfo
-												key={index}
-												icon={info.icon}
-												text={info.text}
-											/>
-										))}
-									</div>
+			<div className="p-6 flex flex-col gap-8 h-[calc(100dvh-4rem)] overflow-y-auto scrollbar-hide">
+				<div className="flex flex-col md:flex-row gap-12 items-start justify-between">
+					<div className="flex flex-col md:flex-row gap-8 items-start flex-1">
+						<AgentImage
+							src={agentData?.image || ""}
+							alt="Agent"
+							isVerified={agentData?.isVerified}
+						/>
+						<div className="flex-1 space-y-6">
+							<div className="space-y-4">
+								<div className="flex flex-col gap-3">
+									<EditableInput
+										value={nameField.value}
+										draft={nameField.draft}
+										isEditing={nameField.isEditing}
+										onChange={nameField.setDraft}
+										onSave={nameField.saveEdit}
+										onCancel={nameField.cancelEdit}
+										onEdit={nameField.startEdit}
+										className="text-4xl font-bold text-foreground tracking-tight"
+										placeholder="Agent Name"
+									/>
+									<Link
+										href={`/marketplace/${agentAddress}`}
+										className="text-sm text-muted-foreground flex items-center gap-1 group"
+									>
+										<span className="group-hover:underline underline-offset-2 ">
+											{agentData?.agent_name}
+										</span>
+										<ExternalLink className="w-4 h-4 mb-0.5" />
+									</Link>
 								</div>
-								<div className="flex gap-x-10">
-									<AddressInfo
-										label="Collection Address"
-										value={agentData?.collection_id}
-										onCopy={handleCopyAddress}
-									/>
-									<AddressInfo
-										label="Agent ID"
-										value={agentData?.nft_id}
-										onCopy={handleCopyAddress}
-									/>
+								<div className="flex items-center gap-6 text-sm text-muted-foreground">
+									{statusInfo.map((info, index) => (
+										<StatusInfo
+											key={index}
+											icon={info.icon}
+											text={info.text}
+										/>
+									))}
 								</div>
 							</div>
-						</div>
-					</div>
-					<div className="space-y-3">
-						<div className="flex items-center justify-between">
-							<Label className="text-lg font-semibold text-foreground">
-								Agent Description
-							</Label>
-							{!descriptionField.isEditing && (
-								<Button
-									size="sm"
-									variant="ghost"
-									onClick={descriptionField.startEdit}
-									className="h-8 px-2"
-									disabled={updateLoading}
-								>
-									<Pencil className="h-4 w-4" />
-								</Button>
-							)}
-						</div>
-						<div className="relative">
-							<div className="min-h-[140px] bg-background/50 border border-border/60 rounded-xl p-6 text-base leading-relaxed">
-								{descriptionField.isEditing ? (
-									<div className="space-y-4">
-										<textarea
-											value={descriptionField.draft}
-											onChange={(e) =>
-												descriptionField.setDraft(
-													e.target.value
-												)
-											}
-											className="w-full min-h-[120px] bg-transparent outline-none focus:outline-none resize-y"
-											placeholder="Enter a description for this agent..."
-											disabled={updateLoading}
-										/>
-										<div className="flex items-center gap-2 justify-end">
-											<Button
-												size="sm"
-												variant="ghost"
-												onClick={
-													descriptionField.saveEdit
-												}
-												className="h-8 px-3"
-												disabled={updateLoading}
-											>
-												<Check className="h-4 w-4 mr-1" />
-												{updateLoading
-													? "Saving..."
-													: "Save"}
-											</Button>
-											<Button
-												size="sm"
-												variant="ghost"
-												onClick={
-													descriptionField.cancelEdit
-												}
-												className="h-8 px-3"
-												disabled={updateLoading}
-											>
-												<X className="h-4 w-4 mr-1" />
-												Cancel
-											</Button>
-										</div>
-									</div>
-								) : (
-									<div>
-										{descriptionField.value ||
-											"No description provided for this agent."}
-									</div>
-								)}
+							<div className="flex gap-x-10">
+								<AddressInfo
+									label="Collection Address"
+									value={agentData?.collection_id}
+									onCopy={handleCopyAddress}
+								/>
+								<AddressInfo
+									label="Agent ID"
+									value={agentData?.nft_id}
+									onCopy={handleCopyAddress}
+								/>
 							</div>
 						</div>
 					</div>
 				</div>
-			)}
+				<div>
+					<AgentTabs
+						agentAddress={agentAddress}
+						nftId={nftId}
+						descriptionField={descriptionField}
+						updateLoading={updateLoading}
+					/>
+				</div>
+			</div>
 		</div>
 	);
 }

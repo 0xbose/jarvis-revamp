@@ -47,6 +47,48 @@ export const getHistory = async (
 	return response.data;
 };
 
+export const getHistoryByAgent = async (
+	params?: {
+		page?: number;
+		limit?: number;
+		agentAddress?: string;
+		agentID?: string;
+		status?:
+			| "in_progress"
+			| "waiting"
+			| "completed"
+			| "pending"
+			| "failed"
+			| "stopped"
+			| "awaiting_response";
+	},
+	skyBrowser?: SkyMainBrowser,
+	web3Context?: Web3Context
+): Promise<WorkflowRequestsResponse> => {
+	const axiosInstance = await getAxiosInstanceWithApiKey(
+		process.env.NEXT_PUBLIC_NFT_USER_AGENT_URL || "",
+		skyBrowser,
+		web3Context
+	);
+
+	const response = await axiosInstance.get("/requests", {
+		params: {
+			agentAddress: params?.agentAddress,
+			agentID: params?.agentID,
+			page: params?.page,
+			limit: params?.limit,
+			status: params?.status,
+		},
+	});
+
+	console.log("✅ getHistoryByAgent - Response received", {
+		status: response.status,
+		dataKeys: Object.keys(response.data || {}),
+	});
+
+	return response.data;
+};
+
 export const getChatMessages = async (
 	workflowId: string,
 	skyBrowser?: SkyMainBrowser,

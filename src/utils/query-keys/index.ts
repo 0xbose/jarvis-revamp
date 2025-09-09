@@ -6,4 +6,5 @@ export const QUERY_KEYS = {
   AGENTS: "agents",
   HISTORY: "history",
   USER_MINTED_AGENTS: "user-minted-agents",
+  AGENT_HISTORY: "agent-history",
 };

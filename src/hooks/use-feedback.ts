@@ -35,7 +35,6 @@ export const useFeedback = ({
 }: UseFeedbackProps) => {
 	const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 	const [retryingSubnetIndex, setRetryingSubnetIndex] = useState<number | null>(null);
-	const queryClient = useQueryClient();
 	
 	// Use the subnet cache hook for subnet operations
 	const { updateSubnetStatus } = useSubnetCache();
