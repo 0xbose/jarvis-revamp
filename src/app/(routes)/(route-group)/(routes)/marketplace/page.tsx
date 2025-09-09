@@ -6,7 +6,7 @@ import AgentMarketplaceCard from "@/components/market-place/agent-marketplace-ca
 import { getCollections } from "@/controllers/collections/collections.query";
 import { QUERY_KEYS } from "@/utils/query-keys";
 import { CollectionAgent, CollectionAgentsResponse } from "@/types/collection";
-import { MarketplaceLoaderSkeleton } from "@/components/market-place/loader-skeleton";
+import AgentCardSkeleton from "@/components/market-place/agent-card-skeleton";
 
 export default function MarketPlacePage() {
 	const [searchQuery, setSearchQuery] = useState("");
@@ -158,7 +158,7 @@ export default function MarketPlacePage() {
 								</div>
 								<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 									{Array.from({ length: 8 }).map((_, i) => (
-										<MarketplaceLoaderSkeleton key={i} />
+										<AgentCardSkeleton key={i} />
 									))}
 								</div>
 							</div>
