@@ -419,7 +419,7 @@ export default function Page() {
         <div className="flex flex-col md:flex-row gap-12 items-start justify-between">
           <div className="flex flex-col md:flex-row gap-8 items-start flex-1">
             <AgentImage 
-              src={agentData?.image} 
+              src={agentData?.image || "/agent-mock.webp"} 
               alt="Agent" 
               isVerified={agentData?.isVerified} 
             />
