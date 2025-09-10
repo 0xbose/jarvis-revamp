@@ -29,7 +29,11 @@ export default function UserAgentsPage() {
 		refetch,
 		isFetched,
 	} = useInfiniteQuery({
-		queryKey: [QUERY_KEYS.USER_MINTED_AGENTS, searchQuery, selectedCategory],
+		queryKey: [
+			QUERY_KEYS.USER_MINTED_AGENTS,
+			searchQuery,
+			selectedCategory,
+		],
 		queryFn: async ({ pageParam = 0 }) => {
 			try {
 				const data = await getUserMintedAgents({

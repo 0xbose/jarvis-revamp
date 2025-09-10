@@ -32,3 +32,35 @@ export const getNodeContextMemory = async ({
 		return [];
 	}
 };
+
+export const getMemoryRecall = async ({
+	agentID,
+}: {
+	agentID: string;
+}): Promise<any> => {
+	const response = await axios.get(
+		`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections/memory-recall`,
+		{
+			params: {
+				apiKey: `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+				agentID,
+			},
+			headers: {
+				"x-api-key": `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+			},
+		}
+	);
+
+	// The API returns { success, data, message }
+	// Handle both single object and array responses
+	const responseData = response.data.data;
+
+	if (Array.isArray(responseData)) {
+		return responseData;
+	} else if (responseData) {
+		// If it's a single object, wrap it in an array
+		return [responseData];
+	} else {
+		return [];
+	}
+};

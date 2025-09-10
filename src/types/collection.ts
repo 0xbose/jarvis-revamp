@@ -8,6 +8,8 @@ export interface CollectionAgent {
   agent_address: string;
   isVerified: boolean;
   image: string | null;
+  collection_address: string;
+  nft_id: string;
 }
 
 export interface CollectionPagination {

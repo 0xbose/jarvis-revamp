@@ -21,7 +21,11 @@ import Link from "next/link";
 import { QUERY_KEYS } from "@/utils/query-keys";
 import { MarketplaceLoaderSkeleton } from "@/components/market-place/loader-skeleton";
 import AgentTabs from "@/components/user-agents/agent-tabs";
-import { AgentDetailResponse } from "@/types/agents";
+import { AgentDetailResponse, AgentSubnet } from "@/types/agents";
+import { getAgentUserAuthStatus } from "@/controllers/user-auth/user-auth.query";
+import { useWallet } from "@/hooks/use-wallet";
+import { getSubnetsByID } from "@/controllers/subnets/subnets.query";
+import { ExtendedSubnet } from "@/types/subnet";
 
 const useAgentData = (agentAddress: string, nftId: string) => {
 	return useQuery({
@@ -211,11 +215,14 @@ const AddressInfo = ({
 	</div>
 );
 
+// --- FIX: Move all useQuery calls to top-level, never inside .map ---
+
 export default function Page() {
 	const params = useParams<{ agentAddress: string }>();
 	const agentAddress = params.agentAddress;
 	const searchParams = useSearchParams();
 	const nftId = searchParams.get("nftid") || "";
+	const { skyBrowser, address } = useWallet();
 
 	const [updateLoading, setUpdateLoading] = useState(false);
 
@@ -304,6 +311,100 @@ export default function Page() {
 		],
 		[agentData?.is_deployed, agentData?.subnet_list?.length, formattedDate]
 	);
+
+	const agentSubnets: AgentSubnet[] = agentData?.subnet_list || [];
+
+	const subnetIds = agentSubnets.map((s) => s.unique_id).filter(Boolean);
+
+	const {
+		data: subnetDetails,
+		isLoading: isLoadingSubnets,
+		isError: isErrorSubnets,
+	} = useQuery<ExtendedSubnet[]>({
+		queryKey: ["agent-subnets", subnetIds],
+		queryFn: async (): Promise<ExtendedSubnet[]> => {
+			if (subnetIds.length === 0) return [];
+
+			const results = await Promise.all(
+				subnetIds.map((id) => getSubnetsByID(id))
+			);
+
+			const flattened = results.flat();
+			const seen = new Set();
+
+			return flattened.filter((subnet) => {
+				const key = subnet.unique_id;
+				if (seen.has(key)) {
+					return false;
+				}
+				seen.add(key);
+				return true;
+			});
+		},
+		enabled: subnetIds.length > 0,
+		staleTime: 0,
+		gcTime: 0,
+		refetchOnMount: "always",
+		refetchOnWindowFocus: true,
+		refetchOnReconnect: true,
+	});
+
+	// Build subnetDetailsMap
+	const subnetDetailsMap = useMemo(() => {
+		const map = new Map();
+		if (subnetDetails) {
+			subnetDetails.forEach((subnet) => {
+				map.set(subnet.unique_id, subnet);
+			});
+		}
+		return map;
+	}, [subnetDetails]);
+
+	const stableSubnetIds = useMemo(
+		() => Array.from(subnetDetailsMap.keys()),
+		[subnetDetailsMap]
+	);
+
+	const {
+		data: subnetAuthDetails,
+		isLoading: isLoadingSubnetAuthDetails,
+		isError: isErrorSubnetAuthDetails,
+	} = useQuery<any[]>({
+		queryKey: [QUERY_KEYS.USER_AGENT_AUTH_STATUS, subnetIds],
+		queryFn: async (): Promise<any[]> => {
+			if (subnetIds.length === 0) return [];
+
+			const results = await Promise.all(
+				stableSubnetIds.map((id) =>
+					getAgentUserAuthStatus({
+						subnetUrl: subnetDetailsMap.get(id)?.subnet_url || "",
+						agentCollection: {
+							agentAddress: agentAddress,
+							agentID: nftId,
+						},
+						skyBrowser: skyBrowser,
+						web3Context: { address },
+					})
+				)
+			);
+
+			const flattened = results.flat();
+			const seen = new Set();
+
+			return flattened.filter((subnet) => {
+				const key = subnet.subnet_url;
+				if (seen.has(key)) {
+					return false;
+				}
+				seen.add(key);
+				return true;
+			});
+		},
+		enabled: subnetIds.length > 0 && !!address && !!skyBrowser,
+		staleTime: 0,
+		gcTime: 0,
+		retry: 1,
+	});
 
 	if (isLoading || isFetching || !isFetched) {
 		return <MarketplaceLoaderSkeleton />;

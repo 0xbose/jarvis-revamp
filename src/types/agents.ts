@@ -13,6 +13,7 @@ export interface UserAgentCollection {
 	agent_description: string;
 	agent_image: string | null;
 	agent_isverified: boolean;
+	agent_address: string;
 }
 
 export interface UserAgentCollectionsResponse {
