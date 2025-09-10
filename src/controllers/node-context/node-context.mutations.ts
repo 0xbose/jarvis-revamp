@@ -88,3 +88,77 @@ export const upsertMemoryRecall = async ({
 	);
 	return response.data;
 };
+
+export const deleteNodeContextMemory = async ({
+	agent_id,
+	itemID,
+}: {
+	agent_id: string;
+	itemID?: string;
+}): Promise<any> => {
+	if (!agent_id) {
+		throw new Error("agent_id is required");
+	}
+	if (!`${process.env.NEXT_PUBLIC_X_API_KEY}`) {
+		throw new Error("api_key is required");
+	}
+
+	const params: any = {
+		apiKey: `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+		agentID: agent_id,
+	};
+
+	// Only add itemID if provided
+	if (itemID) {
+		params.itemID = itemID;
+	}
+
+	const response = await axios.delete(
+		`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections/node-context`,
+		{
+			params,
+			headers: {
+				"x-api-key": `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+				"Content-Type": "application/json",
+			},
+		}
+	);
+	return response.data;
+};
+
+export const deleteMemoryRecall = async ({
+	agent_id,
+	itemID,
+}: {
+	agent_id: string;
+	itemID?: string;
+}): Promise<any> => {
+	if (!agent_id) {
+		throw new Error("agent_id is required");
+	}
+	if (!`${process.env.NEXT_PUBLIC_X_API_KEY}`) {
+		throw new Error("api_key is required");
+	}
+
+	const params: any = {
+		apiKey: `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+		agentID: agent_id,
+	};
+
+	// Only add itemID if provided
+	if (itemID) {
+		params.itemID = itemID;
+	}
+
+	const response = await axios.delete(
+		`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections/memory-recall`,
+		{
+			params,
+			headers: {
+				"x-api-key": `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+				"Content-Type": "application/json",
+			},
+		}
+	);
+	return response.data;
+};

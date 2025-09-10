@@ -26,6 +26,8 @@ import { Checkbox } from "../ui/checkbox";
 import {
 	upsertNodeContextMemory,
 	upsertMemoryRecall,
+	deleteNodeContextMemory,
+	deleteMemoryRecall,
 } from "@/controllers/node-context/node-context.mutations";
 import { getNodeContextMemory } from "@/controllers/node-context/node-context.query";
 import { getMemoryRecall } from "@/controllers/node-context/node-context.query";
@@ -498,6 +500,13 @@ export default function AgentMemory({
 						newSet.add(subnetItemId);
 						return { ...prev, [agentId]: newSet };
 					});
+
+					// Refetch data to ensure UI is in sync with server
+					if (isMaster) {
+						refetchMemoryRecallDetails();
+					} else {
+						refetchMemoryDetails();
+					}
 				} catch (error) {
 					console.error(
 						`Failed to assign ${
@@ -513,12 +522,53 @@ export default function AgentMemory({
 					});
 				}
 			} else {
-				stateSetter((prev) => {
-					const agentSelections = prev[agentId] || new Set<number>();
-					const newSet = new Set<number>(agentSelections);
-					newSet.delete(subnetItemId);
-					return { ...prev, [agentId]: newSet };
-				});
+				// Handle deselection - call delete API
+				setAssigningMemory((prev) => ({ ...prev, [loadingKey]: true }));
+
+				try {
+					if (isMaster) {
+						// For master node, delete memory recall
+						await deleteMemoryRecall({
+							agent_id: agentData.id,
+							itemID: subnetItemId.toString(),
+						});
+					} else {
+						// For regular memory, delete node context memory
+						await deleteNodeContextMemory({
+							agent_id: agentData.id,
+							itemID: subnetItemId.toString(),
+						});
+					}
+
+					// Update state to remove the selection
+					stateSetter((prev) => {
+						const agentSelections =
+							prev[agentId] || new Set<number>();
+						const newSet = new Set<number>(agentSelections);
+						newSet.delete(subnetItemId);
+						return { ...prev, [agentId]: newSet };
+					});
+
+					// Refetch data to ensure UI is in sync with server
+					if (isMaster) {
+						refetchMemoryRecallDetails();
+					} else {
+						refetchMemoryDetails();
+					}
+				} catch (error) {
+					console.error(
+						`Failed to delete ${
+							isMaster ? "master node" : "agent"
+						} memory:`,
+						error
+					);
+				} finally {
+					setAssigningMemory((prev) => {
+						const newState = { ...prev };
+						delete newState[loadingKey];
+						return newState;
+					});
+				}
 			}
 		},
 		[
@@ -578,6 +628,9 @@ export default function AgentMemory({
 						);
 						return { ...prev, [agentId]: allSubnetIds };
 					});
+
+					// Refetch data to ensure UI is in sync with server
+					refetchMemoryRecallDetails();
 				} catch (error) {
 					console.error(
 						"Failed to assign master memory for all subnets:",
@@ -591,11 +644,37 @@ export default function AgentMemory({
 					});
 				}
 			} else {
-				// Deselect all master selections
-				setMasterNodeSelections((prev) => ({
-					...prev,
-					[agentId]: new Set(),
-				}));
+				// Deselect all master selections - call delete API
+				const loadingKey = `master-${agentId}-all`;
+				setAssigningMemory((prev) => ({ ...prev, [loadingKey]: true }));
+
+				try {
+					// Delete all memory recall for this agent
+					await deleteMemoryRecall({
+						agent_id: agentData.id,
+						// Don't pass itemID to delete all memory recall for this agent
+					});
+
+					// Update state to deselect all master selections
+					setMasterNodeSelections((prev) => ({
+						...prev,
+						[agentId]: new Set(),
+					}));
+
+					// Refetch data to ensure UI is in sync with server
+					refetchMemoryRecallDetails();
+				} catch (error) {
+					console.error(
+						"Failed to delete master memory for all subnets:",
+						error
+					);
+				} finally {
+					setAssigningMemory((prev) => {
+						const newState = { ...prev };
+						delete newState[loadingKey];
+						return newState;
+					});
+				}
 			}
 		},
 		[agentSubnets, selectedAgents, masterNodeSelections, agentData.id]
