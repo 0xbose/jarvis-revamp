@@ -473,12 +473,11 @@ export default function AgentMemory({
 				isMaster ? "master-" : ""
 			}${agentId}-${subnetItemId}`;
 
-			if (!isCurrentlySelected) {
-				setAssigningMemory((prev) => ({ ...prev, [loadingKey]: true }));
+			setAssigningMemory((prev) => ({ ...prev, [loadingKey]: true }));
 
-				try {
+			try {
+				if (!isCurrentlySelected) {
 					if (isMaster) {
-						// For master node, we call the API without item_id
 						const payload = {
 							agent_id: agentData.id,
 							agentCollection: {
@@ -488,7 +487,6 @@ export default function AgentMemory({
 						};
 						await upsertMemoryRecall(payload);
 					} else {
-						// For regular memory, we still need item_id
 						const payload = createPayload(agent, subnetItemId);
 						await upsertNodeContextMemory(payload);
 					}
@@ -507,40 +505,19 @@ export default function AgentMemory({
 					} else {
 						refetchMemoryDetails();
 					}
-				} catch (error) {
-					console.error(
-						`Failed to assign ${
-							isMaster ? "master node" : "agent"
-						} memory:`,
-						error
-					);
-				} finally {
-					setAssigningMemory((prev) => {
-						const newState = { ...prev };
-						delete newState[loadingKey];
-						return newState;
-					});
-				}
-			} else {
-				// Handle deselection - call delete API
-				setAssigningMemory((prev) => ({ ...prev, [loadingKey]: true }));
-
-				try {
+				} else {
 					if (isMaster) {
-						// For master node, delete memory recall
 						await deleteMemoryRecall({
 							agent_id: agentData.id,
 							itemID: subnetItemId.toString(),
 						});
 					} else {
-						// For regular memory, delete node context memory
 						await deleteNodeContextMemory({
 							agent_id: agentData.id,
 							itemID: subnetItemId.toString(),
 						});
 					}
 
-					// Update state to remove the selection
 					stateSetter((prev) => {
 						const agentSelections =
 							prev[agentId] || new Set<number>();
@@ -549,26 +526,25 @@ export default function AgentMemory({
 						return { ...prev, [agentId]: newSet };
 					});
 
-					// Refetch data to ensure UI is in sync with server
 					if (isMaster) {
 						refetchMemoryRecallDetails();
 					} else {
 						refetchMemoryDetails();
 					}
-				} catch (error) {
-					console.error(
-						`Failed to delete ${
-							isMaster ? "master node" : "agent"
-						} memory:`,
-						error
-					);
-				} finally {
-					setAssigningMemory((prev) => {
-						const newState = { ...prev };
-						delete newState[loadingKey];
-						return newState;
-					});
 				}
+			} catch (error) {
+				console.error(
+					`Failed to ${!isCurrentlySelected ? "assign" : "delete"} ${
+						isMaster ? "master node" : "agent"
+					} memory:`,
+					error
+				);
+			} finally {
+				setAssigningMemory((prev) => {
+					const newState = { ...prev };
+					delete newState[loadingKey];
+					return newState;
+				});
 			}
 		},
 		[
@@ -594,7 +570,6 @@ export default function AgentMemory({
 		[handleToggle]
 	);
 
-	// Handle master toggle for all subnets
 	const handleMasterAllToggle = useCallback(
 		async (agentId: string) => {
 			if (!agentSubnets.length) return;
@@ -605,13 +580,12 @@ export default function AgentMemory({
 			const currentMasterSelections =
 				masterNodeSelections[agentId] || new Set();
 			const shouldSelectAll = currentMasterSelections.size === 0;
+			const loadingKey = `master-${agentId}-all`;
 
-			if (shouldSelectAll) {
-				// Use single API call for memory recall (no item_id needed)
-				const loadingKey = `master-${agentId}-all`;
-				setAssigningMemory((prev) => ({ ...prev, [loadingKey]: true }));
+			setAssigningMemory((prev) => ({ ...prev, [loadingKey]: true }));
 
-				try {
+			try {
+				if (shouldSelectAll) {
 					const payload = {
 						agent_id: agentData.id,
 						agentCollection: {
@@ -621,7 +595,6 @@ export default function AgentMemory({
 					};
 					await upsertMemoryRecall(payload);
 
-					// Update state to select all subnets for this agent
 					setMasterNodeSelections((prev) => {
 						const allSubnetIds = new Set(
 							agentSubnets.map((subnet) => subnet.itemID)
@@ -629,33 +602,13 @@ export default function AgentMemory({
 						return { ...prev, [agentId]: allSubnetIds };
 					});
 
-					// Refetch data to ensure UI is in sync with server
 					refetchMemoryRecallDetails();
-				} catch (error) {
-					console.error(
-						"Failed to assign master memory for all subnets:",
-						error
-					);
-				} finally {
-					setAssigningMemory((prev) => {
-						const newState = { ...prev };
-						delete newState[loadingKey];
-						return newState;
-					});
-				}
-			} else {
-				// Deselect all master selections - call delete API
-				const loadingKey = `master-${agentId}-all`;
-				setAssigningMemory((prev) => ({ ...prev, [loadingKey]: true }));
-
-				try {
-					// Delete all memory recall for this agent
+				} else {
+				
 					await deleteMemoryRecall({
 						agent_id: agentData.id,
-						// Don't pass itemID to delete all memory recall for this agent
 					});
 
-					// Update state to deselect all master selections
 					setMasterNodeSelections((prev) => ({
 						...prev,
 						[agentId]: new Set(),
@@ -663,18 +616,20 @@ export default function AgentMemory({
 
 					// Refetch data to ensure UI is in sync with server
 					refetchMemoryRecallDetails();
-				} catch (error) {
-					console.error(
-						"Failed to delete master memory for all subnets:",
-						error
-					);
-				} finally {
-					setAssigningMemory((prev) => {
-						const newState = { ...prev };
-						delete newState[loadingKey];
-						return newState;
-					});
 				}
+			} catch (error) {
+				console.error(
+					`Failed to ${
+						shouldSelectAll ? "assign" : "delete"
+					} master memory for all subnets:`,
+					error
+				);
+			} finally {
+				setAssigningMemory((prev) => {
+					const newState = { ...prev };
+					delete newState[loadingKey];
+					return newState;
+				});
 			}
 		},
 		[agentSubnets, selectedAgents, masterNodeSelections, agentData.id]
@@ -707,8 +662,11 @@ export default function AgentMemory({
 					{/* Table Header */}
 					<div className="flex border-b border-border p-4 px-6 mb-4 items-center min-w-fit">
 						<div
-							className="text-lg font-semibold w-[200px] flex-shrink-0 sticky left-0 bg-background z-10 pr-4"
-							style={{ left: 24 }}
+							className="text-lg font-semibold w-[200px] flex-shrink-0 sticky left-0 bg-background z-20 pr-4 pl-6"
+							style={{
+								left: 0,
+								backgroundImage: 'linear-gradient(to right, var(--background) 85%, transparent 100%)',
+							}}
 						>
 							Subnet
 						</div>
@@ -751,10 +709,13 @@ export default function AgentMemory({
 					{/* Master Row */}
 					<div className="flex p-4 px-6 items-center w-full min-w-fit">
 						<div
-							className="text-base font-medium capitalize w-[200px] flex-shrink-0 sticky left-0 z-10 pr-4"
-							style={{ left: 24 }}
+							className="text-base font-medium capitalize w-[200px] flex-shrink-0 sticky left-0 bg-background z-20 pr-4 pl-6"
+							style={{	
+								left: 0,
+								backgroundImage: 'linear-gradient(to right, var(--background) 85%, transparent 100%)',
+							}}
 						>
-							Master
+							Master Agent
 						</div>
 
 						<div className="flex items-center gap-0 w-full">
@@ -769,25 +730,32 @@ export default function AgentMemory({
 									<div
 										key={agent.id}
 										className="flex justify-center items-center min-h-[32px] w-[260px] flex-shrink-0 px-6"
+										// Prevent checkbox wiggle by using a fixed width for the loading spinner container
+										style={{ position: "relative" }}
 									>
-										<Checkbox
-											checked={isMasterChecked}
-											onCheckedChange={() =>
-												handleMasterAllToggle(agent.id)
-											}
-											disabled={isMasterLoading}
-											className={
-												isMasterLoading
-													? "opacity-50"
-													: ""
-											}
-											title={`Set ${agent.name} as master for all subnets`}
-										/>
-										{isMasterLoading && (
-											<div className="ml-2">
-												<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-											</div>
-										)}
+										<div className="flex items-center justify-center" style={{ width: "100%" }}>
+											<Checkbox
+												checked={isMasterChecked}
+												onCheckedChange={() =>
+													handleMasterAllToggle(agent.id)
+												}
+												disabled={isMasterLoading}
+												className={
+													isMasterLoading
+														? "opacity-50"
+														: ""
+												}
+												title={`Set ${agent.name} as master for all subnets`}
+											/>
+											{/* Reserve space for spinner to prevent layout shift */}
+											<span style={{ display: "inline-block", width: 18, marginLeft: 8 }}>
+												{isMasterLoading && (
+													<span>
+														<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+													</span>
+												)}
+											</span>
+										</div>
 									</div>
 								);
 							})}
@@ -810,11 +778,14 @@ export default function AgentMemory({
 									className="flex p-4 px-6 items-center w-full min-w-fit"
 								>
 									<div
-										className="text-base truncate capitalize w-[200px] flex-shrink-0 sticky left-0 bg-background z-10 pr-4"
+										className="text-base truncate capitalize w-[200px] flex-shrink-0 sticky left-0 bg-background z-20 pr-4 pl-6"
 										title={subnetName}
-										style={{ left: 24 }}
+										style={{
+											left: 0,
+											backgroundImage: 'linear-gradient(to right, var(--background) 85%, transparent 100%)',
+										}}
 									>
-										{subnetName}
+										{subnetName} agent
 									</div>
 
 									<div className="flex items-center gap-0 w-full">
@@ -831,8 +802,9 @@ export default function AgentMemory({
 												<div
 													key={agent.id}
 													className="flex justify-center items-center min-h-[32px] w-[260px] flex-shrink-0 px-6"
+													style={{ position: "relative" }}
 												>
-													<div className="flex items-center justify-center">
+													<div className="flex items-center justify-center" style={{ width: "100%" }}>
 														<Checkbox
 															checked={isChecked}
 															onCheckedChange={() =>
@@ -849,11 +821,14 @@ export default function AgentMemory({
 															}
 															title="Assign agent to this subnet"
 														/>
-														{isLoading && (
-															<div className="ml-2">
-																<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-															</div>
-														)}
+														{/* Reserve space for spinner to prevent layout shift */}
+														<span style={{ display: "inline-block", width: 18, marginLeft: 8 }}>
+															{isLoading && (
+																<span>
+																	<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+																</span>
+															)}
+														</span>
 													</div>
 												</div>
 											);
@@ -909,7 +884,7 @@ export default function AgentMemory({
 							</div>
 						)}
 						{mintedAgentsData?.user_collections?.length > 0 && (
-							<div className="flex flex-col gap-3 mt-2">
+							<div className="grid grid-cols-3 gap-3 mt-2">
 								{mintedAgentsData.user_collections.map(
 									(agent: any) => {
 										const isSelected = selectedAgents.some(
@@ -950,10 +925,10 @@ export default function AgentMemory({
 													className="w-16 h-16 object-cover rounded-md mr-4"
 												/>
 												<div className="flex-1 flex flex-col justify-center">
-													<div className="font-medium text-foreground text-sm truncate">
-														{agent.name}
+													<div className="font-medium text-foreground text-sm line-clamp-2">
+														{agent.name} fdaf dfa ffsf da fd
 													</div>
-													<div className="text-muted-foreground text-xs mt-1 line-clamp-2">
+													<div className="text-muted-foreground text-xs mt-1 line-clamp-1">
 														{agent.description}
 													</div>
 												</div>

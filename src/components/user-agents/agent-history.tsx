@@ -2,13 +2,13 @@
 
 import React, { useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	type ColumnDef,
 	getCoreRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
-import { Clock, CheckCircle, TimerIcon } from "lucide-react";
+import { Clock, CheckCircle, TimerIcon, Trash, Settings } from "lucide-react";
 import { getHistoryByAgent } from "@/controllers/requests/requests.query";
 import { QUERY_KEYS } from "@/utils/query-keys";
 import { useWallet } from "@/hooks/use-wallet";
@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/table/DataTable";
 import type { HistoryItem } from "@/types";
 import { STATUS_CONFIG } from "@/constants/status-config";
+import { deleteWorkflowRequest } from "@/controllers/requests/requests.mutation";
+import { toast } from "sonner";
 
 // Memoized status badge component to prevent unnecessary re-renders
 const StatusBadge = React.memo(({ status }: { status: string }) => {
@@ -33,7 +35,6 @@ const StatusBadge = React.memo(({ status }: { status: string }) => {
 	);
 });
 
-// Memoized duration formatter to avoid recalculating on every render
 const formatDuration = (createdAt: string, updatedAt: string) => {
 	const created = new Date(createdAt);
 	const updated = new Date(updatedAt);
@@ -59,7 +60,7 @@ interface AgentHistoryProps {
 function AgentHistory({ agentAddress, agentID }: AgentHistoryProps) {
 	const { skyBrowser, address } = useWallet();
 	const router = useRouter();
-
+	const queryClient = useQueryClient();
 	const {
 		data: historyData,
 		isLoading,
@@ -79,7 +80,7 @@ function AgentHistory({ agentAddress, agentID }: AgentHistoryProps) {
 						agentAddress,
 						agentID,
 						page: 1,
-						limit: 100, // fetch up to 100, no pagination UI
+						limit: 100,
 					},
 					skyBrowser,
 					web3Context
@@ -90,11 +91,10 @@ function AgentHistory({ agentAddress, agentID }: AgentHistoryProps) {
 			}
 		},
 		enabled: !!agentAddress && !!agentID && !!skyBrowser && !!address,
-		staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
-		gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+		staleTime: 5 * 60 * 1000,
+		gcTime: 10 * 60 * 1000,
 	});
 
-	// Memoize the workflows data transformation to avoid recalculation on every render
 	const workflows: HistoryItem[] = useMemo(
 		() =>
 			Array.isArray(historyData?.workflows)
@@ -106,13 +106,28 @@ function AgentHistory({ agentAddress, agentID }: AgentHistoryProps) {
 		[historyData?.workflows]
 	);
 
-	// Memoize the navigation handler to prevent unnecessary re-renders
 	const handleWorkflowClick = useCallback(
 		(workflowId: string, agentAddress: string) => {
 			router.push(`/chat/agent/${agentAddress}?workflowId=${workflowId}`);
 		},
 		[router]
 	);
+
+	const handleDelete = async (workflowId: string) => {
+		try {
+			await deleteWorkflowRequest(
+				workflowId,
+				skyBrowser,
+				address ? { address } : undefined
+			);
+			queryClient.invalidateQueries({
+				queryKey: [QUERY_KEYS.HISTORY, agentAddress, agentID],
+			});
+			toast.success("Workflow deleted successfully");
+		} catch (error) {
+			console.error("Failed to delete workflow:", error);
+		}
+	};
 
 	// Memoize columns definition to prevent recreation on every render
 	const columns: ColumnDef<HistoryItem>[] = useMemo(
@@ -187,6 +202,25 @@ function AgentHistory({ agentAddress, agentID }: AgentHistoryProps) {
 							row.original.createdAt,
 							row.original.updatedAt
 						)}
+					</span>
+				),
+			},
+			{
+				accessorKey: "action",
+				header: () => (
+					<div className="text-gray-400 font-semibold flex items-center gap-2 min-w-24">
+						<Settings className="size-4" />
+						<span>Action</span>
+					</div>
+				),
+				cell: ({ row }) => (
+					<span className="text-sm text-gray-400">
+						<button
+							onClick={() => handleDelete(row.original.requestId)}
+							className="text-red-400 hover:text-red-400/80"
+						>
+							<Trash className="size-4" />
+						</button>
 					</span>
 				),
 			},

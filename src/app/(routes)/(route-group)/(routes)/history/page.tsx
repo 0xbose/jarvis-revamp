@@ -15,6 +15,7 @@ import {
 	EllipsisVertical,
 	Trash,
 	Settings,
+	Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -93,6 +94,9 @@ function WorkflowHistoryInner() {
 		statusParam ? [statusParam] : []
 	);
 	const [search, setSearch] = useState(searchTerm);
+	const [deletingWorkflowId, setDeletingWorkflowId] = useState<string | null>(
+		null
+	);
 
 	const pageSize = 10;
 	const { skyBrowser, address } = useWallet();
@@ -221,6 +225,9 @@ function WorkflowHistoryInner() {
 	}, [workflows, search]);
 
 	const handleDelete = async (workflowId: string) => {
+		if (deletingWorkflowId) return; // Prevent multiple clicks
+
+		setDeletingWorkflowId(workflowId);
 		try {
 			await deleteWorkflowRequest(
 				workflowId,
@@ -233,6 +240,9 @@ function WorkflowHistoryInner() {
 			toast.success("Workflow deleted successfully");
 		} catch (error) {
 			console.error("Failed to delete workflow:", error);
+			toast.error("Failed to delete workflow");
+		} finally {
+			setDeletingWorkflowId(null);
 		}
 	};
 
@@ -319,16 +329,29 @@ function WorkflowHistoryInner() {
 					<span>Action</span>
 				</div>
 			),
-			cell: ({ row }) => (
-				<span className="text-sm text-gray-400">
-					<button
-						onClick={() => handleDelete(row.original.requestId)}
-						className="text-red-400 hover:text-red-400/80"
-					>
-						<Trash className="size-4" />
-					</button>
-				</span>
-			),
+			cell: ({ row }) => {
+				const isDeleting =
+					deletingWorkflowId === row.original.requestId;
+				return (
+					<span className="text-sm text-gray-400">
+						<button
+							onClick={() => handleDelete(row.original.requestId)}
+							disabled={isDeleting || !!deletingWorkflowId}
+							className={`${
+								isDeleting
+									? "text-gray-500 cursor-not-allowed"
+									: "text-red-400 hover:text-red-400/80"
+							} transition-colors`}
+						>
+							{isDeleting ? (
+								<Loader2 className="size-4 animate-spin" />
+							) : (
+								<Trash className="size-4" />
+							)}
+						</button>
+					</span>
+				);
+			},
 		},
 	];
 
