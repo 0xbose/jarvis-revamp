@@ -360,9 +360,15 @@ export default function Page() {
 		return map;
 	}, [subnetDetails]);
 
-	const stableSubnetIds = useMemo(
-		() => Array.from(subnetDetailsMap.keys()),
-		[subnetDetailsMap]
+	// Get subnets that require auth
+	const authRequiredSubnets = useMemo(() => {
+		if (!subnetDetails) return [];
+		return subnetDetails.filter(subnet => subnet.auth_required === true);
+	}, [subnetDetails]);
+
+	const authRequiredSubnetIds = useMemo(
+		() => authRequiredSubnets.map(subnet => subnet.unique_id),
+		[authRequiredSubnets]
 	);
 
 	const {
@@ -370,12 +376,12 @@ export default function Page() {
 		isLoading: isLoadingSubnetAuthDetails,
 		isError: isErrorSubnetAuthDetails,
 	} = useQuery<any[]>({
-		queryKey: [QUERY_KEYS.USER_AGENT_AUTH_STATUS, subnetIds],
+		queryKey: [QUERY_KEYS.USER_AGENT_AUTH_STATUS, authRequiredSubnetIds],
 		queryFn: async (): Promise<any[]> => {
-			if (subnetIds.length === 0) return [];
+			if (authRequiredSubnetIds.length === 0) return [];
 
 			const results = await Promise.all(
-				stableSubnetIds.map((id) =>
+				authRequiredSubnetIds.map((id) =>
 					getAgentUserAuthStatus({
 						subnetUrl: subnetDetailsMap.get(id)?.subnet_url || "",
 						agentCollection: {
@@ -400,7 +406,7 @@ export default function Page() {
 				return true;
 			});
 		},
-		enabled: subnetIds.length > 0 && !!address && !!skyBrowser,
+		enabled: authRequiredSubnetIds.length > 0 && !!address && !!skyBrowser,
 		staleTime: 0,
 		gcTime: 0,
 		retry: 1,
