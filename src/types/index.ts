@@ -240,6 +240,7 @@ export interface HistoryItem {
 	totalSubnets?: number;
 	completedSubnets?: number;
 	userAddress?: string;
+	agentIDFromCollection?: string;
 }
 
 export interface HistoryResponse {

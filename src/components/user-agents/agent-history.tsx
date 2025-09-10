@@ -107,8 +107,8 @@ function AgentHistory({ agentAddress, agentID }: AgentHistoryProps) {
 	);
 
 	const handleWorkflowClick = useCallback(
-		(workflowId: string, agentAddress: string) => {
-			router.push(`/chat/agent/${agentAddress}?workflowId=${workflowId}`);
+		(workflowId: string, agentAddress: string, agentIDFromCollection: string) => {
+			router.push(`/chat/agent/${agentAddress}?workflowId=${workflowId}&nftId=${agentIDFromCollection}`);
 		},
 		[router]
 	);
@@ -145,7 +145,8 @@ function AgentHistory({ agentAddress, agentID }: AgentHistoryProps) {
 						onClick={() =>
 							handleWorkflowClick(
 								row.original.requestId || "",
-								row.original.agentAddress || ""
+								row.original.agentAddress || "",
+								row.original.agentIDFromCollection || ""
 							)
 						}
 						className="text-sm text-gray-300 block hover:text-blue-400 transition-colors cursor-pointer text-left w-full max-w-[350px] overflow-hidden whitespace-nowrap text-ellipsis"

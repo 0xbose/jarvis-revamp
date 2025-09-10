@@ -761,6 +761,14 @@ function AgentChatPageContent() {
 						);
 					}
 
+					console.log("🔄 Fetching agent with params:", {
+						agentAddress,
+						currentNftId,
+						urlWorkflowId,
+						hasSkyBrowser: !!skyBrowser,
+						hasAddress: !!address,
+					});
+
 					const response = await getAgentDetailByCollectionAndNftId(
 						agentAddress,
 						currentNftId
@@ -776,9 +784,34 @@ function AgentChatPageContent() {
 							setError("Agent not found");
 						}
 					}
-				} catch (err) {
+				} catch (err: any) {
 					console.error("Error fetching agent:", err);
-					if (isMounted) setError("Failed to load agent");
+					if (isMounted) {
+						// Provide more specific error messages
+						if (err.response?.status === 404) {
+							setError(
+								`Agent not found: ${agentAddress}/${
+									currentNftId || "unknown"
+								}`
+							);
+						} else if (err.response?.status === 401) {
+							setError(
+								"Authentication failed - please check your API key"
+							);
+						} else if (err.response?.status === 403) {
+							setError(
+								"Access denied - insufficient permissions"
+							);
+						} else if (err.message?.includes("nftId is required")) {
+							setError("NFT ID is required but not found");
+						} else {
+							setError(
+								`Failed to load agent: ${
+									err.message || "Unknown error"
+								}`
+							);
+						}
+					}
 				} finally {
 					if (isMounted) setIsLoading(false);
 				}
