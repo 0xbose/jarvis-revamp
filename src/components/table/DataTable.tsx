@@ -12,7 +12,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "./table-components";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "./skeleton";
 
 interface DataTableProps<T> {
 	table: ReactTable<T>;
@@ -38,7 +38,10 @@ function DataTable<T>({ table, columns, isLoading }: DataTableProps<T>) {
 	const headerGroups = useMemo(() => table.getHeaderGroups(), [table]);
 
 	// Memoize rows to prevent unnecessary re-renders
-	const rows = useMemo(() => table.getRowModel().rows, [table]);
+	const rows = useMemo(() => {
+		const tableRows = table.getRowModel().rows;
+		return tableRows;
+	}, [table, isLoading]);
 
 	return (
 		<div className="border-[1.5px] rounded-lg overflow-hidden">

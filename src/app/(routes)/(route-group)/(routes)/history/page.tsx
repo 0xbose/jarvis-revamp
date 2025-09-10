@@ -7,7 +7,15 @@ import {
 	getCoreRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
-import { Filter, Clock, CheckCircle, TimerIcon } from "lucide-react";
+import {
+	Filter,
+	Clock,
+	CheckCircle,
+	TimerIcon,
+	EllipsisVertical,
+	Trash,
+	Settings,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,8 +31,15 @@ import { HistoryItem, WorkflowResponse } from "@/types";
 import DataTable from "@/components/table/DataTable";
 import DataPagination from "@/components/common/pagination";
 import SearchBar from "@/components/common/search";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import {
+	keepPreviousData,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import { STATUS_CONFIG } from "@/constants/status-config";
+import { QUERY_KEYS } from "@/utils/query-keys";
+import { deleteWorkflowRequest } from "@/controllers/requests/requests.mutation";
+import { toast } from "sonner";
 
 // Helper functions remain unchanged
 function getStatusBadge(status: string) {
@@ -72,6 +87,7 @@ function WorkflowHistoryInner() {
 	const currentPage = Number(searchParams.get("page") || "1");
 	const searchTerm = searchParams.get("search") || "";
 	const statusParam = searchParams.get("status") || "";
+	const queryClient = useQueryClient();
 
 	const [statusFilter, setStatusFilter] = useState<string[]>(
 		statusParam ? [statusParam] : []
@@ -97,7 +113,7 @@ function WorkflowHistoryInner() {
 		refetch,
 	} = useQuery({
 		queryKey: [
-			"history",
+			QUERY_KEYS.HISTORY,
 			address,
 			skyBrowser,
 			currentPage,
@@ -204,6 +220,22 @@ function WorkflowHistoryInner() {
 		);
 	}, [workflows, search]);
 
+	const handleDelete = async (workflowId: string) => {
+		try {
+			await deleteWorkflowRequest(
+				workflowId,
+				skyBrowser,
+				address ? { address } : undefined
+			);
+			queryClient.invalidateQueries({
+				queryKey: [QUERY_KEYS.HISTORY, address],
+			});
+			toast.success("Workflow deleted successfully");
+		} catch (error) {
+			console.error("Failed to delete workflow:", error);
+		}
+	};
+
 	const columns: ColumnDef<HistoryItem>[] = [
 		{
 			accessorKey: "userPrompt",
@@ -276,6 +308,25 @@ function WorkflowHistoryInner() {
 						row.original.createdAt,
 						row.original.updatedAt
 					)}
+				</span>
+			),
+		},
+		{
+			accessorKey: "action",
+			header: () => (
+				<div className="text-gray-400 font-semibold flex items-center gap-2 min-w-24">
+					<Settings className="size-4" />
+					<span>Action</span>
+				</div>
+			),
+			cell: ({ row }) => (
+				<span className="text-sm text-gray-400">
+					<button
+						onClick={() => handleDelete(row.original.requestId)}
+						className="text-red-400 hover:text-red-400/80"
+					>
+						<Trash className="size-4" />
+					</button>
 				</span>
 			),
 		},
@@ -397,7 +448,11 @@ function WorkflowHistoryInner() {
 
 export default function WorkflowHistory() {
 	return (
-		<Suspense fallback={<div className="p-6 text-gray-400">Loading history...</div>}>
+		<Suspense
+			fallback={
+				<div className="p-6 text-gray-400">Loading history...</div>
+			}
+		>
 			<WorkflowHistoryInner />
 		</Suspense>
 	);
