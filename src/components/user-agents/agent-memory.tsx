@@ -926,7 +926,7 @@ export default function AgentMemory({
 												/>
 												<div className="flex-1 flex flex-col justify-center">
 													<div className="font-medium text-foreground text-sm line-clamp-2">
-														{agent.name} fdaf dfa ffsf da fd
+														{agent.name}
 													</div>
 													<div className="text-muted-foreground text-xs mt-1 line-clamp-1">
 														{agent.description}
