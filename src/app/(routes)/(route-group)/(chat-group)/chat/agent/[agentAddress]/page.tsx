@@ -790,9 +790,7 @@ function AgentChatPageContent() {
 						// Provide more specific error messages
 						if (err.response?.status === 404) {
 							setError(
-								`Agent not found: ${agentAddress}/${
-									currentNftId || "unknown"
-								}`
+								`Agent not found: ${agentAddress}/${"unknown"}`
 							);
 						} else if (err.response?.status === 401) {
 							setError(
