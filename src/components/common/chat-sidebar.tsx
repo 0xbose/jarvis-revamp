@@ -57,6 +57,7 @@ import { getHistory } from "@/controllers/requests/requests.query";
 import { prefetchChatData } from "@/utils/chat-utils";
 import { STORAGE_KEYS } from "@/config/constants";
 import { QUERY_KEYS } from "@/utils/query-keys";
+import { deleteWorkflowRequest } from "@/controllers/requests/requests.mutation";
 
 const CHAT_OPTIONS = [1, 5, 10, 15, 20] as const;
 
@@ -74,42 +75,42 @@ interface WorkflowItem {
 const getWorkflowIcon = (status: string) => {
 	switch (status) {
 		case "completed":
-			return CheckCircle; 
+			return CheckCircle;
 		case "awaiting_response":
-			return ShieldAlert; 
+			return ShieldAlert;
 		case "stopped":
-			return CirclePause; 
+			return CirclePause;
 		case "failed":
-			return MessageCircleX; 
+			return MessageCircleX;
 		case "in_progress":
-			return LoaderCircle; 
+			return LoaderCircle;
 		case "waiting":
-			return LoaderCircle; 
+			return LoaderCircle;
 		case "pending":
-			return ClockArrowUp; 
+			return ClockArrowUp;
 		default:
-			return Clock; 
+			return Clock;
 	}
 };
 
 const getWorkflowIconColor = (status: string, questionType?: string) => {
 	switch (status) {
 		case "completed":
-			return "text-green-700"; 
+			return "text-green-700";
 		case "awaiting_response":
-			return "text-yellow-500/90"; 
+			return "text-yellow-500/90";
 		case "stopped":
-			return "text-gray-500"; 
+			return "text-gray-500";
 		case "failed":
-			return "text-red-500/90"; 
+			return "text-red-500/90";
 		case "in_progress":
-			return "text-blue-700"; 
+			return "text-blue-700";
 		case "waiting":
-			return "text-blue-700"; 
+			return "text-blue-700";
 		case "pending":
-			return "text-blue-700"; 
+			return "text-blue-700";
 		default:
-			return "text-gray-400"; 
+			return "text-gray-400";
 	}
 };
 
@@ -117,13 +118,11 @@ const getWorkflowIconAnimation = (status: string) => {
 	switch (status) {
 		case "in_progress":
 		case "waiting":
-			return "animate-spin"; 
+			return "animate-spin";
 		default:
-			return ""; 
+			return "";
 	}
 };
-
-
 
 const WorkflowItem = React.memo(
 	({
@@ -136,6 +135,7 @@ const WorkflowItem = React.memo(
 		isRunning,
 		currentAgentId,
 		currentWorkflowId,
+		handleDelete,
 	}: {
 		workflow: WorkflowItem;
 		index: number;
@@ -146,40 +146,49 @@ const WorkflowItem = React.memo(
 		isRunning: boolean;
 		currentAgentId?: string;
 		currentWorkflowId?: string | null;
+		handleDelete: (workflowId: string) => void;
 	}) => {
 		const router = useRouter();
 		const Icon = getWorkflowIcon(workflow.status);
 		const iconColor = getWorkflowIconColor(workflow.status);
 		const iconAnimation = getWorkflowIconAnimation(workflow.status);
-		
+
 		const isCompleted = workflow.status === "completed";
-		
+
 		const handleMenuSelect = (value: string) => {
 			const workflowId = workflow.requestId || workflow.id || "";
 			const agentAddress = workflow.agentAddress;
-			
+
 			// Debug logging
 			console.log("🔍 Chat Sidebar Debug:", {
 				workflowId,
 				agentAddress,
 				agentIDFromCollection: workflow.agentIDFromCollection,
-				workflow: workflow
+				workflow: workflow,
 			});
-			
+
 			switch (value) {
+				case "delete":
+					handleDelete(workflowId);
+					break;
 				case "Left":
 					// Navigate to single workflow view
-					router.push(`/chat/agent/${agentAddress}?workflowId=${workflowId}&nftId=${workflow.agentIDFromCollection}`);
+					router.push(
+						`/chat/agent/${agentAddress}?workflowId=${workflowId}&nftId=${workflow.agentIDFromCollection}`
+					);
 					break;
 				case "Compare":
 					if (currentWorkflowId && currentAgentId) {
-						router.push(`/chat/agent/${currentAgentId}?workflowId=${currentWorkflowId}&compare=${workflowId}&nftId=${workflow.agentIDFromCollection}`);
+						router.push(
+							`/chat/agent/${currentAgentId}?workflowId=${currentWorkflowId}&compare=${workflowId}&nftId=${workflow.agentIDFromCollection}`
+						);
 					}
 					break;
 				default:
 					break;
 			}
 		};
+
 		return (
 			<SidebarMenuItem
 				key={workflow.requestId || workflow.id || index}
@@ -205,15 +214,21 @@ const WorkflowItem = React.memo(
 								// Debug logging
 								console.log("🔍 Link Debug:", {
 									href: `/chat/agent/${workflow.agentAddress}?workflowId=${workflow.requestId}&nftId=${workflow.agentIDFromCollection}`,
-									agentIDFromCollection: workflow.agentIDFromCollection,
-									workflow: workflow
+									agentIDFromCollection:
+										workflow.agentIDFromCollection,
+									workflow: workflow,
 								});
 								onPrefetch(
 									workflow.requestId || workflow.id || ""
 								);
 							}}
 						>
-							{Icon && <Icon className={`!size-[19px] ${iconColor} ${iconAnimation}`} strokeWidth={1.5} />}
+							{Icon && (
+								<Icon
+									className={`!size-[19px] ${iconColor} ${iconAnimation}`}
+									strokeWidth={1.5}
+								/>
+							)}
 							{sidebarIsExpanded && (
 								<div className="flex items-center !w-full flex-1 min-w-0">
 									<div className="flex flex-col w-[140px] min-w-0">
@@ -244,17 +259,26 @@ const WorkflowItem = React.memo(
 								onValueChange={handleMenuSelect}
 							>
 								<SelectTrigger className="!border-none">
-									<MoreVerticalIcon className="!size-4 flex-shrink-0" strokeWidth={1.5} />
+									<MoreVerticalIcon
+										className="!size-4 flex-shrink-0"
+										strokeWidth={1.5}
+									/>
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="Left">
+									<SelectItem
+										value="delete"
+										className="cursor-pointer text-red-500 bg-red-500/20 focus:bg-red-500/20 focus:text-red-500"
+									>
+										Delete
+									</SelectItem>
+									{/* <SelectItem value="Left">
 										View
 									</SelectItem>
 									{isCompleted && currentWorkflowId && currentWorkflowId !== (workflow.requestId || workflow.id) && (
 										<SelectItem value="Compare">
 											Compare
 										</SelectItem>
-									)}
+									)} */}
 								</SelectContent>
 							</Select>
 						)}
@@ -269,36 +293,44 @@ WorkflowItem.displayName = "WorkflowItem";
 
 const ChatSidebar = React.memo(() => {
 	const [chatCount, setChatCount] = useState(() => {
-		if (typeof window !== 'undefined') {
+		if (typeof window !== "undefined") {
 			try {
-				const stored = localStorage.getItem(STORAGE_KEYS.SELECTED_HISTORIES_COUNT);
+				const stored = localStorage.getItem(
+					STORAGE_KEYS.SELECTED_HISTORIES_COUNT
+				);
 				if (stored) {
-					const parsedCount = Number(stored);	
+					const parsedCount = Number(stored);
 					if (CHAT_OPTIONS.includes(parsedCount as any)) {
 						return parsedCount;
 					}
 				}
 			} catch (error) {
-				console.warn('Failed to read chat count from local storage:', error);
+				console.warn(
+					"Failed to read chat count from local storage:",
+					error
+				);
 			}
 		}
-		return 5; 
+		return 5;
 	});
 	const [isExpanded, setIsExpanded] = useState(false);
 	const [isSelectOpen, setIsSelectOpen] = useState(false);
 	const [isMenuSelectOpen, setIsMenuSelectOpen] = useState(false);
 	const [isPinned, setIsPinned] = useState(() => {
-		if (typeof window !== 'undefined') {
+		if (typeof window !== "undefined") {
 			try {
 				const stored = localStorage.getItem(STORAGE_KEYS.IS_PINNED);
 				if (stored) {
-					return stored === 'true';
+					return stored === "true";
 				}
 			} catch (error) {
-				console.warn('Failed to read pin state from local storage:', error);
+				console.warn(
+					"Failed to read pin state from local storage:",
+					error
+				);
 			}
 		}
-		return false; 
+		return false;
 	});
 	const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -314,23 +346,22 @@ const ChatSidebar = React.memo(() => {
 
 	const hasWallet = !!address;
 
-
 	const hasActiveWorkflow = (workflows: WorkflowItem[]) => {
-		const hasActiveHistoryWorkflow = workflows.some(
-			(workflow) => {
-				if (workflow.status === "in_progress" || 
-					workflow.status === "waiting" || 
-					workflow.status === "pending") {
-					return true;
-				}
-				
-				if (workflow.status === "awaiting_response") {
-					return workflow.questionType === "notification";
-				}
-				
-				return false;
+		const hasActiveHistoryWorkflow = workflows.some((workflow) => {
+			if (
+				workflow.status === "in_progress" ||
+				workflow.status === "waiting" ||
+				workflow.status === "pending"
+			) {
+				return true;
 			}
-		);
+
+			if (workflow.status === "awaiting_response") {
+				return workflow.questionType === "notification";
+			}
+
+			return false;
+		});
 
 		const isCurrentWorkflowRunning = isRunning;
 
@@ -358,14 +389,18 @@ const ChatSidebar = React.memo(() => {
 			if (!workflows) return false;
 			return hasActiveWorkflow(workflows);
 		},
-		
+
 		refetchInterval: (query) => {
 			const workflows = query.state.data as WorkflowItem[] | undefined;
 			if (!workflows) return false;
 
 			if (hasActiveWorkflow(workflows)) {
-				const activeHistoryWorkflows = workflows.filter(w => {
-					if (w.status === "in_progress" || w.status === "waiting" || w.status === "pending") {
+				const activeHistoryWorkflows = workflows.filter((w) => {
+					if (
+						w.status === "in_progress" ||
+						w.status === "waiting" ||
+						w.status === "pending"
+					) {
 						return true;
 					}
 					if (w.status === "awaiting_response") {
@@ -373,19 +408,21 @@ const ChatSidebar = React.memo(() => {
 					}
 					return false;
 				});
-				
+
 				console.log(`🔄 Polling active:`, {
 					activeHistoryWorkflows: activeHistoryWorkflows.length,
 					currentWorkflowRunning: isRunning,
-					reason: isRunning ? 'Current workflow running' : 'History workflows active',
-					activeWorkflows: activeHistoryWorkflows.map(w => ({ 
-						id: w.requestId, 
-						status: w.status, 
-						questionType: w.questionType 
-					}))
+					reason: isRunning
+						? "Current workflow running"
+						: "History workflows active",
+					activeWorkflows: activeHistoryWorkflows.map((w) => ({
+						id: w.requestId,
+						status: w.status,
+						questionType: w.questionType,
+					})),
 				});
-				
-				return 60000; 
+
+				return 60000;
 			}
 
 			return false;
@@ -426,12 +463,16 @@ const ChatSidebar = React.memo(() => {
 		if (hasWallet && isRunning !== undefined) {
 			const timeoutId = setTimeout(() => {
 				if (isRunning) {
-					console.log("🚀 Current workflow started, refetching history and enabling polling");
+					console.log(
+						"🚀 Current workflow started, refetching history and enabling polling"
+					);
 				} else {
-					console.log("✅ Current workflow completed, fetching final history update");
+					console.log(
+						"✅ Current workflow completed, fetching final history update"
+					);
 				}
 				refetch();
-			}, 100); 
+			}, 100);
 
 			return () => clearTimeout(timeoutId);
 		}
@@ -487,63 +528,92 @@ const ChatSidebar = React.memo(() => {
 		const newCount = Number(value);
 		if (CHAT_OPTIONS.includes(newCount as any)) {
 			setChatCount(newCount);
-			if (typeof window !== 'undefined') {
+			if (typeof window !== "undefined") {
 				try {
-					localStorage.setItem(STORAGE_KEYS.SELECTED_HISTORIES_COUNT, newCount.toString());
+					localStorage.setItem(
+						STORAGE_KEYS.SELECTED_HISTORIES_COUNT,
+						newCount.toString()
+					);
 				} catch (error) {
-					console.warn('Failed to save chat count to local storage:', error);
+					console.warn(
+						"Failed to save chat count to local storage:",
+						error
+					);
 				}
 			}
 		} else {
-			console.warn('Invalid chat count selected:', newCount);
+			console.warn("Invalid chat count selected:", newCount);
 		}
 	}, []);
 
 	const handlePinStateChange = useCallback(() => {
 		const newPinState = !isPinned;
 		setIsPinned(newPinState);
-		console.log('Pin state changed:', newPinState ? 'PINNED' : 'UNPINNED');
-		
-		if (typeof window !== 'undefined') {
+		console.log("Pin state changed:", newPinState ? "PINNED" : "UNPINNED");
+
+		if (typeof window !== "undefined") {
 			try {
-				localStorage.setItem(STORAGE_KEYS.IS_PINNED, newPinState.toString());
-				console.log('Pin state saved to local storage');
+				localStorage.setItem(
+					STORAGE_KEYS.IS_PINNED,
+					newPinState.toString()
+				);
+				console.log("Pin state saved to local storage");
 			} catch (error) {
-				console.warn('Failed to save pin state to local storage:', error);
+				console.warn(
+					"Failed to save pin state to local storage:",
+					error
+				);
 			}
 		}
 	}, [isPinned]);
 
 	useEffect(() => {
-		if (typeof window !== 'undefined') {
+		if (typeof window !== "undefined") {
 			try {
-				const stored = localStorage.getItem(STORAGE_KEYS.SELECTED_HISTORIES_COUNT);
+				const stored = localStorage.getItem(
+					STORAGE_KEYS.SELECTED_HISTORIES_COUNT
+				);
 				if (stored) {
 					const storedCount = Number(stored);
-					if (storedCount !== chatCount && CHAT_OPTIONS.includes(storedCount as any)) {
-						console.log('Restoring chat count from local storage:', storedCount);
+					if (
+						storedCount !== chatCount &&
+						CHAT_OPTIONS.includes(storedCount as any)
+					) {
+						console.log(
+							"Restoring chat count from local storage:",
+							storedCount
+						);
 						setChatCount(storedCount);
 					}
 				}
 			} catch (error) {
-				console.warn('Failed to synchronize chat count with local storage:', error);
+				console.warn(
+					"Failed to synchronize chat count with local storage:",
+					error
+				);
 			}
 		}
-	}, []); 
+	}, []);
 
 	useEffect(() => {
-		if (typeof window !== 'undefined') {
+		if (typeof window !== "undefined") {
 			try {
 				const stored = localStorage.getItem(STORAGE_KEYS.IS_PINNED);
 				if (stored) {
-					const storedPinState = stored === 'true';
+					const storedPinState = stored === "true";
 					if (storedPinState !== isPinned) {
-						console.log('Restoring pin state from local storage:', storedPinState);
+						console.log(
+							"Restoring pin state from local storage:",
+							storedPinState
+						);
 						setIsPinned(storedPinState);
 					}
 				}
 			} catch (error) {
-				console.warn('Failed to synchronize pin state with local storage:', error);
+				console.warn(
+					"Failed to synchronize pin state with local storage:",
+					error
+				);
 			}
 		}
 	}, []);
@@ -553,6 +623,21 @@ const ChatSidebar = React.memo(() => {
 			refetch();
 		}
 	}, [refetch, isRefetching]);
+
+	const handleDelete = async (workflowId: string) => {
+		try {
+			await deleteWorkflowRequest(
+				workflowId,
+				skyBrowser,
+				address ? { address } : undefined
+			);
+			queryClient.invalidateQueries({
+				queryKey: [QUERY_KEYS.HISTORY, chatCount, address],
+			});
+		} catch (error) {
+			console.error("Failed to delete workflow:", error);
+		}
+	};
 
 	return (
 		<Sidebar
@@ -630,7 +715,11 @@ const ChatSidebar = React.memo(() => {
 									onClick={handlePinStateChange}
 									className={`!w-fit !h-7 px-2 flex items-center justify-center rounded-md transition-colors duration-200 ${
 										sidebarIsExpanded ? "block" : "hidden"
-									} ${isPinned ? "bg-accent text-accent-foreground" : ""}`}
+									} ${
+										isPinned
+											? "bg-accent text-accent-foreground"
+											: ""
+									}`}
 								>
 									<PinIcon className="!size-4 rotate-45" />
 								</div>
@@ -674,7 +763,10 @@ const ChatSidebar = React.memo(() => {
 											workflow.status === "in_progress" ||
 											workflow.status === "waiting" ||
 											workflow.status === "pending" ||
-											(workflow.status === "awaiting_response" && workflow.questionType === "notification");
+											(workflow.status ===
+												"awaiting_response" &&
+												workflow.questionType ===
+													"notification");
 
 										return (
 											<WorkflowItem
@@ -696,8 +788,13 @@ const ChatSidebar = React.memo(() => {
 												}
 												isSelected={isSelected}
 												isRunning={isRunning}
-												currentAgentId={currentAgentAddress}
-												currentWorkflowId={currentWorkflowId}
+												currentAgentId={
+													currentAgentAddress
+												}
+												currentWorkflowId={
+													currentWorkflowId
+												}
+												handleDelete={handleDelete}
 											/>
 										);
 									}
