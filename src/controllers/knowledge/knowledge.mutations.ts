@@ -37,16 +37,6 @@ export const saveKnowledgeRecord = async (
 		recordId,
 	} = params;
 
-	console.log("saveKnowledgeRecord called with params:", {
-		userAddress,
-		selectedNftId,
-		agentId,
-		knowledgeType,
-		content: content.substring(0, 50) + "...",
-		recordId,
-		agentData,
-	});
-
 	if (!content.trim()) {
 		throw new Error("Content is required");
 	}
@@ -110,18 +100,6 @@ export const saveKnowledgeRecord = async (
 		},
 	};
 
-	console.log("Making direct API request to save knowledge record:", {
-		url: KNOWLEDGE_API_URL,
-		payload: {
-			...payload,
-			userAuthPayload: {
-				...payload.userAuthPayload,
-				signature:
-					payload.userAuthPayload.signature.substring(0, 20) + "...",
-			},
-		},
-	});
-
 	try {
 		const response = await axios.post(KNOWLEDGE_API_URL, payload, {
 			headers: {
@@ -138,8 +116,6 @@ export const saveKnowledgeRecord = async (
 				"API returned HTML instead of JSON - possible server error or CORS issue"
 			);
 		}
-
-		console.log("Knowledge record saved successfully:", result);
 
 		// Check if the API response indicates success
 		if (result && typeof result === "object" && "success" in result) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -195,15 +195,6 @@ export default function KnowledgeDialog({
 	};
 
 	const handleSave = () => {
-		console.log("handleSave called with:", {
-			content: content.substring(0, 50) + "...",
-			skyBrowser: !!skyBrowser,
-			selectedNftId,
-			agentId,
-			activeTab,
-			selectedRecord: selectedRecord?.id,
-		});
-
 		if (!content.trim()) {
 			toast.error("Please enter content to save");
 			return;
@@ -213,17 +204,6 @@ export default function KnowledgeDialog({
 			toast.error("Missing required data for saving");
 			return;
 		}
-
-		console.log("Calling saveMutation.mutate with:", {
-			skyBrowser: !!skyBrowser,
-			userAddress,
-			agentData,
-			selectedNftId,
-			agentId,
-			knowledgeType: activeTab,
-			content: content.substring(0, 50) + "...",
-			recordId: selectedRecord?.id,
-		});
 
 		saveMutation.mutate({
 			skyBrowser,
