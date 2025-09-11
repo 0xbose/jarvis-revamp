@@ -10,6 +10,9 @@ import {
 	Check,
 	X,
 	ExternalLink,
+	Clock as PendingIcon,
+	ExternalLinkIcon,
+	CheckCheckIcon,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -23,6 +26,7 @@ import { MarketplaceLoaderSkeleton } from "@/components/market-place/loader-skel
 import AgentTabs from "@/components/user-agents/agent-tabs";
 import { AgentDetailResponse, AgentSubnet } from "@/types/agents";
 import { getAgentUserAuthStatus } from "@/controllers/user-auth/user-auth.query";
+import { getAgentUserAuthLink } from "@/controllers/user-auth/user-auth.mutations";
 import { useWallet } from "@/hooks/use-wallet";
 import { getSubnetsByID } from "@/controllers/subnets/subnets.query";
 import { ExtendedSubnet } from "@/types/subnet";
@@ -225,6 +229,13 @@ export default function Page() {
 	const { skyBrowser, address } = useWallet();
 
 	const [updateLoading, setUpdateLoading] = useState(false);
+	const [authLinkLoading, setAuthLinkLoading] = useState<string | null>(null);
+	const [pollingSubnets, setPollingSubnets] = useState<Set<string>>(
+		new Set()
+	);
+	const [pollingIntervals, setPollingIntervals] = useState<
+		Map<string, NodeJS.Timeout>
+	>(new Map());
 
 	const {
 		data: agentData,
@@ -281,6 +292,136 @@ export default function Page() {
 		navigator.clipboard.writeText(addressToCopy);
 	}, [agentData?.collection_id, agentData?.id]);
 
+	const startPolling = useCallback(
+		(subnetId: string) => {
+			setPollingSubnets((prev) => new Set(prev).add(subnetId));
+
+			let attempts = 0;
+			const maxAttempts = 3;
+			const interval = 5000; // 5 seconds
+
+			const pollInterval = setInterval(async () => {
+				attempts++;
+				console.log(
+					`Polling attempt ${attempts} for subnet ${subnetId}`
+				);
+
+				try {
+					// Refetch the auth status query
+					// This will trigger a re-fetch of the subnetAuthDetails query
+					// The query will automatically update the UI if auth is completed
+					await refetch();
+				} catch (error) {
+					console.error(
+						`Error during polling attempt ${attempts}:`,
+						error
+					);
+				}
+
+				if (attempts >= maxAttempts) {
+					clearInterval(pollInterval);
+					setPollingSubnets((prev) => {
+						const newSet = new Set(prev);
+						newSet.delete(subnetId);
+						return newSet;
+					});
+					setPollingIntervals((prev) => {
+						const newMap = new Map(prev);
+						newMap.delete(subnetId);
+						return newMap;
+					});
+					console.log(
+						`Stopped polling for subnet ${subnetId} after ${maxAttempts} attempts`
+					);
+				}
+			}, interval);
+
+			// Store the interval ID for potential cleanup
+			setPollingIntervals((prev) =>
+				new Map(prev).set(subnetId, pollInterval)
+			);
+			return pollInterval;
+		},
+		[refetch]
+	);
+
+	const handleAuthLinkRequest = useCallback(
+		async (subnet: ExtendedSubnet) => {
+			if (!skyBrowser || !address) {
+				console.error(
+					"Missing skyBrowser or address for auth link request"
+				);
+				return;
+			}
+
+			setAuthLinkLoading(subnet.unique_id);
+			try {
+				const fullUrl = subnet.subnet_url || "";
+				const normalizedUrl = (() => {
+					try {
+						const urlObj = new URL(fullUrl);
+						return `${urlObj.protocol}//${urlObj.host}`;
+					} catch {
+						return "";
+					}
+				})();
+
+				if (!normalizedUrl) {
+					throw new Error("Invalid subnet URL");
+				}
+
+				const authLinkResponse = await getAgentUserAuthLink({
+					subnetUrl: normalizedUrl,
+					agentCollection: {
+						agentAddress: agentAddress,
+						agentID: nftId,
+					},
+					skyBrowser: skyBrowser,
+					web3Context: { address },
+				});
+
+				// Check if the response contains a link
+				if (
+					authLinkResponse &&
+					authLinkResponse.success &&
+					authLinkResponse.data &&
+					authLinkResponse.data.link
+				) {
+					// Open the link in a new tab
+					window.open(
+						authLinkResponse.data.link,
+						"_blank",
+						"noopener,noreferrer"
+					);
+
+					// Start polling for auth status updates
+					startPolling(subnet.unique_id);
+				} else {
+					console.error(
+						"No auth link found in response:",
+						authLinkResponse
+					);
+					// You might want to show a toast notification here
+				}
+			} catch (error) {
+				console.error("Error requesting auth link:", error);
+				// You might want to show a toast notification here
+			} finally {
+				setAuthLinkLoading(null);
+			}
+		},
+		[skyBrowser, address, agentAddress, nftId, startPolling]
+	);
+
+	// Cleanup polling intervals on unmount
+	useEffect(() => {
+		return () => {
+			pollingIntervals.forEach((interval) => {
+				clearInterval(interval);
+			});
+		};
+	}, [pollingIntervals]);
+
 	const formattedDate = useMemo(() => {
 		if (!agentData?.updated_at) return "Unknown";
 		return new Date(agentData.updated_at).toLocaleString("en-US", {
@@ -316,8 +457,9 @@ export default function Page() {
 
 	const subnetIds = agentSubnets.map((s) => s.unique_id).filter(Boolean);
 
+	// Fetch subnet details as before
 	const {
-		data: subnetDetails,
+		data: rawSubnetDetails,
 		isLoading: isLoadingSubnets,
 		isError: isErrorSubnets,
 	} = useQuery<ExtendedSubnet[]>({
@@ -352,25 +494,28 @@ export default function Page() {
 	// Build subnetDetailsMap
 	const subnetDetailsMap = useMemo(() => {
 		const map = new Map();
-		if (subnetDetails) {
-			subnetDetails.forEach((subnet) => {
+		if (rawSubnetDetails) {
+			rawSubnetDetails.forEach((subnet) => {
 				map.set(subnet.unique_id, subnet);
 			});
 		}
 		return map;
-	}, [subnetDetails]);
+	}, [rawSubnetDetails]);
 
 	// Get subnets that require auth
 	const authRequiredSubnets = useMemo(() => {
-		if (!subnetDetails) return [];
-		return subnetDetails.filter(subnet => subnet.auth_required === true);
-	}, [subnetDetails]);
+		if (!rawSubnetDetails) return [];
+		return rawSubnetDetails.filter(
+			(subnet) => subnet.auth_required === true
+		);
+	}, [rawSubnetDetails]);
 
 	const authRequiredSubnetIds = useMemo(
-		() => authRequiredSubnets.map(subnet => subnet.unique_id),
+		() => authRequiredSubnets.map((subnet) => subnet.unique_id),
 		[authRequiredSubnets]
 	);
 
+	// Fetch auth status for subnets that require auth
 	const {
 		data: subnetAuthDetails,
 		isLoading: isLoadingSubnetAuthDetails,
@@ -381,17 +526,36 @@ export default function Page() {
 			if (authRequiredSubnetIds.length === 0) return [];
 
 			const results = await Promise.all(
-				authRequiredSubnetIds.map((id) =>
-					getAgentUserAuthStatus({
-						subnetUrl: subnetDetailsMap.get(id)?.subnet_url || "",
+				authRequiredSubnetIds.map(async (id) => {
+					const subnet = subnetDetailsMap.get(id);
+					const fullUrl = subnet?.subnet_url || "";
+					const normalizedUrl = (() => {
+						try {
+							const urlObj = new URL(fullUrl);
+							return `${urlObj.protocol}//${urlObj.host}`;
+						} catch {
+							return "";
+						}
+					})();
+
+					const authResponse = await getAgentUserAuthStatus({
+						subnetUrl: normalizedUrl,
 						agentCollection: {
 							agentAddress: agentAddress,
 							agentID: nftId,
 						},
 						skyBrowser: skyBrowser,
 						web3Context: { address },
-					})
-				)
+					});
+
+					// Add subnet identification to the auth response
+					return {
+						...authResponse,
+						subnet_id: id,
+						subnet_url: normalizedUrl,
+						original_subnet_url: fullUrl,
+					};
+				})
 			);
 
 			const flattened = results.flat();
@@ -412,6 +576,51 @@ export default function Page() {
 		retry: 1,
 	});
 
+	const subnetDetailsWithAuth = useMemo(() => {
+		if (!rawSubnetDetails) return [];
+		if (!Array.isArray(subnetAuthDetails)) {
+			return rawSubnetDetails.map((subnet) => ({
+				...subnet,
+				authStatus: null,
+			}));
+		}
+		return rawSubnetDetails.map((subnet) => {
+			let authStatus = null;
+			// Only try to find auth status if this subnet requires auth
+			if (subnet.auth_required) {
+				const normalizedSubnetUrl = (() => {
+					try {
+						const urlObj = new URL(subnet.subnet_url || "");
+						return `${urlObj.protocol}//${urlObj.host}`;
+					} catch {
+						return subnet.subnet_url || "";
+					}
+				})();
+
+				authStatus =
+					subnetAuthDetails.find((detail) => {
+						const matchById =
+							detail?.subnet_id &&
+							detail.subnet_id === subnet.unique_id;
+						const matchByUrl =
+							detail?.subnet_url &&
+							detail.subnet_url === normalizedSubnetUrl;
+
+						return matchById || matchByUrl;
+					}) || null; // Explicitly set to null if not found
+
+			}
+			return {
+				...subnet,
+				authStatus: authStatus,
+			};
+		});
+	}, [rawSubnetDetails, subnetAuthDetails]);
+
+	console.log("subnetDetailsWithAuth", subnetDetailsWithAuth);
+	console.log("authRequiredSubnets count:", authRequiredSubnets.length);
+	console.log("subnetAuthDetails:", subnetAuthDetails);
+
 	if (isLoading || isFetching || !isFetched) {
 		return <MarketplaceLoaderSkeleton />;
 	}
@@ -429,18 +638,103 @@ export default function Page() {
 		);
 	}
 
-	if (isLoading || isFetching || !isFetched) {
-		return <MarketplaceLoaderSkeleton />;
-	}
+	const showSubnetAuthStatus =
+		subnetDetailsWithAuth.some((subnet) => subnet.auth_required) &&
+		!isLoadingSubnetAuthDetails &&
+		!isErrorSubnetAuthDetails;
 
-	if (!agentData && isFetched && !isLoading && !isFetching) {
-		return (
-			<div className="min-h-screen bg-background flex items-center justify-center">
-				<div className="text-center space-y-4">
-					<h2 className="text-xl font-semibold">Agent Not Found</h2>
-					<p className="text-muted-foreground">
-						The agent you're looking for doesn't exist.
-					</p>
+	let subnetAuthStatusContent = null;
+	if (showSubnetAuthStatus) {
+		subnetAuthStatusContent = (
+			<div className="flex flex-col gap-2 mt-4">
+				<Label className="font-medium text-muted-foreground tracking-wide mb-1">
+					Subnet Auth Status
+				</Label>
+				<div className="flex flex-col gap-1">
+					{subnetDetailsWithAuth
+						.filter((subnet) => subnet.auth_required)
+						.map((subnet) => {
+							// Use the already combined auth status
+							const authStatus = subnet.authStatus;
+
+							let icon = null;
+							let statusText = "";
+							let isNotAuthenticated = false;
+							const isPolling = pollingSubnets.has(
+								subnet.unique_id
+							);
+
+							if (
+								authStatus &&
+								typeof authStatus === "object" &&
+								"success" in authStatus
+							) {
+								if (
+									authStatus.success === true &&
+									authStatus.data === true
+								) {
+									icon = (
+										<CheckCheckIcon className="w-4 h-4 text-green-500" />
+									);
+									statusText = "Authenticated";
+								} else {
+									icon = isPolling ? (
+										<PendingIcon className="w-4 h-4 text-blue-500 animate-spin" />
+									) : (
+										<ExternalLinkIcon className="w-4 h-4 text-red-500" />
+									);
+									statusText = isPolling
+										? "Checking..."
+										: "Not Authenticated";
+									isNotAuthenticated = !isPolling;
+								}
+							} else {
+								icon = isPolling ? (
+									<PendingIcon className="w-4 h-4 text-blue-500 animate-spin" />
+								) : (
+									<ExternalLinkIcon className="w-4 h-4 text-red-500" />
+								);
+								statusText = isPolling
+									? "Checking..."
+									: "Not Authenticated";
+								isNotAuthenticated = !isPolling;
+							}
+
+							return (
+								<div
+									key={subnet.unique_id}
+									className={`w-fit flex items-center justify-center gap-2 px-3 py-1 rounded-full border capitalize text-sm font-medium ${
+										isNotAuthenticated
+											? "border-red-500/30 bg-red-500/20 text-red-500 cursor-pointer hover:bg-red-500/30 transition-colors"
+											: "border-border bg-border/40 text-icon"
+									} ${
+										isNotAuthenticated &&
+										authLinkLoading === subnet.unique_id
+											? "opacity-50 cursor-not-allowed"
+											: ""
+									}`}
+									onClick={
+										isNotAuthenticated &&
+										authLinkLoading !== subnet.unique_id &&
+										!isPolling
+											? () =>
+													handleAuthLinkRequest(
+														subnet
+													)
+											: undefined
+									}
+								>
+									<span className="font-normal">
+										{subnet.subnet_name}
+									</span>
+									{authLinkLoading === subnet.unique_id ? (
+										<PendingIcon className="w-4 h-4 animate-spin" />
+									) : (
+										icon
+									)}
+								</div>
+							);
+						})}
 				</div>
 			</div>
 		);
@@ -456,51 +750,56 @@ export default function Page() {
 							alt="Agent"
 							isVerified={agentData?.isVerified}
 						/>
-						<div className="flex-1 space-y-6">
-							<div className="space-y-4">
-								<div className="flex flex-col gap-3">
-									<EditableInput
-										value={nameField.value}
-										draft={nameField.draft}
-										isEditing={nameField.isEditing}
-										onChange={nameField.setDraft}
-										onSave={nameField.saveEdit}
-										onCancel={nameField.cancelEdit}
-										onEdit={nameField.startEdit}
-										className="text-4xl font-bold text-foreground tracking-tight"
-										placeholder="Agent Name"
-									/>
-									<Link
-										href={`/marketplace/${agentAddress}`}
-										className="text-sm text-muted-foreground flex items-center gap-1 group"
-									>
-										<span className="group-hover:underline underline-offset-2 ">
-											{agentData?.agent_name}
-										</span>
-										<ExternalLink className="w-4 h-4 mb-0.5" />
-									</Link>
-								</div>
-								<div className="flex items-center gap-6 text-sm text-muted-foreground">
-									{statusInfo.map((info, index) => (
-										<StatusInfo
-											key={index}
-											icon={info.icon}
-											text={info.text}
+						<div className="w-full grid grid-cols-1 md:grid-cols-3 gap-8">
+							<div className="flex-1 space-y-6 col-span-2">
+								<div className="space-y-4">
+									<div className="flex flex-col gap-3">
+										<EditableInput
+											value={nameField.value}
+											draft={nameField.draft}
+											isEditing={nameField.isEditing}
+											onChange={nameField.setDraft}
+											onSave={nameField.saveEdit}
+											onCancel={nameField.cancelEdit}
+											onEdit={nameField.startEdit}
+											className="text-4xl font-bold text-foreground tracking-tight"
+											placeholder="Agent Name"
 										/>
-									))}
+										<Link
+											href={`/marketplace/${agentAddress}`}
+											className="text-sm text-muted-foreground flex items-center gap-1 group"
+										>
+											<span className="group-hover:underline underline-offset-2 ">
+												{agentData?.agent_name}
+											</span>
+											<ExternalLink className="w-4 h-4 mb-0.5" />
+										</Link>
+									</div>
+									<div className="flex items-center gap-6 text-sm text-muted-foreground">
+										{statusInfo.map((info, index) => (
+											<StatusInfo
+												key={index}
+												icon={info.icon}
+												text={info.text}
+											/>
+										))}
+									</div>
+								</div>
+								<div className="flex gap-x-10">
+									<AddressInfo
+										label="Collection Address"
+										value={agentData?.collection_id}
+										onCopy={handleCopyAddress}
+									/>
+									<AddressInfo
+										label="Agent ID"
+										value={agentData?.nft_id}
+										onCopy={handleCopyAddress}
+									/>
 								</div>
 							</div>
-							<div className="flex gap-x-10">
-								<AddressInfo
-									label="Collection Address"
-									value={agentData?.collection_id}
-									onCopy={handleCopyAddress}
-								/>
-								<AddressInfo
-									label="Agent ID"
-									value={agentData?.nft_id}
-									onCopy={handleCopyAddress}
-								/>
+							<div className="flex flex-col gap-4 col-span-1">
+								{subnetAuthStatusContent}
 							</div>
 						</div>
 					</div>

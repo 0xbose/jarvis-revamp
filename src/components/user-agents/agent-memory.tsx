@@ -17,6 +17,7 @@ import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
@@ -604,7 +605,6 @@ export default function AgentMemory({
 
 					refetchMemoryRecallDetails();
 				} else {
-				
 					await deleteMemoryRecall({
 						agent_id: agentData.id,
 					});
@@ -665,7 +665,8 @@ export default function AgentMemory({
 							className="text-lg font-semibold w-[200px] flex-shrink-0 sticky left-0 bg-background z-20 pr-4 pl-6"
 							style={{
 								left: 0,
-								backgroundImage: 'linear-gradient(to right, var(--background) 85%, transparent 100%)',
+								backgroundImage:
+									"linear-gradient(to right, var(--background) 85%, transparent 100%)",
 							}}
 						>
 							Subnet
@@ -710,9 +711,10 @@ export default function AgentMemory({
 					<div className="flex p-4 px-6 items-center w-full min-w-fit">
 						<div
 							className="text-base font-medium capitalize w-[200px] flex-shrink-0 sticky left-0 bg-background z-20 pr-4 pl-6"
-							style={{	
+							style={{
 								left: 0,
-								backgroundImage: 'linear-gradient(to right, var(--background) 85%, transparent 100%)',
+								backgroundImage:
+									"linear-gradient(to right, var(--background) 85%, transparent 100%)",
 							}}
 						>
 							Master Agent
@@ -733,11 +735,16 @@ export default function AgentMemory({
 										// Prevent checkbox wiggle by using a fixed width for the loading spinner container
 										style={{ position: "relative" }}
 									>
-										<div className="flex items-center justify-center" style={{ width: "100%" }}>
+										<div
+											className="flex items-center justify-center"
+											style={{ width: "100%" }}
+										>
 											<Checkbox
 												checked={isMasterChecked}
 												onCheckedChange={() =>
-													handleMasterAllToggle(agent.id)
+													handleMasterAllToggle(
+														agent.id
+													)
 												}
 												disabled={isMasterLoading}
 												className={
@@ -748,7 +755,13 @@ export default function AgentMemory({
 												title={`Set ${agent.name} as master for all subnets`}
 											/>
 											{/* Reserve space for spinner to prevent layout shift */}
-											<span style={{ display: "inline-block", width: 18, marginLeft: 8 }}>
+											<span
+												style={{
+													display: "inline-block",
+													width: 18,
+													marginLeft: 8,
+												}}
+											>
 												{isMasterLoading && (
 													<span>
 														<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
@@ -782,7 +795,8 @@ export default function AgentMemory({
 										title={subnetName}
 										style={{
 											left: 0,
-											backgroundImage: 'linear-gradient(to right, var(--background) 85%, transparent 100%)',
+											backgroundImage:
+												"linear-gradient(to right, var(--background) 85%, transparent 100%)",
 										}}
 									>
 										{subnetName} agent
@@ -802,9 +816,16 @@ export default function AgentMemory({
 												<div
 													key={agent.id}
 													className="flex justify-center items-center min-h-[32px] w-[260px] flex-shrink-0 px-6"
-													style={{ position: "relative" }}
+													style={{
+														position: "relative",
+													}}
 												>
-													<div className="flex items-center justify-center" style={{ width: "100%" }}>
+													<div
+														className="flex items-center justify-center"
+														style={{
+															width: "100%",
+														}}
+													>
 														<Checkbox
 															checked={isChecked}
 															onCheckedChange={() =>
@@ -822,7 +843,14 @@ export default function AgentMemory({
 															title="Assign agent to this subnet"
 														/>
 														{/* Reserve space for spinner to prevent layout shift */}
-														<span style={{ display: "inline-block", width: 18, marginLeft: 8 }}>
+														<span
+															style={{
+																display:
+																	"inline-block",
+																width: 18,
+																marginLeft: 8,
+															}}
+														>
 															{isLoading && (
 																<span>
 																	<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
@@ -944,6 +972,11 @@ export default function AgentMemory({
 							</div>
 						)}
 					</div>
+					<DialogFooter>
+						<Button onClick={() => setDialogOpen(false)}>
+							Done
+						</Button>
+					</DialogFooter>
 				</DialogContent>
 			</Dialog>
 		</div>
