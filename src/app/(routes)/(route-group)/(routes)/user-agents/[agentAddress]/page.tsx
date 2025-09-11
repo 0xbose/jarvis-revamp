@@ -31,7 +31,6 @@ import { useWallet } from "@/hooks/use-wallet";
 import { getSubnetsByID } from "@/controllers/subnets/subnets.query";
 import { ExtendedSubnet } from "@/types/subnet";
 
-
 const useAgentData = (agentAddress: string, nftId: string) =>
 	useQuery({
 		queryKey: [QUERY_KEYS.USER_AGENTS_BY_ADDRESS, agentAddress, nftId],
@@ -208,7 +207,6 @@ const AddressInfo = ({
 		</div>
 	</div>
 );
-
 
 export default function Page() {
 	const params = useParams<{ agentAddress: string }>();
@@ -399,11 +397,11 @@ export default function Page() {
 			});
 		},
 		enabled: subnetIds.length > 0,
-		staleTime: 0,
-		gcTime: 0,
-		refetchOnMount: "always",
-		refetchOnWindowFocus: true,
-		refetchOnReconnect: true,
+		staleTime: 5 * 60 * 1000, // 5 minutes - subnet data stays fresh for 5 minutes
+		gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes
+		refetchOnMount: false, // Use global setting
+		refetchOnWindowFocus: false, // Use global setting
+		refetchOnReconnect: false, // Use global setting
 	});
 
 	const subnetDetailsMap = useMemo(() => {
@@ -466,8 +464,8 @@ export default function Page() {
 			});
 		},
 		enabled: authRequiredSubnetIds.length > 0 && !!address && !!skyBrowser,
-		staleTime: 0,
-		gcTime: 0,
+		staleTime: 5 * 60 * 1000, // 5 minutes - auth subnet data stays fresh for 5 minutes
+		gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes
 		retry: 1,
 	});
 

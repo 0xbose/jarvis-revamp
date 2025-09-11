@@ -36,6 +36,7 @@ import {
 	getMemoryRecall,
 } from "@/controllers/node-context/node-context.query";
 import { MoreVerticalIcon, PlusIcon } from "lucide-react";
+import KnowledgeDialog from "./knowledge-dialog";
 
 function SubnetSkeletonList() {
 	return (
@@ -90,6 +91,10 @@ export default function AgentMemory({
 	const [assigningMemory, setAssigningMemory] = useState<
 		Record<string, boolean>
 	>({});
+	const [knowledgeDialog, setKnowledgeDialog] = useState<{
+		isOpen: boolean;
+		selectedAgent: SelectedAgent | null;
+	}>({ isOpen: false, selectedAgent: null });
 	const agentSubnets: AgentSubnet[] = agentData?.subnet_list || [];
 
 	// Memory data hook
@@ -131,10 +136,10 @@ export default function AgentMemory({
 				!!skyBrowser &&
 				!!address &&
 				address.trim() !== "",
-			staleTime: 0,
-			gcTime: 0,
-			refetchOnMount: "always",
-			refetchOnWindowFocus: true,
+			staleTime: 5 * 60 * 1000, // 5 minutes - data stays fresh for 5 minutes
+			gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache for 10 minutes
+			refetchOnMount: false, // Use global setting
+			refetchOnWindowFocus: false, // Use global setting
 		});
 
 	const {
@@ -494,6 +499,10 @@ export default function AgentMemory({
 		]
 	);
 
+	const handleAgentNameClick = (agent: SelectedAgent) => {
+		setKnowledgeDialog({ isOpen: true, selectedAgent: agent });
+	};
+
 	if (
 		isLoadingSubnets ||
 		isLoadingMemoryDetails ||
@@ -502,18 +511,7 @@ export default function AgentMemory({
 		return <SubnetSkeletonList />;
 	if (isErrorSubnets) return <div>Failed to load subnets.</div>;
 	if (!skyBrowser || !address) {
-		return (
-			<div className="flex items-center justify-center py-8 text-muted-foreground">
-				<div className="text-center">
-					<p className="text-lg font-medium mb-2">
-						Wallet Not Connected
-					</p>
-					<p className="text-sm">
-						Please connect your wallet to manage agent memory.
-					</p>
-				</div>
-			</div>
-		);
+		return <SubnetSkeletonList />;
 	}
 
 	return (
@@ -544,18 +542,24 @@ export default function AgentMemory({
 							{selectedAgents.map((agent) => (
 								<div
 									key={agent.id}
-									className="text-center font-medium text-sm pl-6 px-2 truncate w-[260px] flex-shrink-0 flex items-center"
+									className="text-center font-medium text-sm pl-6 px-2 truncate w-[260px] flex-shrink-0 flex items-center justify-center"
 									title={agent.name}
 								>
-									<div className="flex flex-col w-full">
-										<span className="w-[220px] truncate">
+									<div className="flex flex-col">
+										<button
+											onClick={() =>
+												handleAgentNameClick(agent)
+											}
+											className="max-w-[220px] truncate hover:text-primary cursor-pointer text-left"
+											title="Click to view knowledge base"
+										>
 											{agent.name}
-										</span>
+										</button>
 									</div>
 									<Button
 										variant="ghost"
 										size="icon"
-										className="hover:bg-gray/80 ml-2"
+										className="hover:bg-gray/80"
 									>
 										<MoreVerticalIcon />
 									</Button>
@@ -834,6 +838,30 @@ export default function AgentMemory({
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			{knowledgeDialog.selectedAgent && (
+				<KnowledgeDialog
+					isOpen={knowledgeDialog.isOpen}
+					onClose={() =>
+						setKnowledgeDialog({
+							isOpen: false,
+							selectedAgent: null,
+						})
+					}
+					skyBrowser={skyBrowser}
+					userAddress={address || ""}
+					agentData={{
+						nft_address:
+							knowledgeDialog.selectedAgent.collection_address,
+						collection_id:
+							knowledgeDialog.selectedAgent.collection_address,
+					}}
+					selectedNftId={knowledgeDialog.selectedAgent.nft_id}
+					agentId={knowledgeDialog.selectedAgent.id}
+					agentName={knowledgeDialog.selectedAgent.name}
+					isWorkflowDeployed={false}
+				/>
+			)}
 		</div>
 	);
 }

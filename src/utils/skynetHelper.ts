@@ -6,17 +6,12 @@ import { Eip1193Provider, ethers } from "ethers";
 import axios, { AxiosError } from "axios";
 import { API_CONFIG } from "@/config/constants";
 import { NFT__factory } from "@decloudlabs/skynet/lib/types/contracts";
+import { KNOWLEDGE_PROMPTS } from "@/constants/knowledge";
 
 // Define constants locally since the import path doesn't exist
 export const KNOWLEDGE_TYPES = {
 	AGENT: "agent",
 	SWARM: "swarm",
-} as const;
-
-export const KNOWLEDGE_PROMPTS = {
-	AGENT_LIST_RECORDS: "List all knowledge base records",
-	SWARM_PREFIX: "[SWARM MODE] ",
-	SWARM_LIST_RECORDS: "List all collection knowledge base records",
 } as const;
 
 export const CONTENT_TYPES = {
@@ -397,14 +392,36 @@ export const makeApiRequest = async (
 	payload: unknown,
 	retries = 2
 ) => {
+	console.log("makeApiRequest called:", { url, payload, retries });
+
 	for (let i = 0; i <= retries; i++) {
 		try {
+			console.log(`Making API request attempt ${i + 1} to:`, url);
 			const response = await axios.post(url, payload, {
 				headers: {
 					"Content-Type": CONTENT_TYPES.JSON,
 				},
 				timeout: 60000, // 60 second timeout
 			});
+
+			console.log("API request successful:", {
+				status: response.status,
+				headers: response.headers,
+				dataType: typeof response.data,
+				data: response.data,
+			});
+
+			// Check if response is HTML (error page)
+			if (
+				typeof response.data === "string" &&
+				response.data.includes("<!DOCTYPE html>")
+			) {
+				console.warn(
+					"API returned HTML instead of JSON - possible server error"
+				);
+				// Treat HTML response as an error and retry
+				throw new Error("API returned HTML instead of JSON");
+			}
 
 			return response.data;
 		} catch (error) {
