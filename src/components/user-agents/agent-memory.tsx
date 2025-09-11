@@ -30,24 +30,17 @@ import {
 	deleteNodeContextMemory,
 	deleteMemoryRecall,
 } from "@/controllers/node-context/node-context.mutations";
-import { getNodeContextMemory } from "@/controllers/node-context/node-context.query";
-import { getMemoryRecall } from "@/controllers/node-context/node-context.query";
+import { useWallet } from "@/hooks/use-wallet";
+import {
+	getNodeContextMemory,
+	getMemoryRecall,
+} from "@/controllers/node-context/node-context.query";
 import { MoreVerticalIcon, PlusIcon } from "lucide-react";
-
-interface MemoryType {
-	id: string;
-	item_id?: string; // Optional for memory recall which doesn't have specific item_id
-	agent_collection: {
-		agentAddress: string;
-		agentID: string;
-	};
-	agentDetails?: any;
-}
 
 function SubnetSkeletonList() {
 	return (
 		<div>
-			{Array.from({ length: 3 }).map((_, idx) => (
+			{[...Array(3)].map((_, idx) => (
 				<div
 					key={idx}
 					className="py-3 px-2 border-b last:border-b-0 flex items-center animate-pulse"
@@ -58,7 +51,6 @@ function SubnetSkeletonList() {
 		</div>
 	);
 }
-
 function MintedAgentSkeleton() {
 	return (
 		<div className="border border-border rounded-lg shadow-sm p-4 flex bg-background animate-pulse">
@@ -70,20 +62,12 @@ function MintedAgentSkeleton() {
 		</div>
 	);
 }
-
 function useDebounce<T>(value: T, delay: number): T {
 	const [debouncedValue, setDebouncedValue] = useState(value);
-
 	useEffect(() => {
-		const handler = setTimeout(() => {
-			setDebouncedValue(value);
-		}, delay);
-
-		return () => {
-			clearTimeout(handler);
-		};
+		const handler = setTimeout(() => setDebouncedValue(value), delay);
+		return () => clearTimeout(handler);
 	}, [value, delay]);
-
 	return debouncedValue;
 }
 
@@ -92,6 +76,7 @@ export default function AgentMemory({
 }: {
 	agentData: AgentDetailResponse;
 }) {
+	const { skyBrowser, address } = useWallet();
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [selectedAgents, setSelectedAgents] = useState<SelectedAgent[]>([]);
 	const [selectedSubnetsPerAgent, setSelectedSubnetsPerAgent] = useState<
@@ -105,113 +90,77 @@ export default function AgentMemory({
 	const [assigningMemory, setAssigningMemory] = useState<
 		Record<string, boolean>
 	>({});
+	const agentSubnets: AgentSubnet[] = agentData?.subnet_list || [];
 
-	// Generic hook for memory data
+	// Memory data hook
 	const useMemoryData = (
 		queryKey: string,
-		fetchFn: (params: { agentID: string }) => Promise<MemoryType[]>
-	) => {
-		return useQuery({
+		fetchFn: (params: {
+			agentID: string;
+			skyBrowser: any;
+			address: string;
+		}) => Promise<any[]>
+	) =>
+		useQuery({
 			queryKey: [queryKey, agentData.id],
 			queryFn: async () => {
-				console.log(`🔍 Fetching ${queryKey} for agent:`, agentData.id);
-				const memories = await fetchFn({ agentID: agentData.id });
-				console.log(`📝 Got ${memories.length} memories:`, memories);
-
-				const memoriesWithAgentDetails = await Promise.all(
+				const memories = await fetchFn({
+					agentID: agentData.id,
+					skyBrowser,
+					address: address || "",
+				});
+				return await Promise.all(
 					memories.map(async (memory) => {
 						try {
 							const { agentAddress, agentID: nftId } =
 								memory.agent_collection;
-							console.log(
-								`🔄 Fetching agent details for memory ${memory.id}: ${agentAddress}/${nftId}`
-							);
 							const agentDetails =
 								await getAgentDetailByCollectionAndNftId(
 									agentAddress,
 									nftId
 								);
-							console.log(
-								`✅ Got agent details for memory ${memory.id}:`,
-								agentDetails?.name
-							);
 							return { ...memory, agentDetails };
-						} catch (error) {
-							console.error(
-								`❌ Failed to fetch agent details for memory ${memory.id}:`,
-								error
-							);
-							console.error(
-								`❌ Collection: ${memory.agent_collection.agentAddress}, NFT ID: ${memory.agent_collection.agentID}`
-							);
+						} catch {
 							return { ...memory, agentDetails: null };
 						}
 					})
 				);
-
-				const successfulFetches = memoriesWithAgentDetails.filter(
-					(m) => m.agentDetails
-				).length;
-				console.log(
-					`📊 Successfully fetched ${successfulFetches}/${memoriesWithAgentDetails.length} agent details`
-				);
-				return memoriesWithAgentDetails;
 			},
-			enabled: !!agentData.id,
-			staleTime: 0, // Always refetch to ensure fresh data on reload
-			gcTime: 0, // Don't cache to avoid stale data issues
+			enabled:
+				!!agentData.id &&
+				!!skyBrowser &&
+				!!address &&
+				address.trim() !== "",
+			staleTime: 0,
+			gcTime: 0,
 			refetchOnMount: "always",
 			refetchOnWindowFocus: true,
 		});
-	};
 
 	const {
 		data: memoryDetails,
 		isLoading: isLoadingMemoryDetails,
 		refetch: refetchMemoryDetails,
 	} = useMemoryData("agentMemoryDetails", getNodeContextMemory);
-
 	const {
 		data: memoryRecallDetails,
 		isLoading: isLoadingMemoryRecallDetails,
 		refetch: refetchMemoryRecallDetails,
 	} = useMemoryData("memoryRecallDetails", getMemoryRecall);
 
-	// Get agent subnets before processMemoryData to avoid hoisting issues
-	const agentSubnets: AgentSubnet[] = agentData?.subnet_list || [];
-
 	// Process memory data into state
 	const processMemoryData = useCallback(
 		(
-			memories: MemoryType[],
+			memories: any[],
 			setterFn: React.Dispatch<
 				React.SetStateAction<Record<string, Set<number>>>
 			>,
-			isMemoryRecall: boolean = false
+			isMemoryRecall = false
 		) => {
-			console.log(
-				`🔄 Processing ${
-					memories?.length || 0
-				} memories (isMemoryRecall: ${isMemoryRecall})`
-			);
-			if (!memories?.length) {
-				console.log("❌ No memories to process");
-				return;
-			}
-
+			if (!memories?.length) return;
 			const agentsFromMemory: SelectedAgent[] = [];
 			const subnetsFromMemory: Record<string, Set<number>> = {};
-
 			memories.forEach((memory) => {
-				console.log(`🔍 Processing memory ${memory.id}:`, {
-					hasAgentDetails: !!memory.agentDetails,
-					agentAddress: memory.agent_collection.agentAddress,
-					agentID: memory.agent_collection.agentID,
-					agentName: memory.agentDetails?.name,
-					itemId: memory.item_id,
-					isMemoryRecall,
-				});
-
 				if (memory.agentDetails) {
 					const agentId = memory.agentDetails.id;
 					const agent: SelectedAgent = {
@@ -223,73 +172,37 @@ export default function AgentMemory({
 							memory.agent_collection.agentAddress,
 						nft_id: memory.agent_collection.agentID,
 					};
-
 					if (!agentsFromMemory.some((a) => a.id === agentId)) {
 						agentsFromMemory.push(agent);
 						subnetsFromMemory[agentId] = new Set();
-						console.log(
-							`✅ Added agent to memory: ${agent.name} (${agentId})`
-						);
 					}
-
 					if (isMemoryRecall) {
-						// For memory recall (master), add all subnets for this agent
 						agentSubnets.forEach((subnet) => {
-							if (!subnetsFromMemory[agentId]) {
-								subnetsFromMemory[agentId] = new Set();
-							}
 							subnetsFromMemory[agentId].add(subnet.itemID);
 						});
-						console.log(
-							`🎯 Added all ${agentSubnets.length} subnets for master agent: ${agent.name}`
-						);
-					} else {
-						// For regular memory, use the specific item_id
-						if (memory.item_id) {
-							const subnetItemId = parseInt(memory.item_id);
-							if (!isNaN(subnetItemId)) {
-								if (!subnetsFromMemory[agentId]) {
-									subnetsFromMemory[agentId] = new Set();
-								}
-								subnetsFromMemory[agentId].add(subnetItemId);
-							}
-						}
+					} else if (memory.item_id) {
+						const subnetItemId = parseInt(memory.item_id);
+						if (!isNaN(subnetItemId))
+							subnetsFromMemory[agentId].add(subnetItemId);
 					}
-				} else {
-					console.log(
-						`❌ Memory ${memory.id} has no agent details - will not be displayed`
-					);
 				}
 			});
-
-			console.log(
-				`📊 Found ${agentsFromMemory.length} valid agents from memories`
-			);
-
-			// Update selected agents
 			setSelectedAgents((prev) => {
 				const existingIds = new Set(prev.map((a) => a.id));
 				const newAgents = agentsFromMemory.filter(
 					(a) => !existingIds.has(a.id)
 				);
-				console.log(
-					`🔄 Adding ${newAgents.length} new agents to state`
-				);
 				return [...prev, ...newAgents];
 			});
-
-			// Update subnet selections
 			setterFn((prev) => {
 				const updated = { ...prev };
 				Object.entries(subnetsFromMemory).forEach(
 					([agentId, subnets]) => {
-						if (updated[agentId]) {
+						if (updated[agentId])
 							subnets.forEach((subnetId) =>
 								updated[agentId].add(subnetId)
 							);
-						} else {
-							updated[agentId] = subnets;
-						}
+						else updated[agentId] = subnets;
 					}
 				);
 				return updated;
@@ -299,67 +212,46 @@ export default function AgentMemory({
 	);
 
 	useEffect(() => {
-		if (memoryDetails) {
+		if (memoryDetails)
 			processMemoryData(memoryDetails, setSelectedSubnetsPerAgent, false);
-		}
 	}, [memoryDetails, processMemoryData]);
-
 	useEffect(() => {
-		if (memoryRecallDetails) {
-			console.log(
-				"🎯 Processing memory recall details:",
-				memoryRecallDetails
-			);
+		if (memoryRecallDetails)
 			processMemoryData(
 				memoryRecallDetails,
 				setMasterNodeSelections,
 				true
 			);
-		} else {
-			console.log("❌ No memory recall details to process");
-		}
 	}, [memoryRecallDetails, processMemoryData]);
 
-	// Remove automatic refetching when dialog opens
-	// Data will be fresh from the initial query and mutations will update it
 	const subnetIds = agentSubnets.map((s) => s.unique_id).filter(Boolean);
-
 	const {
 		data: subnetDetails,
 		isLoading: isLoadingSubnets,
 		isError: isErrorSubnets,
 	} = useQuery<ExtendedSubnet[]>({
 		queryKey: ["agent-subnets", subnetIds],
-		queryFn: async (): Promise<ExtendedSubnet[]> => {
-			if (subnetIds.length === 0) return [];
-
+		queryFn: async () => {
+			if (!subnetIds.length) return [];
 			const results = await Promise.all(
 				subnetIds.map((id) => getSubnetsByID(id))
 			);
-
-			const flattened = results.flat();
 			const seen = new Set();
-
-			return flattened.filter((subnet) => {
+			return results.flat().filter((subnet) => {
 				const key = subnet.unique_id;
-				if (seen.has(key)) {
-					return false;
-				}
+				if (seen.has(key)) return false;
 				seen.add(key);
 				return true;
 			});
 		},
 		enabled: subnetIds.length > 0,
-		staleTime: 10 * 60 * 1000, // 10 minutes - subnets don't change frequently
-		gcTime: 15 * 60 * 1000, // 15 minutes
+		staleTime: 10 * 60 * 1000,
+		gcTime: 15 * 60 * 1000,
 	});
-
 	const subnetDetailsMap = new Map();
-	if (subnetDetails) {
-		subnetDetails.forEach((subnet) => {
-			subnetDetailsMap.set(subnet.unique_id, subnet);
-		});
-	}
+	subnetDetails?.forEach((subnet) =>
+		subnetDetailsMap.set(subnet.unique_id, subnet)
+	);
 
 	const {
 		data: mintedAgentsData,
@@ -371,19 +263,17 @@ export default function AgentMemory({
 			agentData.user_address,
 			debouncedSearch,
 		],
-		queryFn: async () => {
-			return getUserMintedAgents({
+		queryFn: async () =>
+			getUserMintedAgents({
 				address: agentData.user_address,
 				search: debouncedSearch,
-			});
-		},
+			}),
 		enabled: dialogOpen && !!agentData.user_address,
 		staleTime: 5 * 60 * 1000,
 		gcTime: 5 * 60 * 1000,
 		retry: 1,
 	});
 
-	// Helper functions
 	const agentHasAnySubnetSelected = useCallback(
 		(agentId: string) => {
 			const set = selectedSubnetsPerAgent[agentId];
@@ -415,15 +305,11 @@ export default function AgentMemory({
 				collection_address: agent.collection_address,
 				nft_id: agent.nft_id,
 			};
-
 			setSelectedAgents((prev) => {
 				const isSelected = prev.some((a) => a.id === selectedAgent.id);
 				if (isSelected) {
-					// Only allow deselect if no subnet is selected for this agent
-					if (agentHasAnySubnetSelected(selectedAgent.id)) {
-						return prev; // Prevent deselect
-					}
-					// Remove agent and its subnet selections
+					if (agentHasAnySubnetSelected(selectedAgent.id))
+						return prev;
 					setSelectedSubnetsPerAgent((prevSubnets) => {
 						const newSubnets = { ...prevSubnets };
 						delete newSubnets[selectedAgent.id];
@@ -436,7 +322,6 @@ export default function AgentMemory({
 					});
 					return prev.filter((a) => a.id !== selectedAgent.id);
 				} else {
-					// Add agent
 					setSelectedSubnetsPerAgent((prevSubnets) => ({
 						...prevSubnets,
 						[selectedAgent.id]: new Set(),
@@ -453,45 +338,40 @@ export default function AgentMemory({
 	);
 
 	const handleToggle = useCallback(
-		async (
-			agentId: string,
-			subnetItemId: number,
-			isMaster: boolean = false
-		) => {
+		async (agentId: string, subnetItemId: number, isMaster = false) => {
 			const agent = selectedAgents.find((a) => a.id === agentId);
-			if (!agent) return;
-
+			if (!agent || !address || !skyBrowser) return;
 			const stateSelector = isMaster
 				? masterNodeSelections
 				: selectedSubnetsPerAgent;
 			const stateSetter = isMaster
 				? setMasterNodeSelections
 				: setSelectedSubnetsPerAgent;
-
 			const isCurrentlySelected =
 				stateSelector[agentId]?.has(subnetItemId) || false;
 			const loadingKey = `${
 				isMaster ? "master-" : ""
 			}${agentId}-${subnetItemId}`;
-
 			setAssigningMemory((prev) => ({ ...prev, [loadingKey]: true }));
-
 			try {
 				if (!isCurrentlySelected) {
 					if (isMaster) {
-						const payload = {
+						await upsertMemoryRecall({
 							agent_id: agentData.id,
 							agentCollection: {
 								agentAddress: agent.collection_address,
 								agentID: agent.nft_id,
 							},
-						};
-						await upsertMemoryRecall(payload);
+							skyBrowser,
+							address: address || "",
+						});
 					} else {
-						const payload = createPayload(agent, subnetItemId);
-						await upsertNodeContextMemory(payload);
+						await upsertNodeContextMemory({
+							...createPayload(agent, subnetItemId),
+							skyBrowser,
+							address: address || "",
+						});
 					}
-
 					stateSetter((prev) => {
 						const agentSelections =
 							prev[agentId] || new Set<number>();
@@ -499,26 +379,25 @@ export default function AgentMemory({
 						newSet.add(subnetItemId);
 						return { ...prev, [agentId]: newSet };
 					});
-
-					// Refetch data to ensure UI is in sync with server
-					if (isMaster) {
-						refetchMemoryRecallDetails();
-					} else {
-						refetchMemoryDetails();
-					}
+					isMaster
+						? refetchMemoryRecallDetails()
+						: refetchMemoryDetails();
 				} else {
 					if (isMaster) {
 						await deleteMemoryRecall({
 							agent_id: agentData.id,
 							itemID: subnetItemId.toString(),
+							skyBrowser,
+							address: address || "",
 						});
 					} else {
 						await deleteNodeContextMemory({
 							agent_id: agentData.id,
 							itemID: subnetItemId.toString(),
+							skyBrowser,
+							address: address || "",
 						});
 					}
-
 					stateSetter((prev) => {
 						const agentSelections =
 							prev[agentId] || new Set<number>();
@@ -526,20 +405,10 @@ export default function AgentMemory({
 						newSet.delete(subnetItemId);
 						return { ...prev, [agentId]: newSet };
 					});
-
-					if (isMaster) {
-						refetchMemoryRecallDetails();
-					} else {
-						refetchMemoryDetails();
-					}
+					isMaster
+						? refetchMemoryRecallDetails()
+						: refetchMemoryDetails();
 				}
-			} catch (error) {
-				console.error(
-					`Failed to ${!isCurrentlySelected ? "assign" : "delete"} ${
-						isMaster ? "master node" : "agent"
-					} memory:`,
-					error
-				);
 			} finally {
 				setAssigningMemory((prev) => {
 					const newState = { ...prev };
@@ -554,76 +423,58 @@ export default function AgentMemory({
 			selectedSubnetsPerAgent,
 			createPayload,
 			agentData.id,
+			refetchMemoryDetails,
+			refetchMemoryRecallDetails,
+			address,
+			skyBrowser,
 		]
 	);
 
 	const handleSubnetToggle = useCallback(
-		(agentId: string, subnetItemId: number) => {
-			return handleToggle(agentId, subnetItemId, false);
-		},
+		(agentId: string, subnetItemId: number) =>
+			handleToggle(agentId, subnetItemId, false),
 		[handleToggle]
 	);
-
-	const handleMasterNodeToggle = useCallback(
-		(agentId: string, subnetItemId: number) => {
-			return handleToggle(agentId, subnetItemId, true);
-		},
-		[handleToggle]
-	);
-
 	const handleMasterAllToggle = useCallback(
 		async (agentId: string) => {
-			if (!agentSubnets.length) return;
-
+			if (!agentSubnets.length || !address || !skyBrowser) return;
 			const agent = selectedAgents.find((a) => a.id === agentId);
 			if (!agent) return;
-
 			const currentMasterSelections =
 				masterNodeSelections[agentId] || new Set();
 			const shouldSelectAll = currentMasterSelections.size === 0;
 			const loadingKey = `master-${agentId}-all`;
-
 			setAssigningMemory((prev) => ({ ...prev, [loadingKey]: true }));
-
 			try {
 				if (shouldSelectAll) {
-					const payload = {
+					await upsertMemoryRecall({
 						agent_id: agentData.id,
 						agentCollection: {
 							agentAddress: agent.collection_address,
 							agentID: agent.nft_id,
 						},
-					};
-					await upsertMemoryRecall(payload);
-
+						skyBrowser,
+						address: address || "",
+					});
 					setMasterNodeSelections((prev) => {
 						const allSubnetIds = new Set(
 							agentSubnets.map((subnet) => subnet.itemID)
 						);
 						return { ...prev, [agentId]: allSubnetIds };
 					});
-
 					refetchMemoryRecallDetails();
 				} else {
 					await deleteMemoryRecall({
 						agent_id: agentData.id,
+						skyBrowser,
+						address: address || "",
 					});
-
 					setMasterNodeSelections((prev) => ({
 						...prev,
 						[agentId]: new Set(),
 					}));
-
-					// Refetch data to ensure UI is in sync with server
 					refetchMemoryRecallDetails();
 				}
-			} catch (error) {
-				console.error(
-					`Failed to ${
-						shouldSelectAll ? "assign" : "delete"
-					} master memory for all subnets:`,
-					error
-				);
 			} finally {
 				setAssigningMemory((prev) => {
 					const newState = { ...prev };
@@ -632,19 +483,37 @@ export default function AgentMemory({
 				});
 			}
 		},
-		[agentSubnets, selectedAgents, masterNodeSelections, agentData.id]
+		[
+			agentSubnets,
+			selectedAgents,
+			masterNodeSelections,
+			agentData.id,
+			refetchMemoryRecallDetails,
+			address,
+			skyBrowser,
+		]
 	);
 
 	if (
 		isLoadingSubnets ||
 		isLoadingMemoryDetails ||
 		isLoadingMemoryRecallDetails
-	) {
+	)
 		return <SubnetSkeletonList />;
-	}
-
-	if (isErrorSubnets) {
-		return <div>Failed to load subnets.</div>;
+	if (isErrorSubnets) return <div>Failed to load subnets.</div>;
+	if (!skyBrowser || !address) {
+		return (
+			<div className="flex items-center justify-center py-8 text-muted-foreground">
+				<div className="text-center">
+					<p className="text-lg font-medium mb-2">
+						Wallet Not Connected
+					</p>
+					<p className="text-sm">
+						Please connect your wallet to manage agent memory.
+					</p>
+				</div>
+			</div>
+		);
 	}
 
 	return (
@@ -671,7 +540,6 @@ export default function AgentMemory({
 						>
 							Subnet
 						</div>
-
 						<div className="flex items-center gap-0">
 							{selectedAgents.map((agent) => (
 								<div
@@ -706,7 +574,6 @@ export default function AgentMemory({
 							</div>
 						</div>
 					</div>
-
 					{/* Master Row */}
 					<div className="flex p-4 px-6 items-center w-full min-w-fit">
 						<div
@@ -719,7 +586,6 @@ export default function AgentMemory({
 						>
 							Master Agent
 						</div>
-
 						<div className="flex items-center gap-0 w-full">
 							{selectedAgents.map((agent) => {
 								const masterLoadingKey = `master-${agent.id}-all`;
@@ -727,12 +593,10 @@ export default function AgentMemory({
 									assigningMemory[masterLoadingKey];
 								const isMasterChecked =
 									masterNodeSelections[agent.id]?.size > 0;
-
 								return (
 									<div
 										key={agent.id}
 										className="flex justify-center items-center min-h-[32px] w-[260px] flex-shrink-0 px-6"
-										// Prevent checkbox wiggle by using a fixed width for the loading spinner container
 										style={{ position: "relative" }}
 									>
 										<div
@@ -754,7 +618,6 @@ export default function AgentMemory({
 												}
 												title={`Set ${agent.name} as master for all subnets`}
 											/>
-											{/* Reserve space for spinner to prevent layout shift */}
 											<span
 												style={{
 													display: "inline-block",
@@ -775,7 +638,6 @@ export default function AgentMemory({
 							<div className="w-[80px] flex-shrink-0"></div>
 						</div>
 					</div>
-
 					{/* Subnet Rows */}
 					{agentSubnets?.length > 0 ? (
 						agentSubnets.map((subnet) => {
@@ -784,7 +646,6 @@ export default function AgentMemory({
 							);
 							const subnetName =
 								subnetDetail?.subnet_name || subnet.unique_id;
-
 							return (
 								<div
 									key={`${subnet.unique_id}-${subnet.itemID}`}
@@ -801,7 +662,6 @@ export default function AgentMemory({
 									>
 										{subnetName} agent
 									</div>
-
 									<div className="flex items-center gap-0 w-full">
 										{selectedAgents.map((agent) => {
 											const loadingKey = `${agent.id}-${subnet.itemID}`;
@@ -811,7 +671,6 @@ export default function AgentMemory({
 												selectedSubnetsPerAgent[
 													agent.id
 												]?.has(subnet.itemID) || false;
-
 											return (
 												<div
 													key={agent.id}
@@ -842,7 +701,6 @@ export default function AgentMemory({
 															}
 															title="Assign agent to this subnet"
 														/>
-														{/* Reserve space for spinner to prevent layout shift */}
 														<span
 															style={{
 																display:
@@ -873,7 +731,6 @@ export default function AgentMemory({
 					)}
 				</div>
 			</div>
-
 			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
 				<DialogContent className="min-w-[75%] max-h-[42rem] flex flex-col">
 					<DialogHeader>
@@ -883,7 +740,7 @@ export default function AgentMemory({
 							knowledge with this agent.
 						</DialogDescription>
 					</DialogHeader>
-					<div className="">
+					<div>
 						<Input
 							type="text"
 							placeholder="Search minted agents..."
@@ -901,7 +758,7 @@ export default function AgentMemory({
 					>
 						{isLoadingMintedAgents && (
 							<div className="flex flex-col gap-3 mt-2">
-								{Array.from({ length: 5 }).map((_, idx) => (
+								{[...Array(5)].map((_, idx) => (
 									<MintedAgentSkeleton key={idx} />
 								))}
 							</div>
@@ -921,7 +778,6 @@ export default function AgentMemory({
 										const hasAnySubnet =
 											isSelected &&
 											agentHasAnySubnetSelected(agent.id);
-
 										return (
 											<div
 												key={agent.id}
@@ -938,9 +794,8 @@ export default function AgentMemory({
 													if (
 														isSelected &&
 														hasAnySubnet
-													) {
+													)
 														return;
-													}
 													handleAgentToggle(agent);
 												}}
 											>

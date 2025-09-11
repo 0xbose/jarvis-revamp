@@ -1,16 +1,27 @@
 import axios from "axios";
 import { NodeContext } from "../../types/memory";
+import { apiKeyManager } from "@/utils/api-key-manager";
 
 export const getNodeContextMemory = async ({
 	agentID,
+	skyBrowser,
+	address,
 }: {
 	agentID: string;
+	skyBrowser: any;
+	address: string;
 }): Promise<NodeContext[]> => {
+	const apiKey = await apiKeyManager.getApiKey(skyBrowser, {
+		address: address,
+	});
+	if (!apiKey) {
+		throw new Error("apiKey is required");
+	}
 	const response = await axios.get(
 		`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections/node-context`,
 		{
 			params: {
-				apiKey: process.env.NEXT_PUBLIC_X_API_KEY,
+				apiKey: apiKey,
 				agentID,
 			},
 			headers: {
@@ -35,14 +46,25 @@ export const getNodeContextMemory = async ({
 
 export const getMemoryRecall = async ({
 	agentID,
+	skyBrowser,
+	address,
 }: {
 	agentID: string;
+	skyBrowser: any;
+	address: string;
 }): Promise<any> => {
+	const apiKey = await apiKeyManager.getApiKey(skyBrowser, {
+		address: address,
+	});
+	if (!apiKey) {
+		throw new Error("apiKey is required");
+	}
+
 	const response = await axios.get(
 		`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections/memory-recall`,
 		{
 			params: {
-				apiKey: `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+				apiKey: apiKey,
 				agentID,
 			},
 			headers: {

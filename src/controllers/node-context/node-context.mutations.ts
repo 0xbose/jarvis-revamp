@@ -3,15 +3,24 @@ import {
 	NodeContextAgentCollection,
 	NodeContextResponse,
 } from "../../types/memory";
+import { apiKeyManager } from "@/utils/api-key-manager";
 
+/**
+ * Upsert (save or update) collection node memory for a given (agent_id, api_key, item_id) combination.
+ * POST /api/collections/node-context
+ */
 export const upsertNodeContextMemory = async ({
 	agent_id,
 	agentCollection,
 	item_id,
+	skyBrowser,
+	address,
 }: {
 	agent_id: string;
 	agentCollection: NodeContextAgentCollection;
 	item_id: string;
+	skyBrowser: any;
+	address: string;
 }): Promise<NodeContextResponse> => {
 	if (!agent_id) {
 		throw new Error("agent_id is required");
@@ -28,13 +37,20 @@ export const upsertNodeContextMemory = async ({
 	if (!item_id) {
 		throw new Error("item_id is required");
 	}
+	const apiKey = await apiKeyManager.getApiKey(skyBrowser, {
+		address: address,
+	});
+	if (!apiKey) {
+		throw new Error("api_key is required");
+	}
 
 	const response = await axios.post<NodeContextResponse>(
 		`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections/node-context`,
 		{
 			agent_id,
-			agent_collection: agentCollection,
+			agentCollection,
 			item_id,
+			api_key: apiKey,
 		},
 		{
 			headers: {
@@ -46,15 +62,23 @@ export const upsertNodeContextMemory = async ({
 	return response.data;
 };
 
+/**
+ * Upsert (save or update) collection memory for a given (agent_id, api_key) pair.
+ * POST /api/collections/memory-recall
+ */
 export const upsertMemoryRecall = async ({
 	agent_id,
 	agentCollection,
+	skyBrowser,
+	address,
 }: {
 	agent_id: string;
 	agentCollection: {
 		agentAddress: string;
 		agentID: string;
 	};
+	skyBrowser: any;
+	address: string;
 }): Promise<any> => {
 	if (!agent_id) {
 		throw new Error("agent_id is required");
@@ -68,7 +92,11 @@ export const upsertMemoryRecall = async ({
 			"agentCollection with agentAddress and agentID is required"
 		);
 	}
-	if (!`${process.env.NEXT_PUBLIC_X_API_KEY}`) {
+
+	const apiKey = await apiKeyManager.getApiKey(skyBrowser, {
+		address: address,
+	});
+	if (!apiKey) {
 		throw new Error("api_key is required");
 	}
 
@@ -77,7 +105,7 @@ export const upsertMemoryRecall = async ({
 		{
 			agent_id,
 			agentCollection,
-			api_key: `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+			api_key: apiKey,
 		},
 		{
 			headers: {
@@ -89,22 +117,33 @@ export const upsertMemoryRecall = async ({
 	return response.data;
 };
 
+/**
+ * Delete collection node memory for a given (agent_id, api_key, item_id) combination.
+ */
 export const deleteNodeContextMemory = async ({
 	agent_id,
 	itemID,
+	skyBrowser,
+	address,
 }: {
 	agent_id: string;
 	itemID?: string;
+	skyBrowser: any;
+	address: string;
 }): Promise<any> => {
 	if (!agent_id) {
 		throw new Error("agent_id is required");
 	}
-	if (!`${process.env.NEXT_PUBLIC_X_API_KEY}`) {
+
+	const apiKey = await apiKeyManager.getApiKey(skyBrowser, {
+		address: address,
+	});
+	if (!apiKey) {
 		throw new Error("api_key is required");
 	}
 
 	const params: any = {
-		apiKey: `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+		apiKey: apiKey,
 		agentID: agent_id,
 	};
 
@@ -126,22 +165,33 @@ export const deleteNodeContextMemory = async ({
 	return response.data;
 };
 
+/**
+ * Delete collection memory recall for a given (agent_id, api_key, item_id) combination.
+ */
 export const deleteMemoryRecall = async ({
 	agent_id,
 	itemID,
+	skyBrowser,
+	address,
 }: {
 	agent_id: string;
 	itemID?: string;
+	skyBrowser: any;
+	address: string;
 }): Promise<any> => {
 	if (!agent_id) {
 		throw new Error("agent_id is required");
 	}
-	if (!`${process.env.NEXT_PUBLIC_X_API_KEY}`) {
+
+	const apiKey = await apiKeyManager.getApiKey(skyBrowser, {
+		address: address,
+	});
+	if (!apiKey) {
 		throw new Error("api_key is required");
 	}
 
 	const params: any = {
-		apiKey: `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+		apiKey: apiKey,
 		agentID: agent_id,
 	};
 
