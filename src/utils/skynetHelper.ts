@@ -7,203 +7,221 @@ import axios, { AxiosError } from "axios";
 import { API_CONFIG } from "@/config/constants";
 import { NFT__factory } from "@decloudlabs/skynet/lib/types/contracts";
 import { KNOWLEDGE_PROMPTS } from "@/constants/knowledge";
+import type {
+	Web3Context,
+	AgentData,
+	Web3Auth,
+	NFTResult,
+	AgentNFTResult,
+	APIPayload,
+	KnowledgeBasePayload,
+	VerificationResult,
+	RegistrationCheck,
+	BalanceCheckResult,
+	AuthResponse,
+} from "@/types/skynet";
 
-// Define constants locally since the import path doesn't exist
+/**
+ * Constants for knowledge base operations
+ */
 export const KNOWLEDGE_TYPES = {
 	AGENT: "agent",
 	SWARM: "swarm",
 } as const;
 
+/**
+ * HTTP content types
+ */
 export const CONTENT_TYPES = {
 	JSON: "application/json",
 } as const;
 
-// Type definitions
-interface Web3Context {
-	address: string;
-}
+/**
+ * Configuration constants
+ */
+const SKYNET_CHAIN_ID = 619;
+const DEFAULT_TIMEOUT = 60000; // 60 seconds
+const DEFAULT_RETRY_DELAY = 1000; // 1 second
+const MAX_RETRIES = 3;
+const BATCH_SIZE = 20;
 
-interface AgentData {
-	nft_address?: string;
-	collection_id?: string;
-	originalId?: string;
-}
-
-interface Web3Auth {
-	provider?: unknown;
-}
-
-interface NFTResult {
-	success: boolean;
-	nftId?: string;
-	action?: "existing" | "minted" | "error";
-	message?: string;
-	mintPrice?: string;
-	userBalance?: string;
-}
-
-interface AgentNFTResult {
-	success: boolean;
-	agentId?: string;
-	action?: "existing" | "minted" | "error";
-	message?: string;
-	mintPrice?: string;
-	userBalance?: string;
-}
-
-interface APIPayload {
-	prompt: string;
-	userAuthPayload: {
-		userAddress: string;
-		signature: string;
-		message: string;
-	};
-	nftId: string;
-}
-
-interface KnowledgeBasePayload {
-	prompt: string;
-	userAuthPayload: {
-		userAddress: string;
-		signature: string;
-		message: string;
-	};
-	accountNFT: {
-		collectionID: string;
-		nftID: string;
-	};
-	agentCollection: {
-		agentAddress: string;
-		agentID?: string;
-	};
-}
-
-interface VerificationResult {
-	success: boolean;
-	balance: string;
-	tokenIds: string[];
-	message: string;
-}
-
-interface RegistrationCheck {
-	isRegistered: boolean;
-	registeredData?: unknown;
-	mintPrice?: string;
-	isActive?: boolean;
-	error?: string;
-}
-
+/**
+ * Fetches all NFTs owned by a user address with batch processing
+ * @param address - User's wallet address
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @returns Promise<string[]> - Array of NFT IDs owned by the user
+ */
 export const fetchNfts = async (
 	address: string,
 	skyBrowser: SkyMainBrowser
-) => {
-	let storedNfts = JSON.parse(
-		localStorage.getItem(`nfts-${address}`) || "[]"
-	);
-	let selectedNftId = localStorage.getItem(`selectedNftId-${address}`);
-
-	const BATCH_SIZE = 20; // Number of NFTs to fetch in each batch
+): Promise<string[]> => {
+	if (!address || !skyBrowser?.contractService?.AgentNFT) {
+		console.error("Invalid parameters for fetchNfts");
+		return [];
+	}
 
 	try {
-		const nftCount = await skyBrowser?.contractService.AgentNFT.balanceOf(
+		// Get cached NFTs from localStorage
+		const cachedNfts = getCachedNfts(address);
+		let storedNfts = [...cachedNfts];
+		let selectedNftId = localStorage.getItem(`selectedNftId-${address}`);
+
+		// Get total NFT count
+		const nftCount = await skyBrowser.contractService.AgentNFT.balanceOf(
 			address
 		);
-		if (nftCount) {
-			const totalCount = parseInt(nftCount.toString());
-			let currentIndex = storedNfts.length;
-
-			while (currentIndex < totalCount) {
-				const batchPromises = [];
-				const endIndex = Math.min(
-					currentIndex + BATCH_SIZE,
-					totalCount
-				);
-
-				// Create batch of promises
-				for (let i = currentIndex; i < endIndex; i++) {
-					batchPromises.push(
-						skyBrowser?.contractService.AgentNFT.tokenOfOwnerByIndex(
-							address,
-							i
-						)
-					);
-				}
-
-				// Execute batch
-				const batchResults = await Promise.all(batchPromises);
-				const newNftIds = batchResults
-					.filter((nft) => nft)
-					.map((nft) => nft.toString());
-
-				// Update state and localStorage with new batch
-				const updatedNfts = [...storedNfts, ...newNftIds].sort(
-					(a, b) => parseInt(b) - parseInt(a)
-				);
-				storedNfts = updatedNfts;
-				localStorage.setItem(
-					`nfts-${address}`,
-					JSON.stringify(updatedNfts)
-				);
-
-				currentIndex += BATCH_SIZE;
-			}
-
-			// Handle selected NFT after all NFTs are loaded
-			if (
-				!selectedNftId ||
-				!(await isValidOwner(selectedNftId, address, skyBrowser))
-			) {
-				selectedNftId = storedNfts[0];
-				localStorage.setItem(
-					`selectedNftId-${address}`,
-					selectedNftId!
-				);
-			}
-
-			return storedNfts; // Return the NFTs array
+		if (!nftCount || nftCount === BigInt(0)) {
+			return [];
 		}
-		return []; // Return empty array if no NFTs found
+
+		const totalCount = Number(nftCount);
+		let currentIndex = storedNfts.length;
+
+		// Fetch NFTs in batches
+		while (currentIndex < totalCount) {
+			const batchResults = await fetchNftBatch(
+				skyBrowser,
+				address,
+				currentIndex,
+				Math.min(currentIndex + BATCH_SIZE, totalCount)
+			);
+
+			if (batchResults.length > 0) {
+				storedNfts = [...storedNfts, ...batchResults].sort(
+					(a, b) => Number(b) - Number(a)
+				);
+				updateCachedNfts(address, storedNfts);
+			}
+
+			currentIndex += BATCH_SIZE;
+		}
+
+		// Validate and update selected NFT
+		await validateAndUpdateSelectedNft(
+			address,
+			selectedNftId,
+			storedNfts,
+			skyBrowser
+		);
+
+		return storedNfts;
 	} catch (error) {
 		console.error("Error fetching NFTs:", error);
-		return []; // Return empty array on error
+		return [];
 	}
 };
 
-export const mintNft = async (skyBrowser: SkyMainBrowser) => {
+/**
+ * Helper function to fetch a batch of NFTs
+ */
+const fetchNftBatch = async (
+	skyBrowser: SkyMainBrowser,
+	address: string,
+	startIndex: number,
+	endIndex: number
+): Promise<string[]> => {
+	const batchPromises = [];
+
+	for (let i = startIndex; i < endIndex; i++) {
+		batchPromises.push(
+			skyBrowser.contractService.AgentNFT.tokenOfOwnerByIndex(address, i)
+		);
+	}
+
+	const batchResults = await Promise.all(batchPromises);
+	return batchResults.filter((nft) => nft).map((nft) => nft.toString());
+};
+
+/**
+ * Helper function to get cached NFTs from localStorage
+ */
+const getCachedNfts = (address: string): string[] => {
 	try {
+		const cached = localStorage.getItem(`nfts-${address}`);
+		return cached ? JSON.parse(cached) : [];
+	} catch {
+		return [];
+	}
+};
+
+/**
+ * Helper function to update cached NFTs in localStorage
+ */
+const updateCachedNfts = (address: string, nfts: string[]): void => {
+	try {
+		localStorage.setItem(`nfts-${address}`, JSON.stringify(nfts));
+	} catch (error) {
+		console.warn("Failed to update cached NFTs:", error);
+	}
+};
+
+/**
+ * Helper function to validate and update selected NFT
+ */
+const validateAndUpdateSelectedNft = async (
+	address: string,
+	selectedNftId: string | null,
+	storedNfts: string[],
+	skyBrowser: SkyMainBrowser
+): Promise<void> => {
+	if (
+		!selectedNftId ||
+		!(await isValidOwner(selectedNftId, address, skyBrowser))
+	) {
+		const newSelectedNftId = storedNfts[0];
+		if (newSelectedNftId) {
+			localStorage.setItem(`selectedNftId-${address}`, newSelectedNftId);
+		}
+	}
+};
+
+/**
+ * Mints a new NFT for the user
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @returns Promise<boolean> - True if minting was successful, false otherwise
+ */
+export const mintNft = async (skyBrowser: SkyMainBrowser): Promise<boolean> => {
+	if (
+		!skyBrowser?.contractService?.NFTMinter ||
+		!skyBrowser?.contractService?.AgentNFT
+	) {
+		console.error("SkyBrowser or required contracts not initialized");
+		return false;
+	}
+
+	try {
+		// Get registered NFT information
 		const registeredNFT =
 			await skyBrowser.contractService.NFTMinter.getRegisteredNFTs(
 				skyBrowser.contractService.AgentNFT
 			);
 
-		// Based on the provided code, registeredNFT should have properties like isRegistered and mintPrice
-		const isRegistered = registeredNFT.isRegistered;
-		const mintPrice = registeredNFT.mintPrice;
-
-		if (!registeredNFT || !isRegistered || mintPrice === undefined) {
-			console.error(
-				"Minting failed: No registered NFT or mint price undefined"
-			);
+		if (!isValidRegisteredNFT(registeredNFT)) {
+			console.error("NFT registration validation failed");
 			return false;
 		}
 
+		// Execute mint transaction
 		const response = await skyBrowser.contractService.callContractWrite(
 			skyBrowser.contractService.NFTMinter.mint(
 				skyBrowser.contractService.selectedAccount,
 				skyBrowser.contractService.AgentNFT,
 				{
-					value: mintPrice,
+					value: registeredNFT.mintPrice,
 				}
 			)
 		);
 
 		if (response.success) {
+			// Refresh user's NFT list after successful minting
 			await fetchNfts(
 				skyBrowser.contractService.selectedAccount,
 				skyBrowser
 			);
 			return true;
 		}
+
+		console.error("Mint transaction failed:", response);
 		return false;
 	} catch (error) {
 		console.error("Error minting NFT:", error);
@@ -211,40 +229,89 @@ export const mintNft = async (skyBrowser: SkyMainBrowser) => {
 	}
 };
 
+/**
+ * Validates if a registered NFT is valid for minting
+ */
+const isValidRegisteredNFT = (registeredNFT: any): boolean => {
+	return (
+		registeredNFT &&
+		registeredNFT.isRegistered === true &&
+		registeredNFT.mintPrice !== undefined &&
+		registeredNFT.mintPrice !== null
+	);
+};
+
+/**
+ * Mints a Skynet NFT and returns the result with NFT ID
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @param address - User's wallet address
+ * @param web3Auth - Web3 authentication object (unused but kept for compatibility)
+ * @returns Promise<NFTResult> - Result object with success status and NFT ID
+ */
 export const mintSkynetNFT = async (
 	skyBrowser: SkyMainBrowser,
 	address: string,
 	web3Auth: Web3Auth
-) => {
-	try {
-		const success = await mintNft(skyBrowser);
-		if (success) {
-			// Fetch updated NFTs after minting
-			const nfts = await fetchNfts(address, skyBrowser);
-			const newNftId = nfts[0]; // Get the newest NFT
-			return {
-				success: true,
-				nftId: newNftId,
-			};
-		}
+): Promise<NFTResult> => {
+	if (!skyBrowser || !address) {
 		return {
 			success: false,
-			error: "Failed to mint NFT",
+			action: "error",
+			message: "Invalid parameters provided",
+		};
+	}
+
+	try {
+		const success = await mintNft(skyBrowser);
+		if (!success) {
+			return {
+				success: false,
+				action: "error",
+				message: "Failed to mint NFT",
+			};
+		}
+
+		// Fetch updated NFTs after minting
+		const nfts = await fetchNfts(address, skyBrowser);
+		const newNftId = nfts[0]; // Get the newest NFT
+
+		if (!newNftId) {
+			return {
+				success: false,
+				action: "error",
+				message: "NFT was minted but not found in wallet",
+			};
+		}
+
+		return {
+			success: true,
+			nftId: newNftId,
+			action: "minted",
 		};
 	} catch (error) {
 		console.error("Error in mintSkynetNFT:", error);
 		return {
 			success: false,
-			error: error instanceof Error ? error.message : "Unknown error",
+			action: "error",
+			message:
+				error instanceof Error
+					? error.message
+					: "Unknown error occurred",
 		};
 	}
 };
 
+/**
+ * Fetches user NFTs (alias for fetchNfts for backward compatibility)
+ * @param address - User's wallet address
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @returns Promise<string[]> - Array of NFT IDs owned by the user
+ */
 export const fetchUserNfts = async (
 	address: string,
 	skyBrowser: SkyMainBrowser
-) => {
-	return await fetchNfts(address, skyBrowser);
+): Promise<string[]> => {
+	return fetchNfts(address, skyBrowser);
 };
 
 export const getNftId = async (
@@ -336,72 +403,120 @@ export const getNftId = async (
 	return selectedNft;
 };
 
+/**
+ * Validates if a user owns a specific NFT token
+ * @param tokenId - The NFT token ID to check
+ * @param address - User's wallet address
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @returns Promise<boolean> - True if user owns the token, false otherwise
+ */
 const isValidOwner = async (
 	tokenId: string,
 	address: string,
 	skyBrowser: SkyMainBrowser
-) => {
+): Promise<boolean> => {
+	if (!tokenId || !address || !skyBrowser?.contractService?.AgentNFT) {
+		return false;
+	}
+
 	try {
-		const owner = await skyBrowser?.contractService.AgentNFT.ownerOf(
+		const owner = await skyBrowser.contractService.AgentNFT.ownerOf(
 			tokenId
 		);
 		return owner?.toLowerCase() === address.toLowerCase();
-	} catch {
+	} catch (error) {
+		console.warn(`Error validating ownership for token ${tokenId}:`, error);
 		return false;
 	}
 };
 
-// Enhanced authentication with retry logic
+/**
+ * Enhanced authentication with retry logic
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @returns Promise<AuthResponse> - Authentication response object
+ * @throws Error if authentication fails after all retries
+ */
 export const getAuthWithRetry = async (
 	skyBrowser: SkyMainBrowser,
-	maxRetries = 3
-) => {
-	for (let i = 0; i < maxRetries; i++) {
-		try {
-			const signatureResp = await skyBrowser?.appManager?.getUrsulaAuth();
+	maxRetries: number = MAX_RETRIES
+): Promise<AuthResponse> => {
+	if (!skyBrowser?.appManager) {
+		throw new Error("SkyBrowser appManager not initialized");
+	}
 
-			if (
-				signatureResp?.success &&
-				signatureResp.data?.userAddress &&
-				signatureResp.data?.signature &&
-				signatureResp.data?.message
-			) {
+	for (let attempt = 0; attempt < maxRetries; attempt++) {
+		try {
+			const signatureResp = await skyBrowser.appManager.getUrsulaAuth();
+
+			if (isValidAuthResponse(signatureResp)) {
 				return signatureResp;
 			}
 
-			console.warn(`Auth attempt ${i + 1} failed:`, signatureResp);
+			console.warn(`Auth attempt ${attempt + 1} failed:`, signatureResp);
 
-			// Wait before retry
-			if (i < maxRetries - 1) {
-				await new Promise((resolve) =>
-					setTimeout(resolve, 1000 * (i + 1))
-				);
+			// Wait before retry with exponential backoff
+			if (attempt < maxRetries - 1) {
+				await delay(DEFAULT_RETRY_DELAY * (attempt + 1));
 			}
 		} catch (error) {
-			console.error(`Auth attempt ${i + 1} error:`, error);
-			if (i === maxRetries - 1) throw error;
+			console.error(`Auth attempt ${attempt + 1} error:`, error);
+			if (attempt === maxRetries - 1) {
+				throw error;
+			}
 		}
 	}
 
 	throw new Error("Failed to get authentication after retries");
 };
 
-// Enhanced API request wrapper with retry logic using axios
+/**
+ * Validates if an authentication response is valid
+ */
+const isValidAuthResponse = (response: any): response is AuthResponse => {
+	return (
+		response?.success === true &&
+		response.data?.userAddress &&
+		response.data?.signature &&
+		response.data?.message
+	);
+};
+
+/**
+ * Utility function to create a delay
+ */
+const delay = (ms: number): Promise<void> => {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+/**
+ * Enhanced API request wrapper with retry logic using axios
+ * @param url - API endpoint URL
+ * @param payload - Request payload data
+ * @param retries - Number of retry attempts (default: 2)
+ * @returns Promise<any> - API response data
+ * @throws Error if all retry attempts fail
+ */
 export const makeApiRequest = async (
 	url: string,
 	payload: unknown,
-	retries = 2
-) => {
+	retries: number = 2
+): Promise<any> => {
+	if (!url) {
+		throw new Error("URL is required for API request");
+	}
+
 	console.log("makeApiRequest called:", { url, payload, retries });
 
-	for (let i = 0; i <= retries; i++) {
+	for (let attempt = 0; attempt <= retries; attempt++) {
 		try {
-			console.log(`Making API request attempt ${i + 1} to:`, url);
+			console.log(`Making API request attempt ${attempt + 1} to:`, url);
+
 			const response = await axios.post(url, payload, {
 				headers: {
 					"Content-Type": CONTENT_TYPES.JSON,
 				},
-				timeout: 60000, // 60 second timeout
+				timeout: DEFAULT_TIMEOUT,
 			});
 
 			console.log("API request successful:", {
@@ -411,173 +526,280 @@ export const makeApiRequest = async (
 				data: response.data,
 			});
 
-			// Check if response is HTML (error page)
-			if (
-				typeof response.data === "string" &&
-				response.data.includes("<!DOCTYPE html>")
-			) {
-				console.warn(
+			// Validate response is not HTML error page
+			if (isHtmlResponse(response.data)) {
+				throw new Error(
 					"API returned HTML instead of JSON - possible server error"
 				);
-				// Treat HTML response as an error and retry
-				throw new Error("API returned HTML instead of JSON");
 			}
 
 			return response.data;
 		} catch (error) {
 			const axiosError = error as AxiosError;
-			console.error(`Request attempt ${i + 1} failed:`, axiosError);
+			console.error(`Request attempt ${attempt + 1} failed:`, axiosError);
 
-			if (axiosError.response) {
-				// Server responded with error status
-				const status = axiosError.response.status;
-				const errorData = axiosError.response.data;
+			const shouldRetry = await handleApiError(
+				axiosError,
+				attempt,
+				retries
+			);
+			if (!shouldRetry) {
+				throw createApiError(axiosError);
+			}
 
-				console.error(`Error response ${i + 1}:`, {
-					status,
-					data: errorData,
-					headers: axiosError.response.headers,
-				});
-
-				// Don't retry on 4xx client errors
-				if (status >= 400 && status < 500) {
-					const errorMessage =
-						typeof errorData === "string"
-							? errorData
-							: (errorData as { message?: string })?.message ||
-							  JSON.stringify(errorData);
-					throw new Error(`Client Error ${status}: ${errorMessage}`);
-				}
-
-				// Retry on 5xx server errors
-				if (i < retries && status >= 500) {
-					await new Promise((resolve) =>
-						setTimeout(resolve, 1000 * (i + 1))
-					);
-					continue;
-				}
-
-				const errorMessage =
-					typeof errorData === "string"
-						? errorData
-						: (errorData as { message?: string })?.message ||
-						  JSON.stringify(errorData);
-				throw new Error(`Server Error ${status}: ${errorMessage}`);
-			} else if (axiosError.request) {
-				// Network error - retry if we have attempts left
-				console.error(
-					`Network error attempt ${i + 1}:`,
-					axiosError.message
-				);
-
-				if (i < retries) {
-					await new Promise((resolve) =>
-						setTimeout(resolve, 1000 * (i + 1))
-					);
-					continue;
-				}
-
-				throw new Error(`Network Error: ${axiosError.message}`);
-			} else {
-				// Other error
-				console.error(
-					`Request setup error attempt ${i + 1}:`,
-					axiosError.message
-				);
-				throw new Error(`Request Error: ${axiosError.message}`);
+			// Wait before retry with exponential backoff
+			if (attempt < retries) {
+				await delay(DEFAULT_RETRY_DELAY * (attempt + 1));
 			}
 		}
 	}
 };
 
-// API payload validation
-export const validateAPIPayload = (payload: APIPayload) => {
-	const required = ["prompt", "userAuthPayload", "nftId"] as const;
-	const missing = required.filter(
-		(field) => !payload[field as keyof APIPayload]
-	);
-
-	if (missing.length > 0) {
-		throw new Error(`Missing required fields: ${missing.join(", ")}`);
-	}
-
-	if (
-		!payload.userAuthPayload.userAddress ||
-		!payload.userAuthPayload.signature ||
-		!payload.userAuthPayload.message
-	) {
-		throw new Error("Invalid userAuthPayload structure");
-	}
-
-	return true;
+/**
+ * Checks if response data is HTML
+ */
+const isHtmlResponse = (data: any): boolean => {
+	return typeof data === "string" && data.includes("<!DOCTYPE html>");
 };
 
-// Generate agent with enhanced validation
+/**
+ * Handles API errors and determines if retry should be attempted
+ */
+const handleApiError = async (
+	axiosError: AxiosError,
+	attempt: number,
+	maxRetries: number
+): Promise<boolean> => {
+	if (axiosError.response) {
+		const status = axiosError.response.status;
+		const errorData = axiosError.response.data;
+
+		console.error(`Error response ${attempt + 1}:`, {
+			status,
+			data: errorData,
+			headers: axiosError.response.headers,
+		});
+
+		// Don't retry on 4xx client errors
+		if (status >= 400 && status < 500) {
+			return false;
+		}
+
+		// Retry on 5xx server errors
+		return attempt < maxRetries && status >= 500;
+	} else if (axiosError.request) {
+		// Network error - retry if we have attempts left
+		console.error(
+			`Network error attempt ${attempt + 1}:`,
+			axiosError.message
+		);
+		return attempt < maxRetries;
+	} else {
+		// Other error
+		console.error(
+			`Request setup error attempt ${attempt + 1}:`,
+			axiosError.message
+		);
+		return false;
+	}
+};
+
+/**
+ * Creates a standardized error message from Axios error
+ */
+const createApiError = (axiosError: AxiosError): Error => {
+	if (axiosError.response) {
+		const status = axiosError.response.status;
+		const errorData = axiosError.response.data;
+		const errorMessage =
+			typeof errorData === "string"
+				? errorData
+				: (errorData as { message?: string })?.message ||
+				  JSON.stringify(errorData);
+
+		return new Error(`HTTP ${status}: ${errorMessage}`);
+	} else if (axiosError.request) {
+		return new Error(`Network Error: ${axiosError.message}`);
+	} else {
+		return new Error(`Request Error: ${axiosError.message}`);
+	}
+};
+
+/**
+ * Validates API payload structure and required fields
+ * @param payload - API payload to validate
+ * @throws Error if payload is invalid or missing required fields
+ */
+export const validateAPIPayload = (payload: APIPayload): void => {
+	if (!payload) {
+		throw new Error("Payload is required");
+	}
+
+	const requiredFields: (keyof APIPayload)[] = [
+		"prompt",
+		"userAuthPayload",
+		"nftId",
+	];
+	const missingFields = requiredFields.filter((field) => !payload[field]);
+
+	if (missingFields.length > 0) {
+		throw new Error(`Missing required fields: ${missingFields.join(", ")}`);
+	}
+
+	// Validate userAuthPayload structure
+	if (!payload.userAuthPayload) {
+		throw new Error("userAuthPayload is required");
+	}
+
+	const authFields = ["userAddress", "signature", "message"];
+	const missingAuthFields = authFields.filter(
+		(field) =>
+			!payload.userAuthPayload[
+				field as keyof typeof payload.userAuthPayload
+			]
+	);
+
+	if (missingAuthFields.length > 0) {
+		throw new Error(
+			`Missing required auth fields: ${missingAuthFields.join(", ")}`
+		);
+	}
+
+	// Validate prompt is not empty
+	if (!payload.prompt.trim()) {
+		throw new Error("Prompt cannot be empty");
+	}
+
+	// Validate NFT ID format
+	if (!payload.nftId.trim()) {
+		throw new Error("NFT ID cannot be empty");
+	}
+};
+
+/**
+ * Generates an agent with comprehensive validation
+ * @param prompt - User prompt for agent generation
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @param web3Context - Web3 context containing user address
+ * @returns Promise<any> - Agent generation response
+ * @throws Error if validation fails or generation is unsuccessful
+ */
 export const generateAgentWithValidation = async (
 	prompt: string,
 	skyBrowser: SkyMainBrowser | null,
 	web3Context: Web3Context
-) => {
+): Promise<any> => {
 	// Validate inputs
-	if (!prompt?.trim()) throw new Error("Prompt is required");
-	if (!skyBrowser) throw new Error("SkyBrowser not initialized");
-
-	// Get authentication with validation
-	const auth = await getAuthWithRetry(skyBrowser);
-
-	// Get valid NFT ID using the enhanced function
-	const nftResult = await ensureUserHasNFT(skyBrowser, web3Context);
-
-	if (!nftResult.success) {
-		throw new Error(
-			nftResult.message || "Failed to get NFT for agent generation"
-		);
+	if (!prompt?.trim()) {
+		throw new Error("Prompt is required");
+	}
+	if (!skyBrowser) {
+		throw new Error("SkyBrowser not initialized");
+	}
+	if (!web3Context?.address) {
+		throw new Error("Web3 context address is required");
 	}
 
-	const nftId = nftResult.nftId;
+	const apiUrl = process.env.NEXT_PUBLIC_SKYINTEL_API_URL;
+	if (!apiUrl) {
+		throw new Error("SkyIntel API URL not configured");
+	}
 
-	// Prepare and validate payload
-	const payload = {
-		prompt: prompt.trim(),
-		userAuthPayload: auth.data,
-		nftId,
-	};
+	try {
+		// Get authentication with validation
+		const auth = await getAuthWithRetry(skyBrowser);
 
-	validateAPIPayload(payload);
+		// Get valid NFT ID using the enhanced function
+		const nftResult = await ensureUserHasNFT(skyBrowser, web3Context);
 
-	// Make request with proper error handling
-	return await makeApiRequest(
-		process.env.NEXT_PUBLIC_SKYINTEL_API_URL || "",
-		payload
-	);
+		if (!nftResult.success) {
+			throw new Error(
+				nftResult.message || "Failed to get NFT for agent generation"
+			);
+		}
+
+		const nftId = nftResult.nftId;
+		if (!nftId) {
+			throw new Error("NFT ID is required for agent generation");
+		}
+
+		// Prepare and validate payload
+		const payload: APIPayload = {
+			prompt: prompt.trim(),
+			userAuthPayload: auth.data,
+			nftId,
+		};
+
+		validateAPIPayload(payload);
+
+		// Make request with proper error handling
+		return await makeApiRequest(apiUrl, payload);
+	} catch (error) {
+		console.error("Error in generateAgentWithValidation:", error);
+		throw error;
+	}
 };
 
-// Skynet initialization functions
+/**
+ * Skynet initialization functions
+ */
+
+/**
+ * Validates if the provider is connected to the Skynet network
+ * @param provider - Ethers browser provider
+ * @returns Promise<boolean> - True if connected to Skynet network
+ */
 export const validateNetwork = async (
 	provider: ethers.BrowserProvider
 ): Promise<boolean> => {
-	const network = await provider.getNetwork();
-	return network.chainId === BigInt(619); // Skynet chain ID
+	try {
+		const network = await provider.getNetwork();
+		return network.chainId === BigInt(SKYNET_CHAIN_ID);
+	} catch (error) {
+		console.error("Error validating network:", error);
+		return false;
+	}
 };
 
+/**
+ * Creates a SkyEtherContractService instance
+ * @param provider - Web3 provider
+ * @param signer - Ethers signer
+ * @param address - User's wallet address
+ * @returns SkyEtherContractService instance
+ */
 export const createContractService = (
 	provider: unknown,
 	signer: ethers.Signer,
 	address: string
 ): SkyEtherContractService => {
+	if (!provider || !signer || !address) {
+		throw new Error("Provider, signer, and address are required");
+	}
+
 	return new SkyEtherContractService(
 		provider as never,
 		signer,
 		address,
-		619 // Skynet chain ID
+		SKYNET_CHAIN_ID
 	);
 };
 
+/**
+ * Creates a SkyMainBrowser instance
+ * @param contractService - Initialized contract service
+ * @returns SkyMainBrowser instance
+ */
 export const createSkyBrowser = (
 	contractService: SkyEtherContractService
 ): SkyMainBrowser => {
+	const storageApiUrl = process.env.NEXT_PUBLIC_STORAGE_API_URL;
+	if (!storageApiUrl) {
+		throw new Error("Storage API URL not configured");
+	}
+
 	const envConfig: SkyEnvConfigBrowser = {
-		STORAGE_API: process.env.NEXT_PUBLIC_STORAGE_API_URL || "",
+		STORAGE_API: storageApiUrl,
 		CACHE: {
 			TYPE: "CACHE",
 		},
@@ -594,32 +816,63 @@ export const createSkyBrowser = (
 	);
 };
 
+/**
+ * Initializes Skynet with comprehensive validation
+ * @param provider - Web3 provider
+ * @param signer - Ethers signer
+ * @returns Promise<SkyMainBrowser> - Initialized SkyMainBrowser instance
+ * @throws Error if initialization fails
+ */
 export const initializeSkynet = async (
 	provider: unknown,
 	signer: ethers.Signer
 ): Promise<SkyMainBrowser> => {
-	const ethersProvider = new ethers.BrowserProvider(
-		provider as unknown as Eip1193Provider
-	);
-	const address = await signer.getAddress();
-
-	// Validate network
-	const isValidNetwork = await validateNetwork(ethersProvider);
-	if (!isValidNetwork) {
-		throw new Error(`Please switch to Skynet network (Chain ID: 619)`);
+	if (!provider || !signer) {
+		throw new Error(
+			"Provider and signer are required for Skynet initialization"
+		);
 	}
 
-	// Create contract service
-	const contractService = createContractService(provider, signer, address);
+	try {
+		const ethersProvider = new ethers.BrowserProvider(
+			provider as unknown as Eip1193Provider
+		);
+		const address = await signer.getAddress();
 
-	// Create and initialize SkyBrowser
-	const skyBrowser = createSkyBrowser(contractService);
-	await skyBrowser.init(true);
+		// Validate network
+		const isValidNetwork = await validateNetwork(ethersProvider);
+		if (!isValidNetwork) {
+			throw new Error(
+				`Please switch to Skynet network (Chain ID: ${SKYNET_CHAIN_ID})`
+			);
+		}
 
-	return skyBrowser;
+		// Create contract service
+		const contractService = createContractService(
+			provider,
+			signer,
+			address
+		);
+
+		// Create and initialize SkyBrowser
+		const skyBrowser = createSkyBrowser(contractService);
+		await skyBrowser.init(true);
+
+		return skyBrowser;
+	} catch (error) {
+		console.error("Error initializing Skynet:", error);
+		throw error;
+	}
 };
 
-export const checkUserBalance = async (skyBrowser: SkyMainBrowser | null) => {
+/**
+ * Checks user's balance for NFT minting
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @returns Promise<BalanceCheckResult> - Balance check result with mint price and user balance
+ */
+export const checkUserBalance = async (
+	skyBrowser: SkyMainBrowser | null
+): Promise<BalanceCheckResult> => {
 	try {
 		if (!skyBrowser) {
 			return {
@@ -676,13 +929,18 @@ export const checkUserBalance = async (skyBrowser: SkyMainBrowser | null) => {
 	}
 };
 
-// Enhanced NFT checking and minting function
-// This function ensures the user has at least one NFT for all operations (running workflows, generating agents, etc.)
-// Only one NFT is needed - it can be reused for all operations
+/**
+ * Enhanced NFT checking and minting function
+ * This function ensures the user has at least one NFT for all operations (running workflows, generating agents, etc.)
+ * Only one NFT is needed - it can be reused for all operations
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @param web3Context - Web3 context containing user address
+ * @returns Promise<NFTResult> - Result object with success status and NFT ID
+ */
 export const ensureUserHasNFT = async (
 	skyBrowser: SkyMainBrowser | null,
 	web3Context: Web3Context
-) => {
+): Promise<NFTResult> => {
 	try {
 		if (!skyBrowser) {
 			return {
@@ -778,10 +1036,14 @@ export const ensureUserHasNFT = async (
 	}
 };
 
-// Check if AgentNFT is registered with NFTMinter
+/**
+ * Check if AgentNFT is registered with NFTMinter
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @returns Promise<RegistrationCheck> - Registration check result
+ */
 export const checkNFTRegistration = async (
 	skyBrowser: SkyMainBrowser | null
-) => {
+): Promise<RegistrationCheck> => {
 	try {
 		if (!skyBrowser) {
 			return { isRegistered: false, error: "SkyBrowser not initialized" };
@@ -814,11 +1076,16 @@ export const checkNFTRegistration = async (
 	}
 };
 
-// Agent-specific NFT minting function
+/**
+ * Agent-specific NFT minting function
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @param agent - Agent data containing NFT address
+ * @returns Promise<boolean> - True if minting was successful, false otherwise
+ */
 export const mintAgentNft = async (
 	skyBrowser: SkyMainBrowser,
 	agent: AgentData
-) => {
+): Promise<boolean> => {
 	try {
 		const contractService = skyBrowser.contractService;
 
@@ -852,11 +1119,16 @@ export const mintAgentNft = async (
 	}
 };
 
-// Get agent-specific NFTs
+/**
+ * Get agent-specific NFTs owned by the user
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @param agent - Agent data containing NFT address
+ * @returns Promise<string[]> - Array of NFT IDs owned by the user for this agent
+ */
 export const getAgentNft = async (
 	skyBrowser: SkyMainBrowser,
 	agent: AgentData
-) => {
+): Promise<string[]> => {
 	try {
 		const contractService = skyBrowser.contractService;
 		const signer = contractService.signer;
@@ -886,7 +1158,17 @@ export const getAgentNft = async (
 	}
 };
 
-// Fetch knowledge base records using Natural Request API
+/**
+ * Fetch knowledge base records using Natural Request API
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @param userAddress - User's wallet address
+ * @param agentData - Agent data containing NFT address
+ * @param selectedNftId - Optional selected NFT ID
+ * @param agentId - Optional agent ID
+ * @param knowledgeType - Type of knowledge base (swarm or agent)
+ * @returns Promise<any> - Knowledge base records response
+ * @throws Error if operation fails
+ */
 export const fetchKnowledgeBaseRecords = async (
 	skyBrowser: SkyMainBrowser,
 	userAddress: string,
@@ -894,7 +1176,7 @@ export const fetchKnowledgeBaseRecords = async (
 	selectedNftId?: string,
 	agentId?: string,
 	knowledgeType?: "swarm" | "agent"
-) => {
+): Promise<any> => {
 	try {
 		const auth = await getAuthWithRetry(skyBrowser);
 
@@ -1160,7 +1442,18 @@ export const fetchKnowledgeBaseRecords = async (
 	}
 };
 
-// Save knowledge base record using Natural Request API
+/**
+ * Save knowledge base record using Natural Request API
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @param userAddress - User's wallet address
+ * @param agentData - Agent data containing NFT address
+ * @param selectedNftId - Selected NFT ID
+ * @param content - Content to save to knowledge base
+ * @param agentId - Optional agent ID
+ * @param knowledgeType - Type of knowledge base (swarm or agent)
+ * @returns Promise<any> - Save operation response
+ * @throws Error if operation fails
+ */
 export const saveKnowledgeBaseRecord = async (
 	skyBrowser: SkyMainBrowser,
 	userAddress: string,
@@ -1169,7 +1462,7 @@ export const saveKnowledgeBaseRecord = async (
 	content: string,
 	agentId?: string,
 	knowledgeType?: "swarm" | "agent"
-) => {
+): Promise<any> => {
 	try {
 		const auth = await getAuthWithRetry(skyBrowser);
 
@@ -1360,11 +1653,18 @@ export const saveKnowledgeBaseRecord = async (
 	}
 };
 
+/**
+ * Get NFT ID by agent address (most recent token)
+ * @param agentAddress - Agent's NFT contract address
+ * @param userAddress - User's wallet address
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @returns Promise<string | null> - Most recent NFT ID or null if none found
+ */
 export const getNftIdByAgentAddress = async (
 	agentAddress: string,
 	userAddress: string,
 	skyBrowser: SkyMainBrowser
-) => {
+): Promise<string | null> => {
 	try {
 		// Use getAllAgentTokenIds to get the most recent (highest) token ID
 		const tokenIds = await getAllAgentTokenIds(
@@ -1385,6 +1685,13 @@ export const getNftIdByAgentAddress = async (
 	}
 };
 
+/**
+ * Get all agent token IDs owned by a user with retry logic
+ * @param agentAddress - Agent's NFT contract address
+ * @param userAddress - User's wallet address
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @returns Promise<string[]> - Array of token IDs sorted by newest first
+ */
 export const getAllAgentTokenIds = async (
 	agentAddress: string,
 	userAddress: string,
@@ -1482,11 +1789,18 @@ export const getAllAgentTokenIds = async (
 	}
 };
 
+/**
+ * Get agent ID by agent address, trying metadata first, then falling back to token ID
+ * @param agentAddress - Agent's NFT contract address
+ * @param userAddress - User's wallet address
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @returns Promise<string | null> - Agent ID or null if none found
+ */
 export const getAgentIdByAgentAddress = async (
 	agentAddress: string,
 	userAddress: string,
 	skyBrowser: SkyMainBrowser
-) => {
+): Promise<string | null> => {
 	try {
 		const signer = skyBrowser.contractService.signer;
 
@@ -1565,12 +1879,18 @@ export const getAgentIdByAgentAddress = async (
 	}
 };
 
-// Enhanced agent NFT checking and automatic minting function
+/**
+ * Enhanced agent NFT checking and automatic minting function
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @param web3Context - Web3 context containing user address
+ * @param agentData - Agent data containing NFT address
+ * @returns Promise<AgentNFTResult> - Result object with success status and agent ID
+ */
 export const ensureAgentNFT = async (
 	skyBrowser: SkyMainBrowser | null,
 	web3Context: Web3Context,
 	agentData: AgentData
-) => {
+): Promise<AgentNFTResult> => {
 	try {
 		if (!skyBrowser) {
 			return {
@@ -1706,7 +2026,13 @@ export const ensureAgentNFT = async (
 		};
 	}
 };
-// Check if user owns any NFTs from a specific agent collection
+/**
+ * Check if user owns any NFTs from a specific agent collection
+ * @param agentAddress - Agent's NFT contract address
+ * @param userAddress - User's wallet address
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @returns Promise<boolean> - True if user owns NFTs from this agent collection
+ */
 export const checkAgentNFTOwnership = async (
 	agentAddress: string,
 	userAddress: string,
@@ -1728,7 +2054,13 @@ export const checkAgentNFTOwnership = async (
 	}
 };
 
-// Get all NFT IDs that user owns from a specific agent collection
+/**
+ * Get all NFT IDs that user owns from a specific agent collection
+ * @param agentAddress - Agent's NFT contract address
+ * @param userAddress - User's wallet address
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @returns Promise<string[]> - Array of NFT IDs sorted by newest first
+ */
 export const getUserAgentNFTIds = async (
 	agentAddress: string,
 	userAddress: string,
@@ -1772,12 +2104,18 @@ export const getUserAgentNFTIds = async (
 	}
 };
 
-// Manual verification function for agent NFT ownership
+/**
+ * Manual verification function for agent NFT ownership
+ * @param agentAddress - Agent's NFT contract address
+ * @param userAddress - User's wallet address
+ * @param skyBrowser - Initialized SkyMainBrowser instance
+ * @returns Promise<VerificationResult> - Verification result with balance and token IDs
+ */
 export const verifyAgentNFTOwnership = async (
 	agentAddress: string,
 	userAddress: string,
 	skyBrowser: SkyMainBrowser
-) => {
+): Promise<VerificationResult> => {
 	try {
 		const signer = skyBrowser.contractService.signer;
 		const NFTContract = NFT__factory.connect(
