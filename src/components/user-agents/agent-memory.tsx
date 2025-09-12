@@ -277,6 +277,7 @@ export default function AgentMemory({
 		staleTime: 5 * 60 * 1000,
 		gcTime: 5 * 60 * 1000,
 		retry: 1,
+		refetchOnMount:true
 	});
 
 	const agentHasAnySubnetSelected = useCallback(
