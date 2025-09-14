@@ -7,7 +7,9 @@ export type ChatMsg = {
 		| "answer"
 		| "workflow_subnet"
 		| "pending"
-		| "notification";
+		| "notification"
+		| "chat_user"
+		| "chat_response";
 	content: string;
 	timestamp: Date;
 	subnetStatus?:

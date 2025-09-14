@@ -1,9 +1,8 @@
 "use client";
 import ChatInput from "@/components/common/chat-input";
-import React, { useEffect } from "react";
+import React from "react";
 import { useGlobalStore } from "@/stores/global-store";
 import { useRouter } from "next/navigation";
-// import Image from "next/image";
 import Spline from "@splinetool/react-spline";
 
 export default function CreatePage() {
@@ -19,14 +18,24 @@ export default function CreatePage() {
 		if (prompt.trim()) {
 			if (mode === "agent") {
 				if (selectedAgent) {
-					const agentAddress = ('collection_address' in selectedAgent ? selectedAgent.collection_address : null) ||
-						('collection_id' in selectedAgent ? selectedAgent.collection_id : null) ||
-						('nft_address' in selectedAgent ? selectedAgent.nft_address : null);
-					const nftId = ('nft_id' in selectedAgent ? selectedAgent.nft_id : null);
-					
+					const agentAddress =
+						("collection_address" in selectedAgent
+							? selectedAgent.collection_address
+							: null) ||
+						("collection_id" in selectedAgent
+							? selectedAgent.collection_id
+							: null) ||
+						("nft_address" in selectedAgent
+							? selectedAgent.nft_address
+							: null);
+					const nftId =
+						"nft_id" in selectedAgent ? selectedAgent.nft_id : null;
+
 					if (agentAddress && nftId) {
 						console.log("✅ Navigating to agent:", agentAddress);
-						router.push(`/chat/agent/${agentAddress}?nftId=${nftId}`);
+						router.push(
+							`/chat/agent/${agentAddress}?nftId=${nftId}`
+						);
 					} else {
 						console.log("❌ No agent address or nftId available");
 					}
@@ -34,7 +43,8 @@ export default function CreatePage() {
 					console.log("❌ No selected agent");
 				}
 			} else {
-				console.log("🔄 Navigating to: /chat");
+				console.log("🔄 Navigating to: /chat with prompt:", prompt);
+				// Keep prompt in global store for auto-submission in chat page
 				router.push("/chat");
 			}
 		} else {
@@ -44,18 +54,9 @@ export default function CreatePage() {
 
 	return (
 		<div className="flex flex-col items-center h-full w-full relative ">
-			{/* <div className="w-full h-full flex flex-col items-center justify-center"> */}
 			<div className="w-full h-full max-h-[50%] relative">
-				{/* <Image
-					src="/full-logo.svg"
-					alt="Create"
-					width={1000}
-					height={1000}
-					className="w-full max-w-80 h-full"
-				/> */}
 				<Spline scene="https://prod.spline.design/XGG3yvqNuvg63wOA/scene.splinecode" />
 				<div className="absolute bottom-5 right-5 h-10 w-36 bg-background"></div>
-				{/* </div> */}
 			</div>
 			<div className="w-fit min-w-4xl">
 				<ChatInput

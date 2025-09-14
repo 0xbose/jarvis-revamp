@@ -28,6 +28,8 @@ import { ChatMsg } from "@/types/chat";
 import Link from "next/link";
 import { LoadingDots } from "../ui/loading-dots";
 import { Skeleton } from "../ui/skeleton";
+import { ChatUser } from "./chat-user";
+import { ChatResponse } from "./chat-response";
 
 function convertUrlsToLinks(text: string): React.ReactNode {
 	if (!text || typeof text !== "string") return text;
@@ -576,7 +578,7 @@ export function ChatMessage({
 		const isAuthentication =
 			message.questionData?.type === "authentication";
 		return (
-			<div className="relative mb-0 w-full flex justify-end">
+			<div className="relative mb-0 w-full flex justify-start">
 				<div className="flex-1 min-w-0 p-4 w-fit flex justify-start">
 					<div className="flex justify-center items-start gap-3 flex-row w-fit">
 						<div className="flex-shrink-0 size-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
@@ -1635,6 +1637,14 @@ export function ChatMessage({
 		);
 	}
 
+	if (message.type === "chat_response") {
+		return <ChatResponse message={message} isLast={isLast} />;
+	}
+
+	if (message.type === "chat_user") {
+		return <ChatUser message={message} />;
+	}
+
 	return (
 		<div className="relative mb-0">
 			<div className="relative flex items-start bg-card rounded-lg">
@@ -1655,7 +1665,8 @@ export function ChatMessage({
 					{message.imageData && message.isImage && (
 						<div className="relative w-fit ">
 							{(() => {
-								const [imageLoaded, setImageLoaded] = useState(false);
+								const [imageLoaded, setImageLoaded] =
+									useState(false);
 
 								return (
 									<>
@@ -1667,20 +1678,30 @@ export function ChatMessage({
 											className="rounded-lg border border-border max-w-fit h-auto"
 											onLoad={() => setImageLoaded(true)}
 											onError={(e) => {
-												console.error("Failed to load image:", e);
+												console.error(
+													"Failed to load image:",
+													e
+												);
 												// If proxied image fails, try to fallback to original URL
-												const target = e.target as HTMLImageElement;
+												const target =
+													e.target as HTMLImageElement;
 												if (
-													target.src.includes("/api/image/proxy")
+													target.src.includes(
+														"/api/image/proxy"
+													)
 												) {
 													// Extract original URL from proxy URL
-													const urlParams = new URLSearchParams(
-														target.src.split("?")[1]
-													);
+													const urlParams =
+														new URLSearchParams(
+															target.src.split(
+																"?"
+															)[1]
+														);
 													const originalUrl =
 														urlParams.get("url");
 													if (originalUrl) {
-														target.src = originalUrl;
+														target.src =
+															originalUrl;
 													}
 												}
 											}}
@@ -1692,9 +1713,12 @@ export function ChatMessage({
 													className="p-1 bg-background/80"
 													onClick={() => {
 														const link =
-															document.createElement("a");
+															document.createElement(
+																"a"
+															);
 														// Use original URL for download if it's a proxied URL
-														let downloadUrl = message.imageData!;
+														let downloadUrl =
+															message.imageData!;
 														if (
 															downloadUrl.includes(
 																"/api/image/proxy"
@@ -1702,12 +1726,17 @@ export function ChatMessage({
 														) {
 															const urlParams =
 																new URLSearchParams(
-																	downloadUrl.split("?")[1]
+																	downloadUrl.split(
+																		"?"
+																	)[1]
 																);
 															const originalUrl =
-																urlParams.get("url");
+																urlParams.get(
+																	"url"
+																);
 															if (originalUrl) {
-																downloadUrl = originalUrl;
+																downloadUrl =
+																	originalUrl;
 															}
 														}
 														link.href = downloadUrl;

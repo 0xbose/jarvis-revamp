@@ -26,6 +26,7 @@ export const getAxiosInstanceWithApiKey = async (
 				headers: {
 					"Content-Type": "application/json",
 					"x-api-key": apiKey,
+					// "x-api-key": "sk_892700_1753772408763_fptkkoqp3md",
 				},
 			});
 		} catch (error) {

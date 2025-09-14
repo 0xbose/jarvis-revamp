@@ -54,7 +54,11 @@ export default function ChatInput({
 			}
 		} else {
 			if (!prompt.trim()) return;
-			router.push("/chat");
+
+			// Preserve existing URL parameters when navigating to chat
+			const currentUrl = new URL(window.location.href);
+			const chatUrl = `/chat${currentUrl.search}`;
+			router.push(chatUrl);
 
 			// Call onSend for chat mode as well
 			if (onSend) {
@@ -155,7 +159,9 @@ export default function ChatInput({
 						</button>
 					</div>
 				)}
-				<Marketplace disabled={disableAgentSelection} />
+				{mode === "agent" && (
+					<Marketplace disabled={disableAgentSelection} />
+				)}
 			</div>
 
 			<div className="w-full flex items-center bg-input rounded-lg px-4 border border-border h-13">

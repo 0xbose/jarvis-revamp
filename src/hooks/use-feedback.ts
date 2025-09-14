@@ -79,12 +79,6 @@ export const useFeedback = ({
 			question: question || undefined,
 		};
 		
-		console.log(`📤 Sending request to:`, `${nftUserAgentUrl}/natural-request`);
-		console.log(`📤 Request payload:`, contextPayload);
-		console.log(`📤 Request headers:`, {
-			"Content-Type": "application/json",
-			"x-api-key": apiKey ? "***" : "MISSING"
-		});
 
 		const response = await fetch(`${nftUserAgentUrl}/natural-request`, {
 			method: "POST",
