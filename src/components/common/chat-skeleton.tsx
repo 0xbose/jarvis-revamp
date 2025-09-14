@@ -3,7 +3,7 @@ import { Skeleton } from "../ui/skeleton";
 
 export default function ChatSkeleton() {
 	return (
-		<div className="w-full max-w-7xl mx-auto h-full flex flex-col p-4 pb-6">
+		<div className="h-full flex flex-col p-4 pb-6">
 			<Skeleton className="h-28 w-full rounded py-3 mb-4" />
 			<div className=" py-3 rounded-md space-y-2">
 				<Skeleton className="h-4 w-20" />

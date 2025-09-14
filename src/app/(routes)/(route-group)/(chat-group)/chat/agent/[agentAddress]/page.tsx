@@ -834,7 +834,7 @@ function AgentChatPageContent() {
 
 	if (isLoading) {
 		return (
-			<div className="relative w-10/12 max-w-7xl mx-auto h-full flex flex-col p-4">
+			<div className="relative h-full flex flex-col p-4">
 				<ChatSkeleton />
 				<div className="absolute bottom-4 left-0 right-0 px-4 space-y-2">
 					<Skeleton className="h-6 w-24" />

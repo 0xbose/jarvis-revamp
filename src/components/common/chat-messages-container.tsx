@@ -138,7 +138,7 @@ export function ChatMessagesContainer({
 		<div className={containerClassName}>
 			{chatMessages.length === 0 ? (
 				showSkeleton ? (
-					<div className="w-10/12 max-w-7xl mx-auto p-4">
+					<div className="p-4">
 						<ChatSkeleton />
 					</div>
 				) : null
