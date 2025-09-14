@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, {
+	useState,
+	useRef,
+	useEffect,
+	useCallback,
+	Suspense,
+} from "react";
 import { useWallet } from "@/hooks/use-wallet";
 import { apiKeyManager } from "@/utils/api-key-manager";
 import { API_CONFIG } from "@/config/constants";
@@ -10,6 +16,7 @@ import { ChatMsg } from "@/types/chat";
 import { ChatMessage } from "@/components/common/chat-message";
 import { useGlobalStore } from "@/stores/global-store";
 import { useRouter, useSearchParams } from "next/navigation";
+import ChatSkeleton from "@/components/common/chat-skeleton";
 
 interface StreamResponse {
 	type: "update" | "final" | "chat_chunk";
@@ -34,7 +41,7 @@ interface StreamResponse {
 	nftId?: string;
 }
 
-export default function ChatPage() {
+function ChatPageContent() {
 	const [messages, setMessages] = useState<ChatMsg[]>([]);
 	const [prompt, setPrompt] = useState("");
 	const [mode, setMode] = useState<"chat" | "agent">("chat");
@@ -459,5 +466,19 @@ export default function ChatPage() {
 				</div>
 			</div>
 		</div>
+	);
+}
+
+export default function ChatPage() {
+	return (
+		<Suspense
+			fallback={
+				<div className="flex items-center justify-center h-screen">
+					<ChatSkeleton />
+				</div>
+			}
+		>
+			<ChatPageContent />
+		</Suspense>
 	);
 }

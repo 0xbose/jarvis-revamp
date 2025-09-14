@@ -1638,7 +1638,7 @@ export function ChatMessage({
 	}
 
 	if (message.type === "chat_response") {
-		return <ChatResponse message={message} isLast={isLast} />;
+		return <ChatResponse message={message} />;
 	}
 
 	if (message.type === "chat_user") {
