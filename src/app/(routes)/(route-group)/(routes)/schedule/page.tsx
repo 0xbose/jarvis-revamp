@@ -105,7 +105,7 @@ function formatTimeUntil(dateString: string) {
 	const scheduled = new Date(dateString);
 	const diffMs = scheduled.getTime() - now.getTime();
 
-	if (diffMs < 0) return "Overdue";
+	if (diffMs < 0) return null;
 
 	const diffMinutes = Math.floor(diffMs / (1000 * 60));
 	const diffHours = Math.floor(diffMinutes / 60);
@@ -278,9 +278,9 @@ function ScheduledTasksInner() {
 				</div>
 			),
 			cell: ({ row }) => (
-				<div className="!text-sm text-gray-400">
+				<div className="!text-sm text-gray-400 space-y-1">
 					<div>{formatDateTime(row.original.scheduledTime)}</div>
-					<div className="!text-xs text-gray-500">
+					<div className="!text-xs text-gray-500 h-4">
 						{formatTimeUntil(row.original.scheduledTime)}
 					</div>
 				</div>
@@ -301,13 +301,13 @@ function ScheduledTasksInner() {
 					);
 				}
 				return (
-					<div className="text-sm text-gray-400">
+					<div className="text-sm text-gray-500 capitalize">
 						<div>{row.original.recurrenceType}</div>
-						{row.original.recurrenceInterval && (
+						{/* {row.original.recurrenceInterval && (
 							<div className="text-xs text-gray-500">
 								Every {row.original.recurrenceInterval}
 							</div>
-						)}
+						)} */}
 					</div>
 				);
 			},

@@ -179,8 +179,8 @@ export default function Page() {
 		<div className="min-h-screen bg-background">
 			<div className="p-6 space-y-8">
 				<div className="flex items-center justify-between">
-					<h4 className="text-lg font-semibold text-foreground">
-						Schedule
+					<h4 className="text-2xl font-medium text-foreground">
+						Schedule Your Agent
 					</h4>
 					<div className="flex items-center gap-3">
 						<Marketplace />

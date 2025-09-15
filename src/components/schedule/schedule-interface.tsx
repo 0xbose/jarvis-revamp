@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Select,
@@ -42,6 +42,8 @@ export interface ScheduleConfig {
 interface ScheduleInterfaceProps {
 	onScheduleChange: (config: ScheduleConfig) => void;
 	onGeneratedPromptChange: (prompt: string) => void;
+	initialConfig?: Partial<ScheduleConfig>;
+	isDisabled?: boolean;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => {
@@ -95,6 +97,8 @@ function getDefaultFutureDate() {
 export default function ScheduleInterface({
 	onScheduleChange,
 	onGeneratedPromptChange,
+	initialConfig,
+	isDisabled,
 }: ScheduleInterfaceProps) {
 	const getInitialConfig = () => {
 		const defaultDate = getDefaultFutureDate();
@@ -113,12 +117,27 @@ export default function ScheduleInterface({
 	};
 
 	const [config, setConfig] = useState<ScheduleConfig>(
-		() => getInitialConfig() as ScheduleConfig
+		() =>
+			({
+				...getInitialConfig(),
+				...(initialConfig || {}),
+			} as ScheduleConfig)
 	);
 
 	const [showDatePicker, setShowDatePicker] = useState(false);
 
+	useEffect(() => {
+		if (!initialConfig) return;
+		setConfig((prev) => ({ ...prev, ...initialConfig } as ScheduleConfig));
+	}, [initialConfig]);
+
+	useEffect(() => {
+		onScheduleChange(config);
+		onGeneratedPromptChange(generateSchedulePrompt(config));
+	}, [config]);
+
 	const handleTypeChange = (type: "one-time" | "recurring") => {
+		if (isDisabled) return;
 		if (type === "one-time") {
 			const defaultDate = getDefaultFutureDate();
 			updateConfig({
@@ -132,70 +151,55 @@ export default function ScheduleInterface({
 				),
 			});
 		} else {
-			updateConfig({
-				type: "recurring",
-				scheduleType: "daily",
-			});
+			updateConfig({ type: "recurring", scheduleType: "daily" });
 		}
 	};
 
 	const updateConfig = (updates: Partial<ScheduleConfig>) => {
-		const newConfig = { ...config, ...updates };
-		setConfig(newConfig);
-		onScheduleChange(newConfig);
-
-		// Generate prompt based on schedule
-		const prompt = generateSchedulePrompt(newConfig);
-		onGeneratedPromptChange(prompt);
+		if (isDisabled) return;
+		setConfig((prev) => ({ ...prev, ...updates }));
 	};
 
-	const generateSchedulePrompt = (config: ScheduleConfig): string => {
-		if (!config.type) return "";
-		if (config.type === "one-time") {
-			const date = config.selectedDate || new Date();
-			const time = `${config.hour
-				.toString()
-				.padStart(2, "0")}:${config.minute
+	const generateSchedulePrompt = (c: ScheduleConfig): string => {
+		if (!c.type) return "";
+		if (c.type === "one-time") {
+			const date = c.selectedDate || new Date();
+			const time = `${c.hour.toString().padStart(2, "0")}:${c.minute
 				.toString()
 				.padStart(2, "0")}`;
-			return `Execute this task once on ${date.toLocaleDateString()} at ${time}`;
+			return `Schedule this task once on ${date.toLocaleDateString()} at ${time}`;
 		}
-
-		switch (config.scheduleType) {
+		switch (c.scheduleType) {
 			case "minutes":
-				return `Execute this task every ${config.interval} minutes`;
+				return `Schedule this task every ${c.interval} minutes`;
 			case "hours":
-				return `Execute this task every ${config.interval} hour${
-					config.interval !== 1 ? "s" : ""
+				return `Schedule this task every ${c.interval} hour${
+					c.interval !== 1 ? "s" : ""
 				}`;
-			case "daily":
-				const time = `${config.hour
-					.toString()
-					.padStart(2, "0")}:${config.minute
+			case "daily": {
+				const time = `${c.hour.toString().padStart(2, "0")}:${c.minute
 					.toString()
 					.padStart(2, "0")}`;
-				return `Execute this task daily at ${time}`;
-			case "weekly":
-				const days = config.selectedDays?.join(", ") || "selected days";
-				const weeklyTime = `${config.hour
+				return `Schedule this task daily at ${time}`;
+			}
+			case "weekly": {
+				const days = c.selectedDays?.join(", ") || "selected days";
+				const weeklyTime = `${c.hour
 					.toString()
-					.padStart(2, "0")}:${config.minute
+					.padStart(2, "0")}:${c.minute.toString().padStart(2, "0")}`;
+				return `Schedule this task weekly on ${days} at ${weeklyTime}`;
+			}
+			case "monthly": {
+				const monthlyTime = `${c.hour
 					.toString()
-					.padStart(2, "0")}`;
-				return `Execute this task weekly on ${days} at ${weeklyTime}`;
-			case "monthly":
-				const monthlyTime = `${config.hour
-					.toString()
-					.padStart(2, "0")}:${config.minute
-					.toString()
-					.padStart(2, "0")}`;
+					.padStart(2, "0")}:${c.minute.toString().padStart(2, "0")}`;
 				const dayOfMonth =
-					DAY_OF_MONTH_OPTIONS.find(
-						(d) => d.value === config.dayOfMonth
-					)?.label || "1st";
-				return `Execute this task monthly on the ${dayOfMonth} at ${monthlyTime}`;
+					DAY_OF_MONTH_OPTIONS.find((d) => d.value === c.dayOfMonth)
+						?.label || "1st";
+				return `Schedule this task monthly on the ${dayOfMonth} at ${monthlyTime}`;
+			}
 			default:
-				return "Execute this task as scheduled";
+				return "Schedule this task as scheduled";
 		}
 	};
 
@@ -239,6 +243,7 @@ export default function ScheduleInterface({
 							? "border-green-500/80 bg-green-100/10"
 							: "border-border/50 hover:border-green-500/70 bg-card/20"
 					)}
+					disabled={!!isDisabled}
 				>
 					<Calendar
 						className={`h-5 w-5 group-hover:text-green-500/70 ${
@@ -268,6 +273,7 @@ export default function ScheduleInterface({
 							? "border-green-500/80 bg-green-100/10"
 							: "border-border/50 hover:border-green-500/70 bg-card/20"
 					)}
+					disabled={!!isDisabled}
 				>
 					<RefreshCw
 						className={`h-5 w-5 group-hover:text-green-500/70 ${
@@ -298,13 +304,14 @@ export default function ScheduleInterface({
 					</h5>
 
 					<Dialog
-						open={showDatePicker}
-						onOpenChange={setShowDatePicker}
+						open={isDisabled ? false : showDatePicker}
+						onOpenChange={isDisabled ? () => {} : setShowDatePicker}
 					>
 						<DialogTrigger asChild>
 							<Button
 								variant="outline"
 								className="w-full h-12 justify-between bg-card/50 border-border/50 hover:bg-card/30"
+								disabled={!!isDisabled}
 							>
 								<div className="flex items-center gap-2">
 									<Calendar className="h-4 w-4" />
@@ -386,6 +393,7 @@ export default function ScheduleInterface({
 								<button
 									key={key}
 									onClick={() =>
+										!isDisabled &&
 										updateConfig({
 											scheduleType: key as any,
 										})
@@ -396,6 +404,7 @@ export default function ScheduleInterface({
 											? "border-green-500/80 bg-green-100/10"
 											: "border-border/50 hover:border-green-500/70 bg-card/20"
 									)}
+									disabled={!!isDisabled}
 								>
 									<Icon className="h-5 w-5 text-muted-foreground" />
 									<div className="flex-1">
@@ -414,6 +423,7 @@ export default function ScheduleInterface({
 
 							<button
 								onClick={() =>
+									!isDisabled &&
 									updateConfig({ scheduleType: "monthly" })
 								}
 								className={cn(
@@ -422,6 +432,7 @@ export default function ScheduleInterface({
 										? "border-green-500/80 bg-green-100/10"
 										: "border-border/50 hover:border-green-500/70 bg-card/20"
 								)}
+								disabled={!!isDisabled}
 							>
 								<Calendar className="h-5 w-5 text-muted-foreground" />
 								<div className="flex-1">
@@ -448,12 +459,16 @@ export default function ScheduleInterface({
 							<Select
 								value={config.interval?.toString()}
 								onValueChange={(value) =>
+									!isDisabled &&
 									updateConfig({
 										interval: Number.parseInt(value),
 									})
 								}
 							>
-								<SelectTrigger className="bg-card border-border/50">
+								<SelectTrigger
+									className="bg-card border-border/50"
+									disabled={!!isDisabled}
+								>
 									<SelectValue
 										placeholder={`Select ${config.scheduleType}`}
 									/>
@@ -494,12 +509,16 @@ export default function ScheduleInterface({
 								<Select
 									value={config.hour.toString()}
 									onValueChange={(value) =>
+										!isDisabled &&
 										updateConfig({
 											hour: Number.parseInt(value),
 										})
 									}
 								>
-									<SelectTrigger className="bg-card border-border/50">
+									<SelectTrigger
+										className="bg-card border-border/50"
+										disabled={!!isDisabled}
+									>
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
@@ -522,12 +541,16 @@ export default function ScheduleInterface({
 								<Select
 									value={config.minute.toString()}
 									onValueChange={(value) =>
+										!isDisabled &&
 										updateConfig({
 											minute: Number.parseInt(value),
 										})
 									}
 								>
-									<SelectTrigger className="bg-card border-border/50">
+									<SelectTrigger
+										className="bg-card border-border/50"
+										disabled={!!isDisabled}
+									>
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
@@ -558,6 +581,7 @@ export default function ScheduleInterface({
 									<button
 										key={day.value}
 										onClick={() => {
+											if (isDisabled) return;
 											const selectedDays =
 												config.selectedDays || [];
 											const newDays =
@@ -582,6 +606,7 @@ export default function ScheduleInterface({
 												? "border-green-500/80 bg-green-100/10"
 												: "border-border/50 hover:border-green-500/70 bg-card/20"
 										)}
+										disabled={!!isDisabled}
 									>
 										{day.label}
 									</button>
@@ -598,12 +623,16 @@ export default function ScheduleInterface({
 							<Select
 								value={config.dayOfMonth?.toString()}
 								onValueChange={(value) =>
+									!isDisabled &&
 									updateConfig({
 										dayOfMonth: Number.parseInt(value),
 									})
 								}
 							>
-								<SelectTrigger className="bg-card border-border/50">
+								<SelectTrigger
+									className="bg-card border-border/50"
+									disabled={!!isDisabled}
+								>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -659,7 +688,7 @@ function DateTimePicker({
 	const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
 
 	const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-	const emptyDays = Array.from({ length: firstDayOfMonth }, (_, i) => null);
+	const emptyDays = Array.from({ length: firstDayOfMonth }, () => null);
 
 	const monthNames = [
 		"January",
