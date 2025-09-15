@@ -1,3 +1,24 @@
+export interface AgentCollection {
+	agentID: string;
+	agentAddress: string;
+}
+
+export interface WorkflowItem {
+	itemID: string;
+	feedback: boolean;
+	agentCollection: AgentCollection;
+}
+
+export interface AgentPayload {
+	prompt: string;
+	agentId: string;
+	workflow: WorkflowItem[];
+}
+
+export interface ScheduleWorkflowPayload {
+	prompt: string;
+	agentPayload: AgentPayload;
+}
 
 // Scheduled Task Types
 export interface ScheduledTask {

@@ -1,4 +1,5 @@
 import { getAxiosInstanceWithApiKey } from "@/lib/axios";
+import { AgentPayload } from "@/types/schedule";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
 import { Web3Context } from "@/types/skynet";
 
@@ -9,7 +10,7 @@ export const scheduleWorkflowWithPrompt = async ({
 	web3Context,
 }: {
 	prompt: string;
-	agentPayload: any;
+	agentPayload: AgentPayload;
 	skyBrowser?: SkyMainBrowser;
 	web3Context?: Web3Context;
 }) => {
