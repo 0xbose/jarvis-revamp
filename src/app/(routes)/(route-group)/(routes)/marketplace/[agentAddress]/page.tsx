@@ -410,7 +410,7 @@ export default function Page() {
         loading={mintLoading}
       />
       
-      <div className="container mx-auto px-6 py-12 max-w-7xl flex flex-col gap-8">
+      <div className="py-12 flex flex-col gap-8">
         {/* Global Error Display */}
         {mintError && (
           <ErrorMessage message={mintError} />

@@ -369,7 +369,7 @@ function WorkflowHistoryInner() {
 
 	return (
 		<div className="p-6">
-			<div className="max-w-7xl mx-auto">
+			<div>
 				<div className="mb-6">
 					<h1 className="text-2xl font-semibold mb-4">History</h1>
 					<div className="flex items-center justify-between">

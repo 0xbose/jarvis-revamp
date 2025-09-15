@@ -605,7 +605,7 @@ export default function Page() {
 	);
 
 	return (
-		<div className="container mx-auto px-6 py-12 max-w-7xl flex flex-col gap-8">
+		<div className="	py-12 flex flex-col gap-8">
 			<div className="p-6 flex flex-col gap-8 h-[calc(100dvh-4rem)] overflow-y-auto scrollbar-hide">
 				<div className="flex flex-col md:flex-row gap-12 items-start justify-between">
 					<div className="flex flex-col md:flex-row gap-8 items-start flex-1">

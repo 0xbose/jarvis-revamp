@@ -19,8 +19,8 @@ import {
 	Wallet2Icon,
 	LogOutIcon,
 	StoreIcon,
-	AtomIcon,
 	BotIcon,
+	CalendarClock,
 } from "lucide-react";
 import CustomTooltip from "./custom-tool-tip";
 import { usePathname, useRouter } from "next/navigation";
@@ -38,6 +38,11 @@ const navItems = [
 		icon: <PlusCircleIcon className="size-5" strokeWidth={1.5} />,
 		title: "Create",
 		url: "/create",
+	},
+	{
+		icon: <CalendarClock className="size-5" strokeWidth={1.5} />,
+		title: "Schedule",
+		url: "/schedule",
 	},
 	{
 		icon: <HistoryIcon className="size-5" strokeWidth={1.5} />,
@@ -58,7 +63,7 @@ const navItems = [
 		icon: <Wallet2Icon className="size-5" strokeWidth={1.5} />,
 		title: "Manage Funds",
 		url: "/add-funds",
-	}
+	},
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -125,7 +130,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 													href={item.url}
 													className="font-medium hover:text-primary-foreground"
 													onClick={() => {
-														queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.HISTORY] });
+														queryClient.invalidateQueries(
+															{
+																queryKey: [
+																	QUERY_KEYS.HISTORY,
+																],
+															}
+														);
 													}}
 												>
 													{item.icon}

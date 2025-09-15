@@ -2,7 +2,7 @@ import { Skeleton } from "../ui/skeleton";
 
 export const MarketplaceLoaderSkeleton = () => {
 	return (
-		<div className="container mx-auto px-6 py-12">
+		<div className="py-12">
 			<div className="h-[calc(100dvh-4rem)] overflow-y-auto flex flex-col gap-8 p-6">
 				<div className="flex flex-col md:flex-row gap-12 items-start justify-between">
 					<div className="flex flex-col md:flex-row gap-8 items-start flex-1">

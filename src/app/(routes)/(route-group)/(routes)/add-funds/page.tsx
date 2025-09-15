@@ -45,7 +45,7 @@ export default function page() {
 	return (
 		<div className="p-6">
 
-		<div className="max-w-7xl mx-auto flex flex-col gap-4 w-10/12">
+		<div className="flex flex-col gap-4 w-10/12">
 			<div className="px-4 flex flex-col gap-4 w-fit">
 				<h3 className="text-xl font-medium">Credit Balance</h3>
 				<div className="flex flex-col gap-4">

@@ -116,7 +116,7 @@ export default function UserAgentsPage() {
 	return (
 		<div className="h-full w-full bg-background">
 			<div className="relative border-b border-border/40">
-				<div className="container mx-auto px-6 py-8 max-w-7xl">
+				<div className="py-8">
 					<div className="flex flex-col lg:flex-row items-start justify-between gap-8">
 						<div className="space-y-4">
 							<h1 className="text-4xl font-bold text-foreground tracking-tight">
@@ -130,7 +130,7 @@ export default function UserAgentsPage() {
 				</div>
 			</div>
 
-			<div className="container mx-auto px-6 pt-6 max-w-7xl">
+			<div className="pt-6">
 				<div className="space-y-6">
 					<div className="space-y-4">
 						<SearchAndCategories
