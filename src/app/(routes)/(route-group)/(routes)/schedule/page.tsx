@@ -126,6 +126,7 @@ function ScheduledTasksInner() {
 	const searchParams = useSearchParams();
 	const currentPage = Number(searchParams.get("page") || "1");
 	const searchTerm = searchParams.get("search") || "";
+	const queryClient = useQueryClient();
 
 	const [search, setSearch] = useState(searchTerm);
 
@@ -174,6 +175,10 @@ function ScheduledTasksInner() {
 				}));
 				totalTasks = response.data.totalTasks || tasks.length;
 			}
+
+			queryClient.invalidateQueries({
+				queryKey: [QUERY_KEYS.HISTORY, address],
+			});
 
 			return {
 				tasks,

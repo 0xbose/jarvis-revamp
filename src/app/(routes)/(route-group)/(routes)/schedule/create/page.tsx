@@ -150,12 +150,6 @@ export default function Page() {
 		};
 	}, [effectiveAgentDetail, generatedPrompt, userPrompt, workflow]);
 
-	const finalPrompt = useMemo(() => {
-		if (!userPrompt.trim()) return "";
-		if (!generatedPrompt.trim()) return userPrompt;
-		return `${userPrompt}\n\nSchedule: ${generatedPrompt}`;
-	}, [userPrompt, generatedPrompt]);
-
 	const isSaveEnabled = useMemo(() => {
 		if (!selectedAgent) return false;
 		if (!userPrompt.trim()) return false;
@@ -179,7 +173,6 @@ export default function Page() {
 				web3Context: { address },
 			});
 		},
-		// You can add onSuccess/onError handlers here if needed
 	});
 
 	return (

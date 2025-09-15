@@ -9,4 +9,5 @@ export const QUERY_KEYS = {
 	USER_MINTED_AGENTS: "user-minted-agents",
 	AGENT_HISTORY: "agent-history",
 	USER_AGENT_AUTH_STATUS: "user-agent-auth-status",
+	TASK_DETAILS: "task-details",
 };
