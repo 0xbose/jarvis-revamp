@@ -17,6 +17,8 @@ import { ChatMessage } from "@/components/common/chat-message";
 import { useGlobalStore } from "@/stores/global-store";
 import { useRouter, useSearchParams } from "next/navigation";
 import ChatSkeleton from "@/components/common/chat-skeleton";
+import { useQuery } from "@tanstack/react-query";
+import { getChatMessages } from "@/controllers/chat/chat.query";
 
 interface StreamResponse {
 	type: "update" | "final" | "chat_chunk";
@@ -41,6 +43,18 @@ interface StreamResponse {
 	nftId?: string;
 }
 
+function mapFetchedMessagesToChatMsgs(fetchedMessages: any): ChatMsg[] {
+	if (!fetchedMessages || !fetchedMessages.success || !Array.isArray(fetchedMessages.data?.messages)) {
+		return [];
+	}
+	return fetchedMessages.data.messages.map((msg: any, idx: number) => ({
+		id: `${msg.timestamp || idx}`,
+		type: msg.role === "user" ? "chat_user" : "chat_response",
+		content: msg.content,
+		timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+	}));
+}
+
 function ChatPageContent() {
 	const [messages, setMessages] = useState<ChatMsg[]>([]);
 	const [prompt, setPrompt] = useState("");
@@ -48,6 +62,7 @@ function ChatPageContent() {
 	const [isStreaming, setIsStreaming] = useState(false);
 	const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 	const [streamingMessage, setStreamingMessage] = useState("");
+	const [isInitialLoad, setIsInitialLoad] = useState(false);
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -67,17 +82,76 @@ function ChatPageContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 
-	// Check if user is near the bottom of the chat
+	const chatIdFromUrl = searchParams.get("chatId");
+
+	const {
+		data: fetchedMessages,
+		isLoading: isLoadingMessages,
+		isFetched: isFetchedMessages,
+		refetch: refetchMessages,
+	} = useQuery<any>({
+		queryKey: ["chat-messages", chatIdFromUrl],
+		queryFn: () =>
+			getChatMessages({
+				chatId: chatIdFromUrl as string,
+				skyBrowser,
+				web3Context: { address },
+			}),
+		enabled: !!chatIdFromUrl,
+		retry: false,
+		refetchOnWindowFocus: false,
+		staleTime: 0,
+		gcTime: 0,
+	});
+
+	// Set messages from fetchedMessages and show bottom-most messages directly (no scroll)
+	useEffect(() => {
+		if (
+			fetchedMessages &&
+			fetchedMessages.success &&
+			Array.isArray(fetchedMessages.data?.messages) &&
+			messages.length === 0 &&
+			!isStreaming
+		) {
+			const mapped = mapFetchedMessagesToChatMsgs(fetchedMessages);
+			setMessages(mapped);
+			if (fetchedMessages.data?.chatId && !currentChatId) {
+				setCurrentChatId(fetchedMessages.data.chatId);
+			}
+
+			// Mark as initial load and disable auto-scroll
+			setIsInitialLoad(true);
+			shouldAutoScrollRef.current = false;
+			isUserScrollingRef.current = true;
+
+			// Set the message count to prevent the "new messages" effect from triggering
+			lastMessageCountRef.current = mapped.length;
+
+			// Instead of scrolling, directly show the bottom-most messages by setting scrollTop
+			setTimeout(() => {
+				const container = messagesContainerRef.current;
+				if (container) {
+					container.scrollTop = container.scrollHeight;
+				}
+				// Re-enable auto-scroll for future new messages
+				setTimeout(() => {
+					shouldAutoScrollRef.current = true;
+					isUserScrollingRef.current = false;
+					setIsInitialLoad(false);
+				}, 100);
+			}, 50);
+		}
+	}, [fetchedMessages, messages.length, isStreaming, currentChatId]);
+
 	const isNearBottom = useCallback(() => {
 		const container = messagesContainerRef.current;
 		if (!container) return true;
 
-		const threshold = 150; // Increased threshold for better UX
+		const threshold = 150;
 		const { scrollTop, scrollHeight, clientHeight } = container;
 		return scrollHeight - scrollTop - clientHeight < threshold;
 	}, []);
 
-	// Smooth scroll to bottom with improved performance
 	const scrollToBottom = useCallback((force = false, smooth = true) => {
 		if (
 			!messagesEndRef.current ||
@@ -86,21 +160,22 @@ function ChatPageContent() {
 			return;
 		}
 
-		// Prevent multiple simultaneous scroll attempts
 		if (isScrollingToBottomRef.current && !force) {
 			return;
 		}
 
 		isScrollingToBottomRef.current = true;
 
-		// Use requestAnimationFrame for better performance
 		requestAnimationFrame(() => {
-			messagesEndRef.current?.scrollIntoView({
-				behavior: smooth ? "smooth" : "auto",
-				block: "end",
-			});
+			try {
+				messagesEndRef.current?.scrollIntoView({
+					behavior: smooth ? "smooth" : "auto",
+					block: "end",
+				});
+			} catch (error) {
+				console.warn("Scroll error:", error);
+			}
 
-			// Reset the flag after animation completes
 			setTimeout(
 				() => {
 					isScrollingToBottomRef.current = false;
@@ -110,56 +185,50 @@ function ChatPageContent() {
 		});
 	}, []);
 
-	// Handle scroll events with debouncing
 	const handleScroll = useCallback(() => {
 		const container = messagesContainerRef.current;
 		if (!container) return;
 
-		// Clear existing timeout
 		if (scrollTimeoutRef.current) {
 			clearTimeout(scrollTimeoutRef.current);
 		}
 
-		// Debounce scroll handling
 		scrollTimeoutRef.current = setTimeout(() => {
 			const isNearBottomNow = isNearBottom();
 
 			if (isNearBottomNow) {
-				// User is at or near bottom - enable auto-scroll
-				if (isUserScrollingRef.current) {
+				if (isUserScrollingRef.current && !isInitialLoad) {
 					isUserScrollingRef.current = false;
 					shouldAutoScrollRef.current = true;
 				}
-			} else if (!isStreaming) {
-				// User scrolled away from bottom (but only disable auto-scroll if not streaming)
+			} else if (!isStreaming && !isInitialLoad) {
 				isUserScrollingRef.current = true;
 				shouldAutoScrollRef.current = false;
 			}
-		}, 50); // 50ms debounce
-	}, [isNearBottom, isStreaming]);
+		}, 50);
+	}, [isNearBottom, isStreaming, isInitialLoad]);
 
-	// Update URL with chat ID
 	const updateUrlWithChatId = useCallback(
 		(chatId: string) => {
-			const url = new URL(window.location.href);
-			url.searchParams.set("chatId", chatId);
-			router.replace(url.pathname + url.search, { scroll: false });
+			try {
+				const url = new URL(window.location.href);
+				url.searchParams.set("chatId", chatId);
+				router.replace(url.pathname + url.search, { scroll: false });
+			} catch (error) {
+				console.warn("Failed to update URL:", error);
+			}
 		},
 		[router]
 	);
 
-	// Initialize chatId from URL parameters
 	useEffect(() => {
-		const chatIdFromUrl = searchParams.get("chatId");
 		if (chatIdFromUrl && !currentChatId) {
 			setCurrentChatId(chatIdFromUrl);
 		}
-	}, [searchParams, currentChatId]);
+	}, [chatIdFromUrl, currentChatId]);
 
-	// Handle streaming message updates
 	useEffect(() => {
 		if (isStreaming && streamingMessage && shouldAutoScrollRef.current) {
-			// Smooth scroll during streaming, but less frequently for better performance
 			const scrollInterval = setInterval(() => {
 				if (shouldAutoScrollRef.current) {
 					scrollToBottom(false, true);
@@ -170,34 +239,180 @@ function ChatPageContent() {
 		}
 	}, [streamingMessage, isStreaming, scrollToBottom]);
 
-	// Handle new messages
 	useEffect(() => {
 		const currentMessageCount = messages.length;
 		const hasNewMessages =
 			currentMessageCount > lastMessageCountRef.current;
 
-		if (hasNewMessages) {
+		if (hasNewMessages && !isInitialLoad) {
 			lastMessageCountRef.current = currentMessageCount;
 
-			// Always scroll to bottom for new messages if user is near bottom
 			if (shouldAutoScrollRef.current || isNearBottom()) {
 				shouldAutoScrollRef.current = true;
 				scrollToBottom(true, true);
 			}
 		}
-	}, [messages.length, scrollToBottom, isNearBottom]);
+	}, [messages.length, scrollToBottom, isNearBottom, isInitialLoad]);
 
-	// Handle end of streaming
 	useEffect(() => {
-		if (!isStreaming && streamingMessage === "" && messages.length > 0) {
-			// Streaming just ended, ensure we're at bottom if we should be
+		if (!isStreaming && streamingMessage === "" && messages.length > 0 && !isInitialLoad) {
 			if (shouldAutoScrollRef.current) {
 				setTimeout(() => scrollToBottom(true, true), 100);
 			}
 		}
-	}, [isStreaming, streamingMessage, messages.length, scrollToBottom]);
+	}, [isStreaming, streamingMessage, messages.length, scrollToBottom, isInitialLoad]);
 
-	// Auto-submit prompt from global store
+	const handleSendMessage = useCallback(
+		async (message?: string) => {
+			const userMessage = message || prompt.trim();
+			if (!userMessage || isStreaming) return;
+
+			if (!skyBrowser || !address) {
+				toast.error("Please connect your wallet first");
+				return;
+			}
+
+			if (!API_CONFIG.CHAT_ACCESSPOINT_URL) {
+				toast.error("Chat access point URL not configured");
+				return;
+			}
+
+			setPrompt("");
+
+			shouldAutoScrollRef.current = true;
+			isUserScrollingRef.current = false;
+			setIsInitialLoad(false);
+
+			const newMessage: ChatMsg = {
+				id: Date.now().toString(),
+				type: "chat_user",
+				content: userMessage,
+				timestamp: new Date(),
+			};
+			setMessages((prev) => [...prev, newMessage]);
+
+			setIsStreaming(true);
+			setStreamingMessage("");
+
+			try {
+				const apiKey = await apiKeyManager.getApiKey(skyBrowser, {
+					address,
+				});
+				abortControllerRef.current = new AbortController();
+
+				const response = await fetch(
+					`${API_CONFIG.CHAT_ACCESSPOINT_URL}/natural-request?stream=true`,
+					{
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							"x-api-key": apiKey,
+						},
+						body: JSON.stringify({
+							prompt: userMessage,
+							chatId: currentChatId,
+						}),
+						signal: abortControllerRef.current.signal,
+					}
+				);
+
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+
+				if (!response.body) {
+					throw new Error("No response body");
+				}
+
+				const reader = response.body.getReader();
+				const decoder = new TextDecoder();
+				let buffer = "";
+				let fullMessage = "";
+
+				try {
+					while (true) {
+						const { done, value } = await reader.read();
+						if (done) break;
+
+						buffer += decoder.decode(value, { stream: true });
+						const lines = buffer.split("\n");
+						buffer = lines.pop() || "";
+
+						for (const line of lines) {
+							if (!line.trim() || !line.startsWith("data: "))
+								continue;
+
+							try {
+								const jsonData = line.slice(6).trim();
+								if (!jsonData) continue;
+
+								const data: StreamResponse =
+									JSON.parse(jsonData);
+
+								if (
+									(data.type === "chat_chunk" ||
+										data.type === "update") &&
+									data.content
+								) {
+									fullMessage += data.content;
+									setStreamingMessage(fullMessage);
+								} else if (
+									data.type === "final" ||
+									(data.success && data.data?.result?.chatId)
+								) {
+									const chatId = data.data?.result?.chatId;
+
+									if (chatId && !currentChatId) {
+										setCurrentChatId(chatId);
+										updateUrlWithChatId(chatId);
+									}
+
+									const responseMessage: ChatMsg = {
+										id: (Date.now() + 1).toString(),
+										type: "chat_response",
+										content: fullMessage,
+										timestamp: new Date(),
+									};
+									setMessages((prev) => [
+										...prev,
+										responseMessage,
+									]);
+
+									setStreamingMessage("");
+									return;
+								}
+							} catch (parseError) {
+								console.warn(
+									"Failed to parse SSE data:",
+									parseError
+								);
+							}
+						}
+					}
+				} finally {
+					reader.releaseLock();
+				}
+			} catch (error) {
+				if (error instanceof Error && error.name !== "AbortError") {
+					console.error("Chat error:", error);
+					toast.error("Failed to send message. Please try again.");
+				}
+				setStreamingMessage("");
+			} finally {
+				setIsStreaming(false);
+				abortControllerRef.current = null;
+			}
+		},
+		[
+			prompt,
+			isStreaming,
+			skyBrowser,
+			address,
+			currentChatId,
+			updateUrlWithChatId,
+		]
+	);
+
 	useEffect(() => {
 		if (
 			globalPrompt?.trim() &&
@@ -219,9 +434,9 @@ function ChatPageContent() {
 		setGlobalPrompt,
 		skyBrowser,
 		address,
+		handleSendMessage,
 	]);
 
-	// Handle wallet connection for auto-submission
 	useEffect(() => {
 		if (
 			globalPrompt?.trim() &&
@@ -235,158 +450,16 @@ function ChatPageContent() {
 		}
 	}, [globalPrompt, loading, isConnected, setGlobalPrompt]);
 
-	// Cleanup timeouts on unmount
 	useEffect(() => {
 		return () => {
 			if (scrollTimeoutRef.current) {
 				clearTimeout(scrollTimeoutRef.current);
 			}
+			if (abortControllerRef.current) {
+				abortControllerRef.current.abort();
+			}
 		};
 	}, []);
-
-	const addMessage = useCallback(
-		(message: Omit<ChatMsg, "id" | "timestamp">) => {
-			const newMessage: ChatMsg = {
-				...message,
-				id: Date.now().toString(),
-				timestamp: new Date(),
-			};
-			setMessages((prev) => [...prev, newMessage]);
-		},
-		[]
-	);
-
-	const handleSendMessage = async (message?: string) => {
-		const userMessage = message || prompt.trim();
-		if (!userMessage || isStreaming) return;
-
-		if (!skyBrowser || !address) {
-			toast.error("Please connect your wallet first");
-			return;
-		}
-
-		if (!API_CONFIG.CHAT_ACCESSPOINT_URL) {
-			toast.error("Chat access point URL not configured");
-			return;
-		}
-
-		setPrompt("");
-
-		// Reset scroll state for new conversation
-		shouldAutoScrollRef.current = true;
-		isUserScrollingRef.current = false;
-
-		addMessage({
-			type: "chat_user",
-			content: userMessage,
-		});
-
-		setIsStreaming(true);
-		setStreamingMessage("");
-
-		try {
-			const apiKey = await apiKeyManager.getApiKey(skyBrowser, {
-				address,
-			});
-			abortControllerRef.current = new AbortController();
-
-			const response = await fetch(
-				`${API_CONFIG.CHAT_ACCESSPOINT_URL}/natural-request?stream=true`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						"x-api-key": apiKey,
-					},
-					body: JSON.stringify({
-						prompt: userMessage,
-						chatId: currentChatId,
-					}),
-					signal: abortControllerRef.current.signal,
-				}
-			);
-
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
-			}
-
-			if (!response.body) {
-				throw new Error("No response body");
-			}
-
-			const reader = response.body.getReader();
-			const decoder = new TextDecoder();
-			let buffer = "";
-			let fullMessage = "";
-
-			try {
-				while (true) {
-					const { done, value } = await reader.read();
-					if (done) break;
-
-					buffer += decoder.decode(value, { stream: true });
-					const lines = buffer.split("\n");
-					buffer = lines.pop() || "";
-
-					for (const line of lines) {
-						if (!line.trim() || !line.startsWith("data: "))
-							continue;
-
-						try {
-							const jsonData = line.slice(6).trim();
-							if (!jsonData) continue;
-
-							const data: StreamResponse = JSON.parse(jsonData);
-
-							if (
-								(data.type === "chat_chunk" ||
-									data.type === "update") &&
-								data.content
-							) {
-								fullMessage += data.content;
-								setStreamingMessage(fullMessage);
-							} else if (
-								data.type === "final" ||
-								(data.success && data.data?.result?.chatId)
-							) {
-								const chatId = data.data?.result?.chatId;
-
-								if (chatId && !currentChatId) {
-									setCurrentChatId(chatId);
-									updateUrlWithChatId(chatId);
-								}
-
-								addMessage({
-									type: "chat_response",
-									content: fullMessage,
-								});
-
-								setStreamingMessage("");
-								return; // Exit the loop
-							}
-						} catch (parseError) {
-							// Ignore JSON parse errors
-							console.warn(
-								"Failed to parse SSE data:",
-								parseError
-							);
-						}
-					}
-				}
-			} finally {
-				reader.releaseLock();
-			}
-		} catch (error) {
-			if (error instanceof Error && error.name !== "AbortError") {
-				console.error("Chat error:", error);
-				toast.error("Failed to send message. Please try again.");
-			}
-			setStreamingMessage("");
-		} finally {
-			setIsStreaming(false);
-			abortControllerRef.current = null;
-		}
-	};
 
 	const handleStopStreaming = useCallback(() => {
 		if (abortControllerRef.current) {
@@ -409,14 +482,11 @@ function ChatPageContent() {
 					}}
 				>
 					<div className="pb-4">
-						{messages.map((message) => (
+						{messages.map((message, idx) => (
 							<ChatMessage
 								key={message.id}
 								message={message}
-								isLast={
-									messages.indexOf(message) ===
-									messages.length - 1
-								}
+								isLast={idx === messages.length - 1}
 							/>
 						))}
 
