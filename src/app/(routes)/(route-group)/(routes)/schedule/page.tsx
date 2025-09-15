@@ -15,6 +15,7 @@ import {
 	Repeat,
 	Play,
 	Plus,
+	ExternalLinkIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { fetchScheduledTasks } from "@/controllers/schedule/schedule.query";
@@ -238,10 +239,14 @@ function ScheduledTasksInner() {
 			cell: ({ row }) => (
 				<Link
 					href={`/schedule/${row.original.taskId}`}
-					className="text-sm text-gray-300 block text-left w-full max-w-[350px] overflow-hidden whitespace-nowrap text-ellipsis"
+					className="flex items-center gap-x-2 text-sm text-gray-300 text-left w-full max-w-[350px] overflow-hidden whitespace-nowrap text-ellipsis"
 					title={row.original.originalPrompt || "Untitled task"}
 				>
-					{row.original.originalPrompt || "Untitled task"}
+					<span className="max-w-64 truncate">
+						{row.original.originalPrompt || "Untitled task"}
+					</span>
+
+					<ExternalLinkIcon className="size-3.5" />
 				</Link>
 			),
 		},

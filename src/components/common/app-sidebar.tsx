@@ -73,7 +73,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const { reset: resetGlobalStore } = useGlobalStore();
 	const { reset: resetChatStore } = useChatStore();
 	const { reset: resetWorkflowExecutionStore } = useWorkflowExecutionStore();
-	const isChat = pathname.includes("/chat") || pathname.includes("/create");
+	const isChat =
+		pathname.includes("/chat") ||
+		(pathname.includes("/create") &&
+			!pathname.includes("/schedule/create"));
 	const queryClient = useQueryClient();
 
 	const handleLogout = async () => {

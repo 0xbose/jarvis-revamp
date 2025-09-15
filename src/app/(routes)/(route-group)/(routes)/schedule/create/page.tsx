@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import ScheduleInterface, {
 	type ScheduleConfig as UIScheduleConfig,
 } from "@/components/schedule/schedule-interface";
@@ -186,7 +186,7 @@ export default function Page() {
 						<Marketplace />
 						<Button
 							size="sm"
-							className="bg-green-600 hover:bg-green-700 text-white"
+							className="bg-green-600 hover:bg-green-700 text-gray-900"
 							disabled={!isSaveEnabled || isSaving}
 							onClick={() => {
 								if (isSaveEnabled && !isSaving) {
@@ -194,6 +194,7 @@ export default function Page() {
 								}
 							}}
 						>
+							<Save className="mr-0.5" />
 							{isSaving ? "Saving..." : "Save"}
 						</Button>
 					</div>
