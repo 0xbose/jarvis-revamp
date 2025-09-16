@@ -92,13 +92,15 @@ function getTaskTypeBadge(taskType: string, isRecurring: boolean) {
 }
 
 function formatDateTime(dateString: string) {
-	return new Date(dateString).toLocaleDateString("en-US", {
+	const date = new Date(dateString);
+	const formatted = date.toLocaleString(undefined, {
 		month: "short",
 		day: "numeric",
 		hour: "numeric",
 		minute: "2-digit",
 		hour12: true,
 	});
+	return `${formatted}`;
 }
 
 function formatTimeUntil(dateString: string) {
@@ -106,19 +108,23 @@ function formatTimeUntil(dateString: string) {
 	const scheduled = new Date(dateString);
 	const diffMs = scheduled.getTime() - now.getTime();
 
-	if (diffMs < 0) return null;
-
-	const diffMinutes = Math.floor(diffMs / (1000 * 60));
+	const absMs = Math.abs(diffMs);
+	const diffMinutes = Math.floor(absMs / (1000 * 60));
 	const diffHours = Math.floor(diffMinutes / 60);
 	const diffDays = Math.floor(diffHours / 24);
 
+	const format = (value: number, unit: string) => {
+		const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+		return rtf.format(diffMs >= 0 ? value : -value, unit as any);
+	};
+
 	if (diffMinutes < 1) return "Now";
-	if (diffMinutes === 1) return "1 minute";
-	if (diffMinutes < 60) return `${diffMinutes} minutes`;
-	if (diffHours === 1) return "1 hour";
-	if (diffHours < 24) return `${diffHours} hours`;
-	if (diffDays === 1) return "1 day";
-	return `${diffDays} days`;
+	if (diffMinutes === 1) return format(1, "minute");
+	if (diffMinutes < 60) return format(-diffMinutes * -1, "minutes");
+	if (diffHours === 1) return format(1, "hour");
+	if (diffHours < 24) return format(-diffHours * -1, "hours");
+	if (diffDays === 1) return format(1, "day");
+	return format(-diffDays * -1, "days");
 }
 
 // Filters removed

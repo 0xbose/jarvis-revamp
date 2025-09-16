@@ -61,22 +61,18 @@ function ScheduleDetailInner() {
 			if (Number.isNaN(d.getTime())) return undefined;
 			const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 			// Round only the minutes to the nearest 5 without changing hour/day
-			const rawMinute = d.getUTCMinutes();
+			const rawMinute = d.getMinutes();
 			let roundedMinute = Math.round(rawMinute / 5) * 5;
 			if (roundedMinute === 60) {
 				// Do not carry over to the next hour; clamp to 55
 				roundedMinute = 55;
 			}
 			return {
-				dateOnly: new Date(
-					d.getUTCFullYear(),
-					d.getUTCMonth(),
-					d.getUTCDate()
-				),
-				hour: d.getUTCHours(),
+				dateOnly: new Date(d.getFullYear(), d.getMonth(), d.getDate()),
+				hour: d.getHours(),
 				minute: roundedMinute,
-				dayOfMonth: d.getUTCDate(),
-				weekday: weekDays[d.getUTCDay()],
+				dayOfMonth: d.getDate(),
+				weekday: weekDays[d.getDay()],
 			};
 		};
 

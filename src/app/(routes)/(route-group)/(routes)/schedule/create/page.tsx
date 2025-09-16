@@ -9,12 +9,15 @@ import ScheduleInterface, {
 } from "@/components/schedule/schedule-interface";
 import Marketplace from "@/components/market-place/user-agent-selector";
 import { useGlobalStore } from "@/stores/global-store";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getAgentDetailByCollectionAndNftId } from "@/controllers/agents/agents.query";
 import { scheduleWorkflowWithPrompt } from "@/controllers/schedule/schedule.mutations";
 import type { AgentDetailResponse, UserAgentCollection } from "@/types/agents";
 import type { ScheduleWorkflowPayload, WorkflowItem } from "@/types/schedule";
 import { useWallet } from "@/hooks/use-wallet";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { QUERY_KEYS } from "@/utils/query-keys";
 
 type ScheduleConfig = UIScheduleConfig;
 
@@ -81,7 +84,8 @@ export default function Page() {
 	const [scheduleConfig, setScheduleConfig] = useState<ScheduleConfig | null>(
 		null
 	);
-
+	const router = useRouter();
+	const queryClient = useQueryClient();
 	const isUserAgentCollection = (
 		agent: AgentDetailResponse | UserAgentCollection | null
 	): agent is UserAgentCollection => {
@@ -172,6 +176,14 @@ export default function Page() {
 				skyBrowser,
 				web3Context: { address },
 			});
+		},
+		onSuccess: () => {
+			toast.success("Schedule saved successfully");
+			queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.SCHEDULED_TASKS] });
+			router.push(`/schedule`);
+		},
+		onError: () => {
+			toast.error("Failed to save schedule");
 		},
 	});
 

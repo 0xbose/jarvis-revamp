@@ -163,11 +163,29 @@ export default function ScheduleInterface({
 	const generateSchedulePrompt = (c: ScheduleConfig): string => {
 		if (!c.type) return "";
 		if (c.type === "one-time") {
-			const date = c.selectedDate || new Date();
-			const time = `${c.hour.toString().padStart(2, "0")}:${c.minute
+			const baseDate = c.selectedDate || new Date();
+			const localDateTime = new Date(baseDate);
+			localDateTime.setHours(c.hour, c.minute, 0, 0);
+			const utcYear = localDateTime.getUTCFullYear();
+			const utcMonth = localDateTime.getUTCMonth();
+			const utcDay = localDateTime.getUTCDate();
+			const utcHour = localDateTime
+				.getUTCHours()
 				.toString()
-				.padStart(2, "0")}`;
-			return `Schedule this task once on ${date.toLocaleDateString()} at ${time}`;
+				.padStart(2, "0");
+			const utcMinute = localDateTime
+				.getUTCMinutes()
+				.toString()
+				.padStart(2, "0");
+			const utcDateStr = new Date(
+				Date.UTC(utcYear, utcMonth, utcDay)
+			).toLocaleDateString("en-US", {
+				month: "short",
+				day: "numeric",
+				year: "numeric",
+				timeZone: "UTC",
+			});
+			return `Schedule this task once on ${utcDateStr} at ${utcHour}:${utcMinute} UTC`;
 		}
 		switch (c.scheduleType) {
 			case "minutes":
@@ -177,22 +195,30 @@ export default function ScheduleInterface({
 					c.interval !== 1 ? "s" : ""
 				}`;
 			case "daily": {
-				const time = `${c.hour.toString().padStart(2, "0")}:${c.minute
-					.toString()
-					.padStart(2, "0")}`;
-				return `Schedule this task daily at ${time}`;
+				const localRef = new Date();
+				localRef.setHours(c.hour, c.minute, 0, 0);
+				const hh = localRef.getUTCHours().toString().padStart(2, "0");
+				const mm = localRef.getUTCMinutes().toString().padStart(2, "0");
+				return `Schedule this task daily at ${hh}:${mm} UTC`;
 			}
 			case "weekly": {
 				const days = c.selectedDays?.join(", ") || "selected days";
-				const weeklyTime = `${c.hour
-					.toString()
-					.padStart(2, "0")}:${c.minute.toString().padStart(2, "0")}`;
-				return `Schedule this task weekly on ${days} at ${weeklyTime}`;
+				const localRef = new Date();
+				localRef.setHours(c.hour, c.minute, 0, 0);
+				const hh = localRef.getUTCHours().toString().padStart(2, "0");
+				const mm = localRef.getUTCMinutes().toString().padStart(2, "0");
+				return `Schedule this task weekly on ${days} at ${hh}:${mm} UTC`;
 			}
 			case "monthly": {
-				const monthlyTime = `${c.hour
+				const localRef = new Date();
+				localRef.setHours(c.hour, c.minute, 0, 0);
+				const monthlyTime = `${localRef
+					.getUTCHours()
 					.toString()
-					.padStart(2, "0")}:${c.minute.toString().padStart(2, "0")}`;
+					.padStart(2, "0")}:${localRef
+					.getUTCMinutes()
+					.toString()
+					.padStart(2, "0")} UTC`;
 				const dayOfMonth =
 					DAY_OF_MONTH_OPTIONS.find((d) => d.value === c.dayOfMonth)
 						?.label || "1st";
