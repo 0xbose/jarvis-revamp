@@ -14,6 +14,9 @@ interface GlobalStore {
 	prompt: string;
 	selectedAgent: AgentDetailResponse | UserAgentCollection | null;
 
+	// Model selection for chat
+	selectedModel: { id: string; name: string } | null;
+
 	// Auto Mode
 	autoMode: boolean;
 
@@ -23,7 +26,10 @@ interface GlobalStore {
 
 	setMode: (mode: "chat" | "agent") => void;
 	setPrompt: (prompt: string) => void;
-	setSelectedAgent: (agent: AgentDetailResponse | UserAgentCollection | null) => void;
+	setSelectedAgent: (
+		agent: AgentDetailResponse | UserAgentCollection | null
+	) => void;
+	setSelectedModel: (model: { id: string; name: string } | null) => void;
 
 	reset: () => void;
 }
@@ -36,6 +42,7 @@ export const useGlobalStore = create<GlobalStore>()(
 		mode: "agent",
 		prompt: "",
 		selectedAgent: null,
+		selectedModel: null,
 		autoMode: false,
 
 		// Wallet & NFT Management Actions
@@ -48,10 +55,7 @@ export const useGlobalStore = create<GlobalStore>()(
 			set({ mode });
 		},
 		setPrompt: (prompt) => {
-			console.log(
-				"🔧 Global Store: Setting prompt to:",
-				`"${prompt}"`
-			);
+			console.log("🔧 Global Store: Setting prompt to:", `"${prompt}"`);
 			set({ prompt });
 		},
 		setSelectedAgent: (agent) => {
@@ -62,6 +66,14 @@ export const useGlobalStore = create<GlobalStore>()(
 			);
 			set({ selectedAgent: agent });
 		},
+		setSelectedModel: (model) => {
+			console.log(
+				"🔧 Global Store: Setting selected model to:",
+				model?.name,
+				model
+			);
+			set({ selectedModel: model });
+		},
 
 		// Reset
 		reset: () =>
@@ -71,6 +83,7 @@ export const useGlobalStore = create<GlobalStore>()(
 				mode: "agent",
 				prompt: "",
 				selectedAgent: null,
+				selectedModel: null,
 			}),
 	}))
 );

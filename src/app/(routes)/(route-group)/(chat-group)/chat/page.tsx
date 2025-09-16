@@ -45,7 +45,11 @@ interface StreamResponse {
 }
 
 function mapFetchedMessagesToChatMsgs(fetchedMessages: any): ChatMsg[] {
-	if (!fetchedMessages || !fetchedMessages.success || !Array.isArray(fetchedMessages.data?.messages)) {
+	if (
+		!fetchedMessages ||
+		!fetchedMessages.success ||
+		!Array.isArray(fetchedMessages.data?.messages)
+	) {
 		return [];
 	}
 	return fetchedMessages.data.messages.map((msg: any, idx: number) => ({
@@ -78,8 +82,11 @@ function ChatPageContent() {
 	const isScrollingToBottomRef = useRef<boolean>(false);
 
 	const { skyBrowser, address, isConnected, loading } = useWallet();
-	const { prompt: globalPrompt, setPrompt: setGlobalPrompt } =
-		useGlobalStore();
+	const {
+		prompt: globalPrompt,
+		setPrompt: setGlobalPrompt,
+		selectedModel,
+	} = useGlobalStore();
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const queryClient = useQueryClient();
@@ -256,12 +263,23 @@ function ChatPageContent() {
 	}, [messages.length, scrollToBottom, isNearBottom, isInitialLoad]);
 
 	useEffect(() => {
-		if (!isStreaming && streamingMessage === "" && messages.length > 0 && !isInitialLoad) {
+		if (
+			!isStreaming &&
+			streamingMessage === "" &&
+			messages.length > 0 &&
+			!isInitialLoad
+		) {
 			if (shouldAutoScrollRef.current) {
 				setTimeout(() => scrollToBottom(true, true), 100);
 			}
 		}
-	}, [isStreaming, streamingMessage, messages.length, scrollToBottom, isInitialLoad]);
+	}, [
+		isStreaming,
+		streamingMessage,
+		messages.length,
+		scrollToBottom,
+		isInitialLoad,
+	]);
 
 	const handleSendMessage = useCallback(
 		async (message?: string) => {
@@ -312,6 +330,7 @@ function ChatPageContent() {
 						body: JSON.stringify({
 							prompt: userMessage,
 							chatId: currentChatId,
+							modelId: selectedModel?.id,
 						}),
 						signal: abortControllerRef.current.signal,
 					}
@@ -414,6 +433,7 @@ function ChatPageContent() {
 			address,
 			currentChatId,
 			updateUrlWithChatId,
+			selectedModel,
 		]
 	);
 
