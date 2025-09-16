@@ -9,6 +9,18 @@ import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import { useState, useEffect } from "react";
 
+// Replace angle-bracket autolinks like <https://example.com> with [https://example.com](https://example.com)
+function replaceAngleBracketAutolinks(input: string): string {
+	if (!input) return input;
+	// Matches <https://...>, <http://...>, <mailto:...>
+	return input.replace(
+		/<((?:https?:\/\/|mailto:)[^\s>]+)>/g,
+		(_match, url) => {
+			return `[${url}](${url})`;
+		}
+	);
+}
+
 // Function to detect and convert URLs to clickable links
 // This function automatically detects URLs in text content and converts them to clickable links
 // It handles both http and https URLs and ensures they open in new tabs
@@ -43,7 +55,7 @@ const components = {
 	// Headings
 	h1: ({ children, ...props }: any) => (
 		<h1
-			className="text-xl font-semibold text-white mb-4 mt-6 first:mt-0"
+			className="text-xl font-semibold text-white mb-4 mt-6 first:mt-0 [&_a]:text-inherit [&_a]:no-underline hover:[&_a]:no-underline"
 			{...props}
 		>
 			{children}
@@ -51,7 +63,7 @@ const components = {
 	),
 	h2: ({ children, ...props }: any) => (
 		<h2
-			className="text-xl font-semibold text-white mb-3 mt-5 first:mt-0"
+			className="text-xl font-semibold text-white mb-3 mt-5 first:mt-0 [&_a]:text-inherit [&_a]:no-underline hover:[&_a]:no-underline"
 			{...props}
 		>
 			{children}
@@ -59,7 +71,7 @@ const components = {
 	),
 	h3: ({ children, ...props }: any) => (
 		<h3
-			className="text-lg font-semibold text-white mb-2 mt-4 first:mt-0"
+			className="text-lg font-semibold text-white mb-2 mt-4 first:mt-0 [&_a]:text-inherit [&_a]:no-underline hover:[&_a]:no-underline"
 			{...props}
 		>
 			{children}
@@ -67,7 +79,7 @@ const components = {
 	),
 	h4: ({ children, ...props }: any) => (
 		<h4
-			className="text-base font-semibold text-white mb-2 mt-3 first:mt-0"
+			className="text-base font-semibold text-white mb-2 mt-3 first:mt-0 [&_a]:text-inherit [&_a]:no-underline hover:[&_a]:no-underline"
 			{...props}
 		>
 			{children}
@@ -75,7 +87,7 @@ const components = {
 	),
 	h5: ({ children, ...props }: any) => (
 		<h5
-			className="text-sm font-semibold text-white mb-2 mt-3 first:mt-0"
+			className="text-sm font-semibold text-white mb-2 mt-3 first:mt-0 [&_a]:text-inherit [&_a]:no-underline hover:[&_a]:no-underline"
 			{...props}
 		>
 			{children}
@@ -83,7 +95,7 @@ const components = {
 	),
 	h6: ({ children, ...props }: any) => (
 		<h6
-			className="text-xs font-semibold text-white mb-2 mt-3 first:mt-0"
+			className="text-xs font-semibold text-white mb-2 mt-3 first:mt-0 [&_a]:text-inherit [&_a]:no-underline hover:[&_a]:no-underline"
 			{...props}
 		>
 			{children}
@@ -118,11 +130,11 @@ const components = {
 		</li>
 	),
 
-	// Links - now properly using href
+	// Links - keep standard styling for regular links
 	a: ({ children, href, ...props }: any) => (
 		<a
 			href={href}
-			className="text-blue-400 hover:text-blue-300 underline transition-colors"
+			className="font-normal text-blue-400 hover:text-blue-300 underline transition-colors underline-offset-2 decoration-[0.5px]"
 			target="_blank"
 			rel="noopener noreferrer"
 			{...props}
@@ -260,7 +272,7 @@ export function MDXRenderer({ content, className = "" }: MDXRendererProps) {
 				setError(null);
 
 				// Clean up the content by replacing escaped newlines with actual newlines
-				const cleanedContent = content
+				const cleanedContent = replaceAngleBracketAutolinks(content)
 					.replace(/\\n/g, "\n")
 					.replace(/\\t/g, "\t")
 					.replace(/\\r/g, "\r")
@@ -279,7 +291,15 @@ export function MDXRenderer({ content, className = "" }: MDXRendererProps) {
 						rehypePlugins: [
 							rehypeHighlight,
 							rehypeSlug,
-							[rehypeAutolinkHeadings, { behavior: "wrap" }],
+							[
+								rehypeAutolinkHeadings,
+								{
+									behavior: "wrap",
+									properties: {
+										className: ["mdx-heading-anchor"],
+									},
+								},
+							],
 						],
 					},
 				});

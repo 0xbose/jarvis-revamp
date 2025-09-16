@@ -144,7 +144,7 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
 			<DialogTrigger asChild>
 				<Button
 					size="sm"
-					className={`w-fit max-w-32 ${
+					className={`w-fit max-w-32 bg-background ${
 						disabled
 							? "cursor-not-allowed opacity-80"
 							: "cursor-pointer"

@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { LucideArrowUp, Square, Play } from "lucide-react";
 import { ChatInputProps } from "@/types/types";
@@ -164,15 +165,27 @@ export default function ChatInput({
 				)}
 			</div>
 
-			<div className="w-full flex items-center bg-input rounded-lg px-4 border border-border h-13">
-				<Input
-					className="flex-1 px-0 h-full border-none shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground text-base"
-					type="text"
+			<div className="w-full flex items-end gap-2 bg-input rounded-lg px-4 border border-border py-2">
+				<Textarea
+					className="flex-1 resize-none border-none bg-transparent shadow-none px-0 py-1 focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground text-base min-h-10 max-h-40 overflow-y-auto scrollbar-thin"
+					rows={1}
 					placeholder={getPlaceholderText()}
 					value={prompt}
 					onChange={(e) => {
 						if (canType) {
 							setPrompt(e.target.value);
+						}
+					}}
+					onKeyDown={(e) => {
+						if (e.key === "Enter" && !e.shiftKey) {
+							e.preventDefault();
+							if (canSubmit) {
+								// Trigger form submit
+								(
+									e.currentTarget
+										.form as HTMLFormElement | null
+								)?.requestSubmit();
+							}
 						}
 					}}
 				/>
