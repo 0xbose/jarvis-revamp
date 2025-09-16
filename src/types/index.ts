@@ -263,10 +263,14 @@ export interface HistoryResponse {
 export interface WorkflowResponse {
 	workflows: HistoryItem[];
 	pagination: {
-		page: number;
-		limit: number;
-		total: number;
-		totalPages: number;
+		page?: number;
+		limit?: number;
+		total?: number;
+		totalPages?: number;
+		hasNextPage?: boolean;
+		nextPageUrl?: string;
+		workflowCursor?: string;
+		chatCursor?: string;
 	};
 	timestamp: string;
 }
@@ -274,7 +278,6 @@ export interface WorkflowResponse {
 export interface UIState {
 	testStatus: TestStatus;
 }
-
 
 // Global Window Types
 declare global {

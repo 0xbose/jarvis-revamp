@@ -97,6 +97,10 @@ function WorkflowHistoryInner() {
 	const [deletingWorkflowId, setDeletingWorkflowId] = useState<string | null>(
 		null
 	);
+	// Cursor-based pagination state
+	const [nextPageUrl, setNextPageUrl] = useState<string | undefined>(
+		undefined
+	);
 
 	const pageSize = 10;
 	const { skyBrowser, address } = useWallet();
@@ -123,6 +127,7 @@ function WorkflowHistoryInner() {
 			currentPage,
 			pageSize,
 			statusFilter.length > 0 ? statusFilter[0] : undefined,
+			nextPageUrl, // include cursor url in key
 		],
 		queryFn: async () => {
 			if (!skyBrowser || !address) {
@@ -144,6 +149,7 @@ function WorkflowHistoryInner() {
 									| "stopped"
 									| "awaiting_response")
 							: undefined,
+					nextPageUrl,
 				},
 				skyBrowser,
 				web3Context
@@ -163,7 +169,11 @@ function WorkflowHistoryInner() {
 
 			return {
 				workflows: newWorkflows,
-				pagination: { total: newTotalCount },
+				pagination: {
+					total: newTotalCount,
+					hasNextPage: response.pagination?.hasNextPage,
+					nextPageUrl: response.pagination?.nextPageUrl,
+				},
 			};
 		},
 		placeholderData: keepPreviousData,
@@ -184,6 +194,7 @@ function WorkflowHistoryInner() {
 
 	const handleSearch = (value: string) => {
 		setSearch(value);
+		setNextPageUrl(undefined); // reset cursor on new search
 		updateSearchParams({ search: value || null, page: "1" });
 	};
 
@@ -192,6 +203,7 @@ function WorkflowHistoryInner() {
 			? [...statusFilter, status]
 			: statusFilter.filter((s) => s !== status);
 		setStatusFilter(newStatusFilter);
+		setNextPageUrl(undefined); // reset cursor on filter change
 		updateSearchParams({
 			status: newStatusFilter.length > 0 ? newStatusFilter[0] : null,
 			page: "1",
@@ -200,6 +212,7 @@ function WorkflowHistoryInner() {
 
 	const handleClearFilters = () => {
 		setStatusFilter([]);
+		setNextPageUrl(undefined); // reset cursor
 		updateSearchParams({ status: null, page: "1" });
 	};
 
@@ -367,6 +380,10 @@ function WorkflowHistoryInner() {
 		: totalCount;
 	const maxPages = Math.ceil(effectiveTotal / pageSize);
 
+	const hasNextPage = Boolean(
+		(historyData as WorkflowResponse)?.pagination?.hasNextPage
+	);
+
 	return (
 		<div className="p-6">
 			<div>
@@ -462,6 +479,15 @@ function WorkflowHistoryInner() {
 						maxPages={maxPages}
 						total={effectiveTotal}
 						currentLocation="/history"
+						cursorMode
+						hasNextPage={hasNextPage}
+						onNext={() => {
+							const url = (historyData as WorkflowResponse)
+								?.pagination?.nextPageUrl;
+							if (url) {
+								setNextPageUrl(url);
+							}
+						}}
 					/>
 				</div>
 			</div>

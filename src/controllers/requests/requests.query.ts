@@ -32,6 +32,7 @@ export const getHistory = async (
 			| "failed"
 			| "stopped"
 			| "awaiting_response";
+		nextPageUrl?: string;
 	},
 	skyBrowser?: SkyMainBrowser,
 	web3Context?: Web3Context
@@ -41,9 +42,19 @@ export const getHistory = async (
 		skyBrowser,
 		web3Context
 	);
+
+	// If API provides a fully-qualified nextPageUrl, use it directly
+	if (params?.nextPageUrl) {
+		const response = await axiosInstance.get(params.nextPageUrl);
+		return response.data;
+	}
+
 	const response = await axiosInstance.get("/requests", {
 		params: {
-			...params,
+			page: params?.page,
+			limit: params?.limit,
+			agentId: params?.agentId,
+			status: params?.status,
 			includeChatSessions: true,
 		},
 	});

@@ -9,12 +9,19 @@ interface PaginationProps {
 	maxPages: number;
 	currentLocation?: string;
 	total: number;
+	// Cursor mode support
+	cursorMode?: boolean;
+	hasNextPage?: boolean;
+	onNext?: () => void;
 }
 
 const DataPagination: React.FC<PaginationProps> = ({
 	maxPages,
 	currentLocation,
 	total,
+	cursorMode,
+	hasNextPage,
+	onNext,
 }) => {
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -43,6 +50,10 @@ const DataPagination: React.FC<PaginationProps> = ({
 	};
 
 	const handleNextPage = () => {
+		if (cursorMode && onNext) {
+			onNext();
+			return;
+		}
 		const newSearchParams = new URLSearchParams();
 		usePreviousSearchParams({ newSearchParams });
 		newSearchParams.set("page", (parseInt(currentPage) + 1).toString());
@@ -122,56 +133,72 @@ const DataPagination: React.FC<PaginationProps> = ({
 					: "No items to display"}
 			</div>
 			<div className="flex items-center space-x-1">
-				<Button
-					disabled={currentPageNumber === 1}
-					type="button"
-					onClick={handlePreviousPage}
-					variant="ghost"
-					className={cn(
-						"h-8 w-8 p-0",
-						currentPageNumber === 1
-							? "text-gray-500 cursor-not-allowed"
-							: "text-gray-300 hover:bg-gray-700 hover:text-white"
-					)}
-				>
-					<ChevronLeft className="size-4" />
-				</Button>
-
-				{pageButtons.map((page, index) =>
-					page === "ellipsis" ? (
-						<span
-							key={`ellipsis-${index}`}
-							className="h-8 w-8 flex items-center justify-center text-gray-400"
-						>
-							...
-						</span>
-					) : (
+				{!cursorMode && (
+					<>
 						<Button
-							key={`page-${page}`}
+							disabled={currentPageNumber === 1}
 							type="button"
+							onClick={handlePreviousPage}
 							variant="ghost"
-							onClick={() => handlePageClick(page)}
 							className={cn(
-								"h-8 w-8 p-0 text-sm",
-								currentPageNumber === page
-									? "bg-muted text-white hover:bg-muted/80"
+								"h-8 w-8 p-0",
+								currentPageNumber === 1
+									? "text-gray-500 cursor-not-allowed"
 									: "text-gray-300 hover:bg-gray-700 hover:text-white"
 							)}
-							aria-current={currentPageNumber === page ? "page" : undefined}
 						>
-							{page}
+							<ChevronLeft className="size-4" />
 						</Button>
-					)
+
+						{pageButtons.map((page, index) =>
+							page === "ellipsis" ? (
+								<span
+									key={`ellipsis-${index}`}
+									className="h-8 w-8 flex items-center justify-center text-gray-400"
+								>
+									...
+								</span>
+							) : (
+								<Button
+									key={`page-${page}`}
+									type="button"
+									variant="ghost"
+									onClick={() => handlePageClick(page)}
+									className={cn(
+										"h-8 w-8 p-0 text-sm",
+										currentPageNumber === page
+											? "bg-muted text-white hover:bg-muted/80"
+											: "text-gray-300 hover:bg-gray-700 hover:text-white"
+									)}
+									aria-current={
+										currentPageNumber === page
+											? "page"
+											: undefined
+									}
+								>
+									{page}
+								</Button>
+							)
+						)}
+					</>
 				)}
 
 				<Button
-					disabled={currentPageNumber >= maxPages}
+					disabled={
+						cursorMode
+							? !hasNextPage
+							: currentPageNumber >= maxPages
+					}
 					type="button"
 					onClick={handleNextPage}
 					variant="ghost"
 					className={cn(
 						"h-8 w-8 p-0",
-						currentPageNumber >= maxPages
+						cursorMode
+							? !hasNextPage
+								? "text-gray-500 cursor-not-allowed"
+								: "text-gray-300 hover:bg-gray-700 hover:text-white"
+							: currentPageNumber >= maxPages
 							? "text-gray-500 cursor-not-allowed"
 							: "text-gray-300 hover:bg-gray-700 hover:text-white"
 					)}
