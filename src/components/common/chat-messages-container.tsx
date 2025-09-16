@@ -138,7 +138,7 @@ export function ChatMessagesContainer({
 		<div className={containerClassName}>
 			{chatMessages.length === 0 ? (
 				showSkeleton ? (
-					<div className="p-4">
+					<div className="w-full p-4 px-6 mx-auto max-w-7xl">
 						<ChatSkeleton />
 					</div>
 				) : null
@@ -147,7 +147,7 @@ export function ChatMessagesContainer({
 					<div className={messagesContainerClassName}>
 						<div
 							ref={finalChatContainerRef}
-							className="flex flex-col gap-4"
+							className="flex flex-col gap-4 px-6 mx-auto max-w-7xl"
 							onScroll={handleScroll}
 						>
 							<ChatMessagesGrouped
@@ -198,7 +198,7 @@ export function ChatMessagesContainer({
 			)}
 
 			{showChatInput && (
-				<div className={inputContainerClassName}>
+				<div className={`${inputContainerClassName} mx-auto max-w-7xl`}>
 					<ChatInput
 						onSend={onSend}
 						onStop={onStop}

@@ -485,7 +485,7 @@ function ChatPageContent() {
 						height: "calc(100vh - 8rem)",
 					}}
 				>
-					<div className="pb-4">
+					<div className="pb-4 px-6 mx-auto max-w-7xl">
 						{messages.map((message, idx) => (
 							<ChatMessage
 								key={message.id}
@@ -525,7 +525,7 @@ function ChatPageContent() {
 					<div ref={messagesEndRef} />
 				</div>
 
-				<div className="absolute bottom-4 left-0 right-0 px-6">
+				<div className="absolute bottom-4 left-0 right-0 px-6 mx-auto max-w-7xl">
 					<ChatInput
 						onSend={handleSendMessage}
 						onStop={handleStopStreaming}
@@ -547,7 +547,7 @@ export default function ChatPage() {
 	return (
 		<Suspense
 			fallback={
-				<div className="flex items-center justify-center h-screen">
+				<div className="flex items-center justify-center h-screen px-6 mx-auto max-w-7xl">
 					<ChatSkeleton />
 				</div>
 			}

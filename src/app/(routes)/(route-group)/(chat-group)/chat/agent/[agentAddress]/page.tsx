@@ -834,7 +834,7 @@ function AgentChatPageContent() {
 
 	if (isLoading) {
 		return (
-			<div className="relative h-full flex flex-col p-4">
+			<div className="relative h-full flex flex-col p-4 px-6 mx-auto max-w-7xl">
 				<ChatSkeleton />
 				<div className="absolute bottom-4 left-0 right-0 px-4 space-y-2">
 					<Skeleton className="h-6 w-24" />
@@ -948,7 +948,12 @@ function AgentChatPageContent() {
 
 export default function AgentChatPage() {
 	return (
-		<Suspense fallback={<ChatSkeleton />}>
+		<Suspense fallback={
+		<div className="
+		px-6 mx-auto max-w-7xl">
+		<ChatSkeleton />
+		</div>
+		}>
 			<AgentChatPageContent />
 		</Suspense>
 	);
