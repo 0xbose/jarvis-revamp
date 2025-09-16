@@ -74,6 +74,69 @@ interface ChatMessageProps {
 	retryingSubnetIndex?: number | null;
 }
 
+interface GeneratedImageProps {
+	url: string;
+	contentType?: string;
+}
+
+function GeneratedImage({ url, contentType }: GeneratedImageProps) {
+	const [imageLoaded, setImageLoaded] = useState(false);
+	return (
+		<div className="relative w-fit ">
+			<Image
+				src={url}
+				alt="Generated image"
+				width={400}
+				height={400}
+				className="rounded-lg border border-border max-w-fit h-auto"
+				onLoad={() => setImageLoaded(true)}
+				onError={(e) => {
+					console.error("Failed to load image:", e);
+					const target = e.target as HTMLImageElement;
+					if (target.src.includes("/api/image/proxy")) {
+						const urlParams = new URLSearchParams(
+							target.src.split("?")[1]
+						);
+						const originalUrl = urlParams.get("url");
+						if (originalUrl) {
+							target.src = originalUrl;
+						}
+					}
+				}}
+			/>
+			{imageLoaded && (
+				<div className="absolute top-2 right-2">
+					<Button
+						size="icon"
+						className="p-1 bg-background/80"
+						onClick={() => {
+							const link = document.createElement("a");
+							let downloadUrl = url;
+							if (downloadUrl.includes("/api/image/proxy")) {
+								const urlParams = new URLSearchParams(
+									downloadUrl.split("?")[1]
+								);
+								const originalUrl = urlParams.get("url");
+								if (originalUrl) {
+									downloadUrl = originalUrl;
+								}
+							}
+							link.href = downloadUrl;
+							link.download =
+								"generated_image." +
+								((contentType && contentType.split("/")[1]) ||
+									"jpg");
+							link.click();
+						}}
+					>
+						<DownloadIcon className="w-3 h-3 text-foreground" />
+					</Button>
+				</div>
+			)}
+		</div>
+	);
+}
+
 export function ChatMessage({
 	message,
 	isLast = false,
@@ -381,7 +444,7 @@ export function ChatMessage({
 					<h2 className="text-2xl font-bold text-white leading-tight mb-2 capitalize break-words">
 						{message.content}
 					</h2>
-					{message.imageData && (
+					{/* {message.imageData && (
 						<div className="mt-3">
 							{message.isImage ? (
 								<div className="relative w-fit ">
@@ -472,7 +535,7 @@ export function ChatMessage({
 								</div>
 							)}
 						</div>
-					)}
+					)} */}
 				</div>
 			</div>
 		);
@@ -1461,103 +1524,11 @@ export function ChatMessage({
 							</div>
 						)}
 						{/* Display file content if present */}
-						{message.imageData && (
-							<div className="mt-3">
-								{message.isImage ? (
-									<div className="relative w-fit ">
-										<Image
-											src={message.imageData}
-											alt="Generated image"
-											width={400}
-											height={400}
-											className="rounded-lg border border-border max-w-fit h-auto"
-											onError={(e) => {
-												console.error(
-													"Failed to load image:",
-													e
-												);
-											}}
-										/>
-										<div className="absolute top-2 right-2">
-											<Button
-												size="icon"
-												className="p-1 bg-background/80"
-												onClick={() => {
-													const link =
-														document.createElement(
-															"a"
-														);
-													link.href =
-														message.imageData!;
-													link.download =
-														"generated_image." +
-														((message.contentType &&
-															message.contentType.split(
-																"/"
-															)[1]) ||
-															"jpg");
-													link.click();
-												}}
-											>
-												<DownloadIcon className="w-3 h-3 text-foreground" />
-											</Button>
-										</div>
-									</div>
-								) : (
-									<div className="p-4 border border-border rounded-lg bg-muted/20">
-										<div className="flex items-center gap-3">
-											<div className="p-2 bg-primary/10 rounded-lg">
-												<svg
-													className="w-6 h-6 text-primary"
-													fill="none"
-													stroke="currentColor"
-													viewBox="0 0 24 24"
-												>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth={2}
-														d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.293.707l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-													/>
-												</svg>
-											</div>
-											<div className="flex-1">
-												<p className="text-sm font-medium text-foreground">
-													{message.contentType
-														? message.contentType
-																.split("/")[1]
-																.toUpperCase()
-														: "File"}{" "}
-													generated
-												</p>
-												<p className="text-xs text-muted-foreground">
-													{message.contentType ||
-														"Unknown type"}
-												</p>
-											</div>
-											<button
-												onClick={() => {
-													const link =
-														document.createElement(
-															"a"
-														);
-													link.href =
-														message.imageData!;
-													link.download = `generated_file.${
-														message.contentType?.split(
-															"/"
-														)[1] || "bin"
-													}`;
-													link.click();
-												}}
-												className="px-3 py-1 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-											>
-												Download
-											</button>
-										</div>
-									</div>
-								)}
-							</div>
+						{message.imageData && message.isImage && (
+							<GeneratedImage
+								url={message.imageData}
+								contentType={message.contentType}
+							/>
 						)}
 
 						{/* Interactive Elements Section - Moved to Bottom */}
@@ -1663,101 +1634,10 @@ export function ChatMessage({
 						</div>
 					</div>
 					{message.imageData && message.isImage && (
-						<div className="relative w-fit ">
-							{(() => {
-								const [imageLoaded, setImageLoaded] =
-									useState(false);
-
-								return (
-									<>
-										<Image
-											src={message.imageData}
-											alt="Generated image"
-											width={400}
-											height={400}
-											className="rounded-lg border border-border max-w-fit h-auto"
-											onLoad={() => setImageLoaded(true)}
-											onError={(e) => {
-												console.error(
-													"Failed to load image:",
-													e
-												);
-												// If proxied image fails, try to fallback to original URL
-												const target =
-													e.target as HTMLImageElement;
-												if (
-													target.src.includes(
-														"/api/image/proxy"
-													)
-												) {
-													// Extract original URL from proxy URL
-													const urlParams =
-														new URLSearchParams(
-															target.src.split(
-																"?"
-															)[1]
-														);
-													const originalUrl =
-														urlParams.get("url");
-													if (originalUrl) {
-														target.src =
-															originalUrl;
-													}
-												}
-											}}
-										/>
-										{imageLoaded && (
-											<div className="absolute top-2 right-2">
-												<Button
-													size="icon"
-													className="p-1 bg-background/80"
-													onClick={() => {
-														const link =
-															document.createElement(
-																"a"
-															);
-														// Use original URL for download if it's a proxied URL
-														let downloadUrl =
-															message.imageData!;
-														if (
-															downloadUrl.includes(
-																"/api/image/proxy"
-															)
-														) {
-															const urlParams =
-																new URLSearchParams(
-																	downloadUrl.split(
-																		"?"
-																	)[1]
-																);
-															const originalUrl =
-																urlParams.get(
-																	"url"
-																);
-															if (originalUrl) {
-																downloadUrl =
-																	originalUrl;
-															}
-														}
-														link.href = downloadUrl;
-														link.download =
-															"generated_image." +
-															((message.contentType &&
-																message.contentType.split(
-																	"/"
-																)[1]) ||
-																"jpg");
-														link.click();
-													}}
-												>
-													<DownloadIcon className="w-3 h-3 text-foreground" />
-												</Button>
-											</div>
-										)}
-									</>
-								);
-							})()}
-						</div>
+						<GeneratedImage
+							url={message.imageData}
+							contentType={message.contentType}
+						/>
 					)}
 				</div>
 			</div>

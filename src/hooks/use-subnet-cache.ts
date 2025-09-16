@@ -6,9 +6,10 @@ import { parseAgentResponse, createContentHash } from "@/utils/message-parser";
 // Query keys for subnet caching with TanStack Query
 export const subnetQueryKeys = {
 	subnets: (workflowId: string) => ["subnets", workflowId] as const,
-	subnetData: (workflowId: string, subnetIndex: number) => 
+	subnetData: (workflowId: string, subnetIndex: number) =>
 		["subnets", workflowId, "data", subnetIndex] as const,
-	subnetStatus: (workflowId: string) => ["subnets", workflowId, "status"] as const,
+	subnetStatus: (workflowId: string) =>
+		["subnets", workflowId, "status"] as const,
 };
 
 // Subnet data interface for caching
@@ -79,84 +80,117 @@ export const useSubnetCache = () => {
 	const generatedMessageIds = useRef<Map<string, Set<string>>>(new Map());
 
 	// TanStack Query-based subnet caching functions
-	const cacheSubnetData = useCallback((workflowId: string, subnetIndex: number, subnetData: any) => {
-		const cachedData: CachedSubnetData = {
-			itemID: subnetData.itemID || subnetIndex,
-			toolName: subnetData.toolName,
-			status: subnetData.status,
-			data: subnetData.data,
-			prompt: subnetData.prompt,
-			question: subnetData.question,
-			feedbackHistory: subnetData.feedbackHistory,
-			timestamp: Date.now(),
-		};
-
-		// Store individual subnet data
-		queryClient.setQueryData(
-			subnetQueryKeys.subnetData(workflowId, subnetIndex),
-			cachedData
-		);
-
-		// Update the full subnets map
-		queryClient.setQueryData(
-			subnetQueryKeys.subnets(workflowId),
-			(oldSubnets: Map<number, CachedSubnetData> = new Map()) => {
-				const newSubnets = new Map(oldSubnets);
-				newSubnets.set(subnetIndex, cachedData);
-				return newSubnets;
-			}
-		);
-	}, [queryClient]);
-
-	const getCachedSubnetData = useCallback((workflowId: string, subnetIndex: number): CachedSubnetData | undefined => {
-		return queryClient.getQueryData(subnetQueryKeys.subnetData(workflowId, subnetIndex));
-	}, [queryClient]);
-
-	const hasSubnetChanged = useCallback((workflowId: string, subnetIndex: number, newData: any): boolean => {
-		const cached = getCachedSubnetData(workflowId, subnetIndex);
-		
-		if (!cached) {
-			return true; // New subnet, consider it changed
-		}
-
-		// Simple comparison based on status and data
-		return (
-			cached.status !== newData.status ||
-			JSON.stringify(cached.data) !== JSON.stringify(newData.data) ||
-			JSON.stringify(cached.question) !== JSON.stringify(newData.question)
-		);
-	}, [getCachedSubnetData]);
-
-	const clearWorkflowCache = useCallback((workflowId: string) => {
-		queryClient.removeQueries({ queryKey: subnetQueryKeys.subnets(workflowId) });
-		queryClient.removeQueries({ 
-			predicate: (query) => 
-				Array.isArray(query.queryKey) && 
-				query.queryKey[0] === "subnets" && 
-				query.queryKey[1] === workflowId
-		});
-	}, [queryClient]);
-
-	const getCachedSubnets = useCallback((workflowId: string): Map<number, CachedSubnetData> | undefined => {
-		return queryClient.getQueryData(subnetQueryKeys.subnets(workflowId));
-	}, [queryClient]);
-
-	const updateSubnetStatus = useCallback((workflowId: string, subnetIndex: number, status: string, data: any = null) => {
-		const cached = getCachedSubnetData(workflowId, subnetIndex);
-		if (cached) {
-			const updatedData = {
-				...cached,
-				status: status as CachedSubnetData['status'],
-				data: data || cached.data,
+	const cacheSubnetData = useCallback(
+		(workflowId: string, subnetIndex: number, subnetData: any) => {
+			const cachedData: CachedSubnetData = {
+				itemID: subnetData.itemID || subnetIndex,
+				toolName: subnetData.toolName,
+				status: subnetData.status,
+				data: subnetData.data,
+				prompt: subnetData.prompt,
+				question: subnetData.question,
+				feedbackHistory: subnetData.feedbackHistory,
 				timestamp: Date.now(),
 			};
-			
+
+			// Store individual subnet data
 			queryClient.setQueryData(
 				subnetQueryKeys.subnetData(workflowId, subnetIndex),
-				updatedData
+				cachedData
 			);
-		}
-	}, [getCachedSubnetData, queryClient]);
+
+			// Update the full subnets map
+			queryClient.setQueryData(
+				subnetQueryKeys.subnets(workflowId),
+				(oldSubnets: Map<number, CachedSubnetData> = new Map()) => {
+					const newSubnets = new Map(oldSubnets);
+					newSubnets.set(subnetIndex, cachedData);
+					return newSubnets;
+				}
+			);
+		},
+		[queryClient]
+	);
+
+	const getCachedSubnetData = useCallback(
+		(
+			workflowId: string,
+			subnetIndex: number
+		): CachedSubnetData | undefined => {
+			return queryClient.getQueryData(
+				subnetQueryKeys.subnetData(workflowId, subnetIndex)
+			);
+		},
+		[queryClient]
+	);
+
+	const hasSubnetChanged = useCallback(
+		(workflowId: string, subnetIndex: number, newData: any): boolean => {
+			const cached = getCachedSubnetData(workflowId, subnetIndex);
+
+			if (!cached) {
+				return true; // New subnet, consider it changed
+			}
+
+			// Simple comparison based on status and data
+			return (
+				cached.status !== newData.status ||
+				JSON.stringify(cached.data) !== JSON.stringify(newData.data) ||
+				JSON.stringify(cached.question) !==
+					JSON.stringify(newData.question)
+			);
+		},
+		[getCachedSubnetData]
+	);
+
+	const clearWorkflowCache = useCallback(
+		(workflowId: string) => {
+			queryClient.removeQueries({
+				queryKey: subnetQueryKeys.subnets(workflowId),
+			});
+			queryClient.removeQueries({
+				predicate: (query) =>
+					Array.isArray(query.queryKey) &&
+					query.queryKey[0] === "subnets" &&
+					query.queryKey[1] === workflowId,
+			});
+		},
+		[queryClient]
+	);
+
+	const getCachedSubnets = useCallback(
+		(workflowId: string): Map<number, CachedSubnetData> | undefined => {
+			return queryClient.getQueryData(
+				subnetQueryKeys.subnets(workflowId)
+			);
+		},
+		[queryClient]
+	);
+
+	const updateSubnetStatus = useCallback(
+		(
+			workflowId: string,
+			subnetIndex: number,
+			status: string,
+			data: any = null
+		) => {
+			const cached = getCachedSubnetData(workflowId, subnetIndex);
+			if (cached) {
+				const updatedData = {
+					...cached,
+					status: status as CachedSubnetData["status"],
+					data: data || cached.data,
+					timestamp: Date.now(),
+				};
+
+				queryClient.setQueryData(
+					subnetQueryKeys.subnetData(workflowId, subnetIndex),
+					updatedData
+				);
+			}
+		},
+		[getCachedSubnetData, queryClient]
+	);
 
 	const getWorkflowMaps = useCallback((workflowId: string) => {
 		if (!subnetPreviousStatus.current.has(workflowId)) {
@@ -280,63 +314,84 @@ export const useSubnetCache = () => {
 
 				// ALWAYS process current subnet question first, regardless of feedback history
 				if (subnet.question) {
-					const isAuthenticationQuestion = subnet.question.type === "authentication";
+					const isAuthenticationQuestion =
+						subnet.question.type === "authentication";
 					const isQuestionAlreadyAnswered =
 						subnet.feedbackHistory?.some(
 							(feedback: any) =>
-								feedback.feedback_question === subnet.question.text &&
+								feedback.feedback_question ===
+									subnet.question.text &&
 								feedback.user_answer &&
 								feedback.user_answer.trim() !== "" &&
 								feedback.user_answer !== null
 						);
 
 					// Always show authentication questions, even if we have feedback history
-					const shouldShowQuestion = !isQuestionAlreadyAnswered || isAuthenticationQuestion;
+					const shouldShowQuestion =
+						!isQuestionAlreadyAnswered || isAuthenticationQuestion;
 
 					if (shouldShowQuestion) {
 						const currentQuestionKey = `current_question_${workflowId}_${index}`;
-						
+
 						// Determine the correct feedback index for the current question
 						let currentFeedbackIndex = 0;
-						if (subnet.feedbackHistory && subnet.feedbackHistory.length > 0) {
+						if (
+							subnet.feedbackHistory &&
+							subnet.feedbackHistory.length > 0
+						) {
 							// Find the feedback item that matches this current question
-							const matchingFeedbackIndex = subnet.feedbackHistory.findIndex(
-								(feedback: any) => feedback.feedback_question === subnet.question.text
-							);
+							const matchingFeedbackIndex =
+								subnet.feedbackHistory.findIndex(
+									(feedback: any) =>
+										feedback.feedback_question ===
+										subnet.question.text
+								);
 							if (matchingFeedbackIndex !== -1) {
 								currentFeedbackIndex = matchingFeedbackIndex;
 							} else {
 								// If no exact match, use the highest index + 1 (for new questions)
-								currentFeedbackIndex = subnet.feedbackHistory.length - 1;
+								currentFeedbackIndex =
+									subnet.feedbackHistory.length - 1;
 							}
 						}
-						
+
 						// Check if a question with this sourceId already exists (from feedback history processing)
 						const proposedSourceId = `subnet_${index}_feedback_question_${currentFeedbackIndex}`;
-						const questionAlreadyExists = dataMessages.some(
-							(msg) => msg.sourceId === proposedSourceId
-						) || questionMessages.some(
-							(msg) => msg.sourceId === proposedSourceId
-						);
-						
-						if (!messageIds.has(currentQuestionKey) && !questionAlreadyExists) {
+						const questionAlreadyExists =
+							dataMessages.some(
+								(msg) => msg.sourceId === proposedSourceId
+							) ||
+							questionMessages.some(
+								(msg) => msg.sourceId === proposedSourceId
+							);
+
+						if (
+							!messageIds.has(currentQuestionKey) &&
+							!questionAlreadyExists
+						) {
 							const baseTimestamp = subnet.updatedAt
 								? new Date(subnet.updatedAt)
 								: new Date();
-							const questionTimestamp = new Date(baseTimestamp.getTime() + 1000);
+							const questionTimestamp = new Date(
+								baseTimestamp.getTime() + 1000
+							);
 
 							// For authentication questions, try to get authUrl from feedback history
 							let authUrl = undefined;
-							if (isAuthenticationQuestion && subnet.feedbackHistory?.length > 0) {
-								const authFeedback = subnet.feedbackHistory.find(
-									(feedback: any) => feedback.response?.type === "authentication"
-								);
+							if (
+								isAuthenticationQuestion &&
+								subnet.feedbackHistory?.length > 0
+							) {
+								const authFeedback =
+									subnet.feedbackHistory.find(
+										(feedback: any) =>
+											feedback.response?.type ===
+											"authentication"
+									);
 								if (authFeedback) {
 									authUrl = authFeedback.response?.authUrl;
 								}
 							}
-
-
 
 							const currentQuestionMessage: ChatMsg = {
 								id: `current_question_${index}_${Date.now()}`,
@@ -356,7 +411,9 @@ export const useSubnetCache = () => {
 							};
 							questionMessages.push(currentQuestionMessage);
 							messageIds.add(currentQuestionKey);
-							console.log(`✅ Current question message generated for subnet ${index} (type: ${subnet.question.type}) - feedbackIndex: ${currentFeedbackIndex} - sourceId: ${proposedSourceId}`);
+							console.log(
+								`✅ Current question message generated for subnet ${index} (type: ${subnet.question.type}) - feedbackIndex: ${currentFeedbackIndex} - sourceId: ${proposedSourceId}`
+							);
 						}
 					}
 				}
@@ -393,7 +450,9 @@ export const useSubnetCache = () => {
 						return timeA - timeB; // oldest first for proper chronological flow
 					});
 
-					console.log(`🔍 Processing ${sortedFeedbackHistory.length} feedback history items for subnet ${index}`);
+					console.log(
+						`🔍 Processing ${sortedFeedbackHistory.length} feedback history items for subnet ${index}`
+					);
 
 					// Process each feedback history item
 					sortedFeedbackHistory.forEach(
@@ -413,34 +472,76 @@ export const useSubnetCache = () => {
 								);
 
 							if (!responseAlreadyExists) {
+								// Resolve file/image url from feedback response if available
+								const responseContentType =
+									feedbackItem.response?.data?.contentType ||
+									feedbackItem.response?.contentType;
+								const responseFileUrl: string | undefined =
+									feedbackItem.response?.data?.fileUrl ||
+									feedbackItem.response?.fileUrl;
+								let resolvedImageUrl: string | undefined =
+									undefined;
+								if (
+									typeof responseFileUrl === "string" &&
+									responseFileUrl.length > 0
+								) {
+									try {
+										// If external URL, route via proxy to avoid CORS
+										const isExternal =
+											responseFileUrl.startsWith("http");
+										if (isExternal) {
+											resolvedImageUrl = `/api/image/proxy?url=${encodeURIComponent(
+												responseFileUrl
+											)}`;
+										} else {
+											resolvedImageUrl = responseFileUrl;
+										}
+									} catch {
+										resolvedImageUrl = responseFileUrl;
+									}
+								}
+
 								// Create response message with prompt and data
 								const responseMessage: ChatMsg = {
 									id: `feedback_response_${index}_${feedbackIndex}_${Date.now()}`,
 									type: "workflow_subnet", // Use workflow_subnet type for collapsible display
-									content: feedbackItem.response?.message || subnet.data || "No response data available",
-									timestamp: new Date(feedbackItem.created_at),
+									content:
+										feedbackItem.response?.message ||
+										subnet.data ||
+										"No response data available",
+									timestamp: new Date(
+										feedbackItem.created_at
+									),
 									toolName: subnet.toolName,
 									subnetIndex: index,
 									subnetStatus: subnet.status,
 									sourceId: responseSourceId,
-									prompt: subnet.prompt || feedbackItem.response?.prompt,
-									// Include image data if present
-									imageData: feedbackItem.response?.fileData,
+									prompt:
+										subnet.prompt ||
+										feedbackItem.response?.prompt,
+									// Include image url from response if present
+									imageData: resolvedImageUrl,
 									isImage:
-										!!feedbackItem.response?.fileData &&
-										feedbackItem.response?.contentType?.startsWith(
+										!!resolvedImageUrl &&
+										typeof responseContentType ===
+											"string" &&
+										responseContentType.startsWith(
 											"image/"
 										),
-									contentType: feedbackItem.response?.contentType,
+									contentType: responseContentType,
 								};
 								dataMessages.push(responseMessage);
 								messageIds.add(responseKey);
-								console.log(`✅ Created feedback response message for subnet ${index}, feedback ${feedbackIndex}`);
+								console.log(
+									`✅ Created feedback response message for subnet ${index}, feedback ${feedbackIndex}`
+								);
 							}
 
 							// Check if this is an authentication question
-							const isAuthenticationQuestion = feedbackItem.response?.type === "authentication";
-							
+							const isAuthenticationQuestion =
+								feedbackItem.response?.type ===
+								"authentication";
+
 							// For authentication questions, don't create a separate feedback question message
 							// since we're already creating the current subnet question message
 							if (!isAuthenticationQuestion) {
@@ -450,15 +551,21 @@ export const useSubnetCache = () => {
 
 								const questionAlreadyExists =
 									dataMessages.some(
-										(msg) => msg.sourceId === questionSourceId
+										(msg) =>
+											msg.sourceId === questionSourceId
 									) ||
 									questionMessages.some(
-										(msg) => msg.sourceId === questionSourceId
+										(msg) =>
+											msg.sourceId === questionSourceId
 									);
 
 								if (!questionAlreadyExists) {
-									const responseTimestamp = new Date(feedbackItem.created_at);
-									const questionTimestamp = new Date(responseTimestamp.getTime() + 1000);
+									const responseTimestamp = new Date(
+										feedbackItem.created_at
+									);
+									const questionTimestamp = new Date(
+										responseTimestamp.getTime() + 1000
+									);
 
 									const questionMessage: ChatMsg = {
 										id: `feedback_question_${index}_${feedbackIndex}_${Date.now()}`,
@@ -478,10 +585,14 @@ export const useSubnetCache = () => {
 									};
 									questionMessages.push(questionMessage);
 									messageIds.add(questionKey);
-									console.log(`✅ Created feedback question message for subnet ${index}, feedback ${feedbackIndex}`);
+									console.log(
+										`✅ Created feedback question message for subnet ${index}, feedback ${feedbackIndex}`
+									);
 								}
 							} else {
-								console.log(`⏭️ Skipping feedback question message for authentication - using current subnet question instead`);
+								console.log(
+									`⏭️ Skipping feedback question message for authentication - using current subnet question instead`
+								);
 							}
 
 							// Create answer message if user has answered
@@ -501,11 +612,18 @@ export const useSubnetCache = () => {
 									);
 
 								if (!answerAlreadyExists) {
-									const responseTimestamp = new Date(feedbackItem.created_at);
-									const questionTimestamp = new Date(responseTimestamp.getTime() + 1000);
+									const responseTimestamp = new Date(
+										feedbackItem.created_at
+									);
+									const questionTimestamp = new Date(
+										responseTimestamp.getTime() + 1000
+									);
 									const answerTimestamp = new Date(
 										feedbackItem.updated_at ||
-											new Date(questionTimestamp.getTime() + 1000)
+											new Date(
+												questionTimestamp.getTime() +
+													1000
+											)
 									);
 
 									const answerMessage: ChatMsg = {
@@ -519,14 +637,18 @@ export const useSubnetCache = () => {
 									};
 									questionMessages.push(answerMessage);
 									messageIds.add(answerKey);
-									console.log(`✅ Created feedback answer message for subnet ${index}, feedback ${feedbackIndex}`);
+									console.log(
+										`✅ Created feedback answer message for subnet ${index}, feedback ${feedbackIndex}`
+									);
 								}
 							}
 						}
 					);
 
-										// Skip subnet data processing when we have feedback history
-					console.log(`⏭️ Skipping subnet data processing - using feedback history for subnet ${index}`);
+					// Skip subnet data processing when we have feedback history
+					console.log(
+						`⏭️ Skipping subnet data processing - using feedback history for subnet ${index}`
+					);
 				} else {
 					// Only process subnet data when no feedback history exists
 					const shouldGenerateMessage =
@@ -538,97 +660,106 @@ export const useSubnetCache = () => {
 							(subnet.status === "awaiting_response" &&
 								subnet.data &&
 								(prevStatus || !includeHistory)) ||
-							(subnet.status === "pending" && hasSubstantialData) ||
+							(subnet.status === "pending" &&
+								hasSubstantialData) ||
 							(prevStatus === "in_progress" &&
 								subnet.status !== "in_progress") ||
 							isQuestionArrivingLater);
 
 					if (shouldGenerateMessage) {
 						const {
-						dataMessages: subnetDataMessages,
-						questionMessages: subnetQuestionMessages,
-					} = createSubnetMessages(workflowId, index, subnet, {
-						isRegenerating,
-						isShowingQuestion,
-						hasFeedback: feedbackSet.has(index),
-						isProcessingAfterFeedback:
-							processingMap.get(index) || false,
-						isQuestionArrivingLater,
-						hasFeedbackHistory,
-						includeHistory,
-					});
+							dataMessages: subnetDataMessages,
+							questionMessages: subnetQuestionMessages,
+						} = createSubnetMessages(workflowId, index, subnet, {
+							isRegenerating,
+							isShowingQuestion,
+							hasFeedback: feedbackSet.has(index),
+							isProcessingAfterFeedback:
+								processingMap.get(index) || false,
+							isQuestionArrivingLater,
+							hasFeedbackHistory,
+							includeHistory,
+						});
 
 						// Process data messages
 						subnetDataMessages.forEach((message) => {
-						if (message) {
-							let messageKey;
-							if (subnet.status === "pending" && subnet.data) {
-								messageKey = `${workflowId}_${index}_pending_with_data_${JSON.stringify(
+							if (message) {
+								let messageKey;
+								if (
+									subnet.status === "pending" &&
 									subnet.data
-								).slice(0, 100)}`;
-							} else if (
-								message.type === "workflow_subnet" &&
-								message.subnetStatus === "awaiting_response"
-							) {
-								const dataHash = subnet.data
-									? JSON.stringify(subnet.data).slice(0, 100)
-									: "no-data";
-								messageKey = `${workflowId}_${index}_awaiting_response_data_${dataHash}`;
-							} else {
-								messageKey = `${workflowId}_${index}_${
-									message.type
-								}_${subnet.status}_${
-									subnet.data
+								) {
+									messageKey = `${workflowId}_${index}_pending_with_data_${JSON.stringify(
+										subnet.data
+									).slice(0, 100)}`;
+								} else if (
+									message.type === "workflow_subnet" &&
+									message.subnetStatus === "awaiting_response"
+								) {
+									const dataHash = subnet.data
 										? JSON.stringify(subnet.data).slice(
 												0,
 												100
 										  )
-										: "no-data"
-								}`;
-							}
+										: "no-data";
+									messageKey = `${workflowId}_${index}_awaiting_response_data_${dataHash}`;
+								} else {
+									messageKey = `${workflowId}_${index}_${
+										message.type
+									}_${subnet.status}_${
+										subnet.data
+											? JSON.stringify(subnet.data).slice(
+													0,
+													100
+											  )
+											: "no-data"
+									}`;
+								}
 
-							if (!messageIds.has(messageKey)) {
-								dataMessages.push(message);
-								messageIds.add(messageKey);
-							} else {
-								console.log(
-									`⏭️ Skipping duplicate data message for subnet ${index}:`,
-									message.type,
-									`Status: ${message.subnetStatus || "N/A"}`
-								);
+								if (!messageIds.has(messageKey)) {
+									dataMessages.push(message);
+									messageIds.add(messageKey);
+								} else {
+									console.log(
+										`⏭️ Skipping duplicate data message for subnet ${index}:`,
+										message.type,
+										`Status: ${
+											message.subnetStatus || "N/A"
+										}`
+									);
+								}
 							}
-						}
-					});
+						});
 
 						subnetQuestionMessages.forEach((message) => {
-						if (message) {
-							let messageKey;
-							const questionData =
-								message.questionData || subnet.question;
-							messageKey = `${workflowId}_${index}_question_${
-								questionData?.type
-							}_${message.content?.slice(0, 50)}`;
+							if (message) {
+								let messageKey;
+								const questionData =
+									message.questionData || subnet.question;
+								messageKey = `${workflowId}_${index}_question_${
+									questionData?.type
+								}_${message.content?.slice(0, 50)}`;
 
-							if (!messageIds.has(messageKey)) {
-								questionMessages.push(message);
-								messageIds.add(messageKey);
-							} else {
+								if (!messageIds.has(messageKey)) {
+									questionMessages.push(message);
+									messageIds.add(messageKey);
+								} else {
+								}
 							}
-						}
-					});
+						});
 
 						const shouldShowNotification =
-						subnet.question?.type === "notification" &&
-						(hasChanged ||
-							isShowingQuestion ||
-							(subnet.status === "pending" && subnet.data));
+							subnet.question?.type === "notification" &&
+							(hasChanged ||
+								isShowingQuestion ||
+								(subnet.status === "pending" && subnet.data));
 
 						if (shouldShowNotification) {
 							const notificationKey = `notification_${workflowId}_${index}_${subnet.question.text}`;
 
 							if (!messageIds.has(notificationKey)) {
 								const notificationMessage =
-								createNotificationMessage(subnet, index);
+									createNotificationMessage(subnet, index);
 								if (notificationMessage) {
 									dataMessages.push(notificationMessage);
 									messageIds.add(notificationKey);
@@ -656,17 +787,21 @@ export const useSubnetCache = () => {
 				}
 
 				// Filter out feedback processing messages
-				if (msg.content?.includes("Feedback submitted successfully") ||
+				if (
+					msg.content?.includes("Feedback submitted successfully") ||
 					msg.content?.includes("Feedback processed successfully") ||
-					msg.content?.includes("Resuming workflow")) {
+					msg.content?.includes("Resuming workflow")
+				) {
 					return false;
 				}
 
 				// Filter out generic "Response" messages without meaningful content
-				if (msg.type === "response" && 
-					(msg.content === "Response" || 
-					 msg.content === "Your answer" ||
-					 msg.content === "Proceeding with current result")) {
+				if (
+					msg.type === "response" &&
+					(msg.content === "Response" ||
+						msg.content === "Your answer" ||
+						msg.content === "Proceeding with current result")
+				) {
 					return false;
 				}
 
@@ -675,44 +810,48 @@ export const useSubnetCache = () => {
 
 			const filteredQuestionMessages = questionMessages.filter((msg) => {
 				// Filter out unwanted question messages
-				if (msg.content?.includes("Feedback submitted successfully") ||
-					msg.content?.includes("Feedback processed successfully")) {
+				if (
+					msg.content?.includes("Feedback submitted successfully") ||
+					msg.content?.includes("Feedback processed successfully")
+				) {
 					return false;
 				}
 
 				return true;
 			});
 
-			const safeguardedDataMessages = filteredDataMessages.filter((msg) => {
-				if (
-					msg.type === "workflow_subnet" &&
-					msg.subnetIndex !== undefined
-				) {
-					const subnetIndex = msg.subnetIndex;
-					const subnet = subnetData[subnetIndex];
-					const hasFeedbackForThisSubnet =
-						subnet?.feedbackHistory &&
-						subnet.feedbackHistory.length > 0;
+			const safeguardedDataMessages = filteredDataMessages.filter(
+				(msg) => {
+					if (
+						msg.type === "workflow_subnet" &&
+						msg.subnetIndex !== undefined
+					) {
+						const subnetIndex = msg.subnetIndex;
+						const subnet = subnetData[subnetIndex];
+						const hasFeedbackForThisSubnet =
+							subnet?.feedbackHistory &&
+							subnet.feedbackHistory.length > 0;
 
-					if (hasFeedbackForThisSubnet) {
-						// Check if this is an original data message (not from feedback history)
-						const isOriginalDataMessage =
-							!msg.sourceId?.includes("feedback");
+						if (hasFeedbackForThisSubnet) {
+							// Check if this is an original data message (not from feedback history)
+							const isOriginalDataMessage =
+								!msg.sourceId?.includes("feedback");
 
-						if (isOriginalDataMessage) {
-							return false;
+							if (isOriginalDataMessage) {
+								return false;
+							}
 						}
 					}
-				}
-				// For response messages from feedback history, always keep them
-				if (
-					msg.type === "response" &&
-					msg.sourceId?.includes("feedback")
-				) {
-				}
+					// For response messages from feedback history, always keep them
+					if (
+						msg.type === "response" &&
+						msg.sourceId?.includes("feedback")
+					) {
+					}
 
-				return true;
-			});
+					return true;
+				}
+			);
 
 			// Apply the same safeguard to question messages
 			const safeguardedQuestionMessages = filteredQuestionMessages.filter(
@@ -878,9 +1017,16 @@ export const useSubnetCache = () => {
 							const parsedData = JSON.parse(subnet.data);
 
 							// Check for nested data structure (like in subnet 3)
-							if (parsedData.data && parsedData.data.data && parsedData.data.data.message) {
+							if (
+								parsedData.data &&
+								parsedData.data.data &&
+								parsedData.data.data.message
+							) {
 								content = parsedData.data.data.message;
-							} else if (parsedData.data && parsedData.data.message) {
+							} else if (
+								parsedData.data &&
+								parsedData.data.message
+							) {
 								content = parsedData.data.message;
 							} else if (
 								parsedData.enhancedPrompt &&
@@ -998,10 +1144,17 @@ export const useSubnetCache = () => {
 							const parsedData = JSON.parse(subnet.data);
 
 							// Check for nested data structure
-							if (parsedData.data && parsedData.data.data && parsedData.data.data.message) {
+							if (
+								parsedData.data &&
+								parsedData.data.data &&
+								parsedData.data.data.message
+							) {
 								// For Twitter responses: data.data.message
 								content = parsedData.data.data.message;
-							} else if (parsedData.data && parsedData.data.message) {
+							} else if (
+								parsedData.data &&
+								parsedData.data.message
+							) {
 								content = parsedData.data.message;
 							} else if (
 								parsedData.enhancedPrompt &&
@@ -1096,10 +1249,17 @@ export const useSubnetCache = () => {
 						try {
 							const parsedData = JSON.parse(subnet.data);
 
-							if (parsedData.data && parsedData.data.data && parsedData.data.data.message) {
+							if (
+								parsedData.data &&
+								parsedData.data.data &&
+								parsedData.data.data.message
+							) {
 								// For Twitter responses: data.data.message
 								content = parsedData.data.data.message;
-							} else if (parsedData.data && parsedData.data.message) {
+							} else if (
+								parsedData.data &&
+								parsedData.data.message
+							) {
 								content = parsedData.data.message;
 							} else if (
 								parsedData.enhancedPrompt &&
@@ -1288,8 +1448,6 @@ export const useSubnetCache = () => {
 		},
 		[]
 	);
-
-
 
 	const hasSubnetData = useCallback(
 		(workflowId: string, subnetIndex: number) => {
