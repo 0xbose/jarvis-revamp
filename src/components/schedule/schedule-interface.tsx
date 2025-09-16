@@ -678,7 +678,7 @@ export default function ScheduleInterface({
 				</div>
 			)}
 
-			{isDateInPast && (
+			{isDateInPast && !isDisabled && (
 				<div className="p-3 rounded-md flex items-center gap-x-4 bg-amber-500/20">
 					<Info className="size-5" />
 					<span>

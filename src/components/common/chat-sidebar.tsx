@@ -42,6 +42,7 @@ import {
 	Shield,
 	MessageCircle,
 	CirclePause,
+	MessageCircleMoreIcon,
 } from "lucide-react";
 import {
 	Tooltip,
@@ -58,18 +59,32 @@ import { prefetchChatData } from "@/utils/chat-utils";
 import { STORAGE_KEYS } from "@/config/constants";
 import { QUERY_KEYS } from "@/utils/query-keys";
 import { deleteWorkflowRequest } from "@/controllers/requests/requests.mutation";
+import { deleteChatSession } from "@/controllers/chat/chat.mutations";
 
 const CHAT_OPTIONS = [1, 5, 10, 15, 20] as const;
 
 interface WorkflowItem {
-	requestId: string;
+	// Common
+	type?: "workflow" | "chat";
 	id?: string;
-	agentId: string;
-	agentAddress: string;
-	agentIDFromCollection: string;
-	status: string;
 	userPrompt?: string;
+
+	// Workflow-specific
+	requestId?: string;
+	agentId?: string;
+	agentAddress?: string;
+	agentIDFromCollection?: string;
+	status?: string;
 	questionType?: string;
+
+	// Chat-specific
+	chatId?: string;
+	nftId?: string;
+	firstMessage?: {
+		role: string;
+		content: string;
+		timestamp: string;
+	};
 }
 
 const getWorkflowIcon = (status: string) => {
@@ -146,12 +161,21 @@ const WorkflowItem = React.memo(
 		isRunning: boolean;
 		currentAgentId?: string;
 		currentWorkflowId?: string | null;
-		handleDelete: (workflowId: string) => void;
+		handleDelete: (item: WorkflowItem) => void;
 	}) => {
 		const router = useRouter();
-		const Icon = getWorkflowIcon(workflow.status);
-		const iconColor = getWorkflowIconColor(workflow.status);
-		const iconAnimation = getWorkflowIconAnimation(workflow.status);
+		const Icon =
+			workflow.type === "chat"
+				? MessageCircleMoreIcon
+				: getWorkflowIcon(workflow.status as string);
+		const iconColor =
+			workflow.type === "chat"
+				? "text-amber-600"
+				: getWorkflowIconColor(workflow.status as string);
+		const iconAnimation =
+			workflow.type === "chat"
+				? ""
+				: getWorkflowIconAnimation(workflow.status as string);
 
 		const isCompleted = workflow.status === "completed";
 
@@ -169,7 +193,7 @@ const WorkflowItem = React.memo(
 
 			switch (value) {
 				case "delete":
-					handleDelete(workflowId);
+					handleDelete(workflow);
 					break;
 				case "Left":
 					// Navigate to single workflow view
@@ -191,7 +215,12 @@ const WorkflowItem = React.memo(
 
 		return (
 			<SidebarMenuItem
-				key={workflow.requestId || workflow.id || index}
+				key={
+					workflow.requestId ||
+					workflow.id ||
+					workflow.chatId ||
+					index
+				}
 				className="w-full"
 			>
 				<SidebarMenuButton
@@ -208,19 +237,29 @@ const WorkflowItem = React.memo(
 						}`}
 					>
 						<Link
-							href={`/chat/agent/${workflow.agentAddress}?workflowId=${workflow.requestId}&nftId=${workflow.agentIDFromCollection}`}
+							href={
+								workflow.type === "chat" && workflow.chatId
+									? `/chat?chatId=${workflow.chatId}`
+									: `/chat/agent/${workflow.agentAddress}?workflowId=${workflow.requestId}&nftId=${workflow.agentIDFromCollection}`
+							}
 							className="w-full flex items-center justify-center gap-x-1.5"
 							onMouseEnter={() => {
 								// Debug logging
 								console.log("🔍 Link Debug:", {
-									href: `/chat/agent/${workflow.agentAddress}?workflowId=${workflow.requestId}&nftId=${workflow.agentIDFromCollection}`,
+									href:
+										workflow.type === "chat" &&
+										workflow.chatId
+											? `/chat?chatId=${workflow.chatId}`
+											: `/chat/agent/${workflow.agentAddress}?workflowId=${workflow.requestId}&nftId=${workflow.agentIDFromCollection}`,
 									agentIDFromCollection:
 										workflow.agentIDFromCollection,
 									workflow: workflow,
 								});
-								onPrefetch(
-									workflow.requestId || workflow.id || ""
-								);
+								if (workflow.type !== "chat") {
+									onPrefetch(
+										workflow.requestId || workflow.id || ""
+									);
+								}
 							}}
 						>
 							{Icon && (
@@ -236,14 +275,26 @@ const WorkflowItem = React.memo(
 											<Tooltip>
 												<TooltipTrigger asChild>
 													<span className="text-sm text-ellipsis whitespace-nowrap overflow-hidden cursor-pointer">
-														{workflow.userPrompt ||
-															workflow.requestId}
+														{workflow.type ===
+														"chat"
+															? workflow
+																	.firstMessage
+																	?.content ||
+															  workflow.chatId
+															: workflow.userPrompt ||
+															  workflow.requestId}
 													</span>
 												</TooltipTrigger>
 												<TooltipContent>
 													<p className="max-w-xs text-ellipsis whitespace-nowrap overflow-hidden">
-														{workflow.userPrompt ||
-															workflow.requestId}
+														{workflow.type ===
+														"chat"
+															? workflow
+																	.firstMessage
+																	?.content ||
+															  workflow.chatId
+															: workflow.userPrompt ||
+															  workflow.requestId}
 													</p>
 												</TooltipContent>
 											</Tooltip>
@@ -369,7 +420,7 @@ const ChatSidebar = React.memo(() => {
 	};
 
 	const { data, refetch, isRefetching, isLoading, error } = useQuery({
-		queryKey: [QUERY_KEYS.HISTORY, chatCount, address],
+		queryKey: [QUERY_KEYS.HISTORY, address],
 		queryFn: async () => {
 			const response = await getHistory(
 				{ limit: chatCount },
@@ -624,18 +675,26 @@ const ChatSidebar = React.memo(() => {
 		}
 	}, [refetch, isRefetching]);
 
-	const handleDelete = async (workflowId: string) => {
+	const handleDelete = async (item: WorkflowItem) => {
 		try {
-			await deleteWorkflowRequest(
-				workflowId,
-				skyBrowser,
-				address ? { address } : undefined
-			);
+			if (item.type === "chat" && item.chatId) {
+				await deleteChatSession({
+					chatId: item.chatId,
+					skyBrowser,
+					web3Context: address ? { address } : undefined,
+				});
+			} else if (item.requestId) {
+				await deleteWorkflowRequest(
+					item.requestId,
+					skyBrowser,
+					address ? { address } : undefined
+				);
+			}
 			queryClient.invalidateQueries({
 				queryKey: [QUERY_KEYS.HISTORY, chatCount, address],
 			});
 		} catch (error) {
-			console.error("Failed to delete workflow:", error);
+			console.error("Failed to delete item:", error);
 		}
 	};
 

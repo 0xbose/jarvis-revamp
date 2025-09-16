@@ -17,8 +17,9 @@ import { ChatMessage } from "@/components/common/chat-message";
 import { useGlobalStore } from "@/stores/global-store";
 import { useRouter, useSearchParams } from "next/navigation";
 import ChatSkeleton from "@/components/common/chat-skeleton";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getChatMessages } from "@/controllers/chat/chat.query";
+import { QUERY_KEYS } from "@/utils/query-keys";
 
 interface StreamResponse {
 	type: "update" | "final" | "chat_chunk";
@@ -81,7 +82,7 @@ function ChatPageContent() {
 		useGlobalStore();
 	const router = useRouter();
 	const searchParams = useSearchParams();
-
+	const queryClient = useQueryClient();
 	const chatIdFromUrl = searchParams.get("chatId");
 
 	const {
@@ -390,6 +391,9 @@ function ChatPageContent() {
 						}
 					}
 				} finally {
+					queryClient.invalidateQueries({
+						queryKey: [QUERY_KEYS.HISTORY, address],
+					});
 					reader.releaseLock();
 				}
 			} catch (error) {

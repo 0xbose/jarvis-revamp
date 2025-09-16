@@ -42,7 +42,10 @@ export const getHistory = async (
 		web3Context
 	);
 	const response = await axiosInstance.get("/requests", {
-		params: params || {},
+		params: {
+			...params,
+			includeChatSessions: true,
+		},
 	});
 	return response.data;
 };
