@@ -24,10 +24,47 @@ interface SelectionCardProps {
 	onTextChange: (cardId: string, text: string) => void;
 	onModelChange: (cardId: string, modelId: string) => void;
 	onSend: (cardId: string, text: string, modelId: string) => void;
-	onOpenChat: (chatId: string) => void;
+	onOpenChat: (chatId: string, cardId: string) => void;
 	onRemove: (cardId: string) => void;
 	onToggleCollapse: (cardId: string) => void;
 }
+
+// Generate a consistent gradient index based on card ID
+const getGradientIndex = (cardId: string): number => {
+	let hash = 0;
+	for (let i = 0; i < cardId.length; i++) {
+		const char = cardId.charCodeAt(i);
+		hash = (hash << 5) - hash + char;
+		hash = hash & hash; // Convert to 32-bit integer
+	}
+	return Math.abs(hash) % 8; // 8 different gradients
+};
+
+const Gradients = [
+	// Platinum
+	"bg-[conic-gradient(at_center,_#fafafa,_#d4d4d8,_#f3f4f6,_#fafafa)] dark:bg-[conic-gradient(at_center,_#525252,_#262626,_#737373,_#525252)]",
+
+	// Titanium Blue
+	"bg-[conic-gradient(at_center,_#dbeafe,_#60a5fa,_#93c5fd,_#dbeafe)] dark:bg-[conic-gradient(at_center,_#1e3a8a,_#0c4a6e,_#1e40af,_#1e3a8a)]",
+
+	// Polished Silver
+	"bg-[conic-gradient(at_top_left,_#f5f5f5,_#d4d4d8,_#f5f5f5)] dark:bg-[conic-gradient(at_top_left,_#404040,_#171717,_#404040)]",
+
+	// Chrome
+	"bg-[conic-gradient(at_center,_#fafafa,_#a3a3a3,_#e5e5e5,_#fafafa)] dark:bg-[conic-gradient(at_center,_#525252,_#0a0a0a,_#262626,_#525252)]",
+
+	// Shiny Gold
+	"bg-[conic-gradient(at_center,_#fef9c3,_#facc15,_#fde68a,_#fef9c3)] dark:bg-[conic-gradient(at_center,_#854d0e,_#713f12,_#a16207,_#854d0e)]",
+
+	// Bronze
+	"bg-[conic-gradient(at_center,_#fcd34d,_#b45309,_#fbbf24,_#fcd34d)] dark:bg-[conic-gradient(at_center,_#78350f,_#451a03,_#92400e,_#78350f)]",
+
+	// Gunmetal
+	"bg-[conic-gradient(at_center,_#e5e7eb,_#9ca3af,_#6b7280,_#e5e7eb)] dark:bg-[conic-gradient(at_center,_#1f2937,_#111827,_#374151,_#1f2937)]",
+
+	// Rose Gold
+	"bg-[conic-gradient(at_center,_#fce7f3,_#f9a8d4,_#fbcfe8,_#fce7f3)] dark:bg-[conic-gradient(at_center,_#831843,_#4a044e,_#9d174d,_#831843)]",
+];
 
 export default function SelectionCardComponent({
 	card,
@@ -42,13 +79,14 @@ export default function SelectionCardComponent({
 	onToggleCollapse,
 }: SelectionCardProps) {
 	const isCollapsed = card.isCollapsed ?? true;
+	const gradientClass = Gradients[getGradientIndex(card.id)];
 
 	if (isCollapsed) {
 		return (
 			<div className="flex justify-end">
 				<button
 					onClick={() => onToggleCollapse(card.id)}
-					className="mr-2 group relative w-12 h-12 bg-background border border-border rounded-full shadow-sm backdrop-blur hover:shadow-md transition-all duration-200 hover:scale-105 flex items-center justify-center"
+					className={`mr-2 group relative w-12 h-12 ${gradientClass} border border-border/50 rounded-full shadow-sm backdrop-blur hover:shadow-md transition-all duration-200 hover:scale-105 flex items-center justify-center`}
 				>
 					{/* Message icon */}
 					<svg
@@ -60,7 +98,7 @@ export default function SelectionCardComponent({
 						strokeWidth="2"
 						strokeLinecap="round"
 						strokeLinejoin="round"
-						className="text-muted-foreground group-hover:text-foreground transition-colors"
+						className="text-slate-600 dark:text-slate-300 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors"
 					>
 						<path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
 						<path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
@@ -133,7 +171,7 @@ export default function SelectionCardComponent({
 					{card.chatId ? (
 						<Button
 							variant="outline"
-							onClick={() => onOpenChat(card.chatId!)}
+							onClick={() => onOpenChat(card.chatId!, card.id)}
 							className="flex items-center gap-2 bg-sidebar hover:bg-sidebar/80 cursor-pointer"
 						>
 							<svg

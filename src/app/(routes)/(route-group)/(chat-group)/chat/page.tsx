@@ -175,11 +175,21 @@ function ChatPageContent() {
 			fetchedMessages &&
 			fetchedMessages.success &&
 			Array.isArray(fetchedMessages.data?.messages) &&
-			messages.length === 0 &&
-			!isStreaming
+			!isStreaming &&
+			chatIdFromUrl // Ensure we have a chatId from URL
 		) {
 			const mapped = mapFetchedMessagesToChatMsgs(fetchedMessages);
+
+			console.log(
+				"Loading messages for chatId:",
+				chatIdFromUrl,
+				"Messages count:",
+				mapped.length
+			);
+
+			// Always update messages if we have new fetched data, regardless of current message length
 			setMessages(mapped);
+
 			if (fetchedMessages.data?.chatId && !currentChatId) {
 				setCurrentChatId(fetchedMessages.data.chatId);
 			}
@@ -206,7 +216,7 @@ function ChatPageContent() {
 				}, 100);
 			}, 50);
 		}
-	}, [fetchedMessages, messages.length, isStreaming, currentChatId]);
+	}, [fetchedMessages, isStreaming, currentChatId, chatIdFromUrl]);
 
 	const isNearBottom = useCallback(() => {
 		const container = messagesContainerRef.current;
@@ -622,21 +632,30 @@ function ChatPageContent() {
 	);
 
 	const handleCardOpenChat = useCallback(
-		(chatId: string) => {
-			// Clear current messages to force refetch
+		(chatId: string, cardId: string) => {
+			setSelectionCards((prev) => prev.filter((c) => c.id !== cardId));
+
 			setMessages([]);
 			setCurrentChatId(null);
 			setStreamingMessage("");
 			setIsStreaming(false);
 			setIsCardStreaming(false);
 
-			// Invalidate cache for the new chat
+			// Invalidate cache for the new chat and force refetch
 			queryClient.invalidateQueries({
 				queryKey: ["chat-messages", chatId],
 			});
 
 			// Navigate to the new chat
 			router.push(`/chat?chatId=${chatId}`);
+
+			// Force refetch after navigation
+			setTimeout(() => {
+				console.log("Force refetching messages for chatId:", chatId);
+				queryClient.refetchQueries({
+					queryKey: ["chat-messages", chatId],
+				});
+			}, 100);
 		},
 		[queryClient, router]
 	);
@@ -739,7 +758,9 @@ function ChatPageContent() {
 								onTextChange={handleCardTextChange}
 								onModelChange={handleCardModelChange}
 								onSend={handleCardSend}
-								onOpenChat={handleCardOpenChat}
+								onOpenChat={(chatId, cardId) =>
+									handleCardOpenChat(chatId, cardId)
+								}
 								onRemove={handleCardRemove}
 								onToggleCollapse={handleCardToggleCollapse}
 							/>
