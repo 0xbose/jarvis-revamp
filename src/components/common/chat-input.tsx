@@ -183,6 +183,7 @@ export default function ChatInput({
 								setMode(mode === "agent" ? "chat" : "agent");
 							}}
 							aria-pressed={mode === "agent"}
+							disabled={disableAgentSelection}
 						>
 							<span
 								className={`

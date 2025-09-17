@@ -20,6 +20,7 @@ import ChatSkeleton from "@/components/common/chat-skeleton";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getChatMessages } from "@/controllers/chat/chat.query";
 import { QUERY_KEYS } from "@/utils/query-keys";
+import SelectionAskJarvis from "@/components/common/selection-ask-jarvis";
 
 interface StreamResponse {
 	type: "update" | "final" | "chat_chunk";
@@ -505,7 +506,16 @@ function ChatPageContent() {
 						height: "calc(100vh - 8rem)",
 					}}
 				>
-					<div className="pb-4 px-6 mx-auto max-w-7xl">
+					<div className="pb-4 px-6 mx-auto max-w-7xl relative chat-page-messages-root">
+						<SelectionAskJarvis
+							rootSelector=".chat-page-messages-root"
+							onAsk={(text) => {
+								const prefix = prompt?.trim()
+									? `${prompt}\n\n`
+									: "";
+								setPrompt(`${prefix}"${text}"\n`);
+							}}
+						/>
 						{messages.map((message, idx) => (
 							<ChatMessage
 								key={message.id}
@@ -555,7 +565,7 @@ function ChatPageContent() {
 						setPrompt={setPrompt}
 						isExecuting={isStreaming}
 						workflowStatus={isStreaming ? "running" : "completed"}
-						hideModeSelection={true}
+						disableAgentSelection={true}
 					/>
 				</div>
 			</div>
