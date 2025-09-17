@@ -12,6 +12,8 @@ interface PaginationProps {
 	// Cursor mode support
 	cursorMode?: boolean;
 	hasNextPage?: boolean;
+	hasPreviousPage?: boolean;
+	onPrevious?: () => void;
 	onNext?: () => void;
 }
 
@@ -21,6 +23,8 @@ const DataPagination: React.FC<PaginationProps> = ({
 	total,
 	cursorMode,
 	hasNextPage,
+	hasPreviousPage,
+	onPrevious,
 	onNext,
 }) => {
 	const router = useRouter();
@@ -40,6 +44,10 @@ const DataPagination: React.FC<PaginationProps> = ({
 	};
 
 	const handlePreviousPage = () => {
+		if (cursorMode && onPrevious) {
+			onPrevious();
+			return;
+		}
 		const newSearchParams = new URLSearchParams();
 		usePreviousSearchParams({ newSearchParams });
 		newSearchParams.set("page", (parseInt(currentPage) - 1).toString());
@@ -182,7 +190,22 @@ const DataPagination: React.FC<PaginationProps> = ({
 						)}
 					</>
 				)}
-
+				{cursorMode && (
+					<Button
+						disabled={!hasPreviousPage}
+						type="button"
+						onClick={handlePreviousPage}
+						variant="ghost"
+						className={cn(
+							"h-8 w-8 p-0",
+							!hasPreviousPage
+								? "text-gray-500 cursor-not-allowed"
+								: "text-gray-300 hover:bg-gray-700 hover:text-white"
+						)}
+					>
+						<ChevronLeft className="size-4" />
+					</Button>
+				)}
 				<Button
 					disabled={
 						cursorMode

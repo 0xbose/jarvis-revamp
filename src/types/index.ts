@@ -269,6 +269,7 @@ export interface WorkflowResponse {
 		totalPages?: number;
 		hasNextPage?: boolean;
 		nextPageUrl?: string;
+		previousPageUrl?: string;
 		workflowCursor?: string;
 		chatCursor?: string;
 	};

@@ -33,6 +33,7 @@ export const getHistory = async (
 			| "stopped"
 			| "awaiting_response";
 		nextPageUrl?: string;
+		pageUrl?: string; // generic cursor page url (previous or next)
 	},
 	skyBrowser?: SkyMainBrowser,
 	web3Context?: Web3Context
@@ -43,9 +44,10 @@ export const getHistory = async (
 		web3Context
 	);
 
-	// If API provides a fully-qualified nextPageUrl, use it directly
-	if (params?.nextPageUrl) {
-		const response = await axiosInstance.get(params.nextPageUrl);
+	// If API provides a fully-qualified cursor pageUrl (prev/next), use it directly
+	const directUrl = params?.pageUrl || params?.nextPageUrl;
+	if (directUrl) {
+		const response = await axiosInstance.get(directUrl);
 		return response.data;
 	}
 

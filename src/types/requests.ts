@@ -29,6 +29,7 @@ export interface WorkflowRequestsPagination {
 	// Cursor-based fields (new API)
 	hasNextPage?: boolean;
 	nextPageUrl?: string;
+	previousPageUrl?: string;
 	workflowCursor?: string;
 	chatCursor?: string;
 }

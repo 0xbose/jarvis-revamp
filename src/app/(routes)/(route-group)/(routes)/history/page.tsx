@@ -98,9 +98,7 @@ function WorkflowHistoryInner() {
 		null
 	);
 	// Cursor-based pagination state
-	const [nextPageUrl, setNextPageUrl] = useState<string | undefined>(
-		undefined
-	);
+	const [pageUrl, setPageUrl] = useState<string | undefined>(undefined);
 
 	const pageSize = 10;
 	const { skyBrowser, address } = useWallet();
@@ -127,7 +125,7 @@ function WorkflowHistoryInner() {
 			currentPage,
 			pageSize,
 			statusFilter.length > 0 ? statusFilter[0] : undefined,
-			nextPageUrl, // include cursor url in key
+			pageUrl, // include cursor url in key
 		],
 		queryFn: async () => {
 			if (!skyBrowser || !address) {
@@ -149,7 +147,7 @@ function WorkflowHistoryInner() {
 									| "stopped"
 									| "awaiting_response")
 							: undefined,
-					nextPageUrl,
+					pageUrl,
 				},
 				skyBrowser,
 				web3Context
@@ -173,6 +171,7 @@ function WorkflowHistoryInner() {
 					total: newTotalCount,
 					hasNextPage: response.pagination?.hasNextPage,
 					nextPageUrl: response.pagination?.nextPageUrl,
+					previousPageUrl: response.pagination?.previousPageUrl,
 				},
 			};
 		},
@@ -194,7 +193,7 @@ function WorkflowHistoryInner() {
 
 	const handleSearch = (value: string) => {
 		setSearch(value);
-		setNextPageUrl(undefined); // reset cursor on new search
+		setPageUrl(undefined); // reset cursor on new search
 		updateSearchParams({ search: value || null, page: "1" });
 	};
 
@@ -203,7 +202,7 @@ function WorkflowHistoryInner() {
 			? [...statusFilter, status]
 			: statusFilter.filter((s) => s !== status);
 		setStatusFilter(newStatusFilter);
-		setNextPageUrl(undefined); // reset cursor on filter change
+		setPageUrl(undefined); // reset cursor on filter change
 		updateSearchParams({
 			status: newStatusFilter.length > 0 ? newStatusFilter[0] : null,
 			page: "1",
@@ -212,7 +211,7 @@ function WorkflowHistoryInner() {
 
 	const handleClearFilters = () => {
 		setStatusFilter([]);
-		setNextPageUrl(undefined); // reset cursor
+		setPageUrl(undefined); // reset cursor
 		updateSearchParams({ status: null, page: "1" });
 	};
 
@@ -384,6 +383,11 @@ function WorkflowHistoryInner() {
 		(historyData as WorkflowResponse)?.pagination?.hasNextPage
 	);
 
+	const previousPageUrl = (historyData as WorkflowResponse)?.pagination
+		?.previousPageUrl as string | undefined;
+	const nextPageUrl = (historyData as WorkflowResponse)?.pagination
+		?.nextPageUrl as string | undefined;
+
 	return (
 		<div className="p-6">
 			<div>
@@ -481,11 +485,15 @@ function WorkflowHistoryInner() {
 						currentLocation="/history"
 						cursorMode
 						hasNextPage={hasNextPage}
+						hasPreviousPage={Boolean(previousPageUrl)}
+						onPrevious={() => {
+							if (previousPageUrl) {
+								setPageUrl(previousPageUrl);
+							}
+						}}
 						onNext={() => {
-							const url = (historyData as WorkflowResponse)
-								?.pagination?.nextPageUrl;
-							if (url) {
-								setNextPageUrl(url);
+							if (nextPageUrl) {
+								setPageUrl(nextPageUrl);
 							}
 						}}
 					/>
