@@ -12,14 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getAvailableModels } from "@/controllers/models/models.query";
 import { useWallet } from "@/hooks/use-wallet";
 import { QUERY_KEYS } from "@/utils/query-keys";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-	DialogClose,
-} from "@/components/ui/dialog";
+import ModelSelectDialog from "@/components/common/ModelSelectDialog";
 
 export default function ChatInput({
 	onSend,
@@ -218,87 +211,10 @@ export default function ChatInput({
 
 				{/* Model selector - only in Chat Mode */}
 				{!isAgentMode && (
-					<Dialog>
-						<DialogTrigger asChild>
-							<Button
-								size="sm"
-								className={`w-fit max-w-48 bg-background border border-border text-xs ${
-									selectedModel
-										? "border-accent bg-accent/20 hover:bg-accent/25 !text-accent"
-										: ""
-								}`}
-							>
-								<Cpu className="mr-2 h-3.5 w-3.5" />
-								<span className="max-w-40 truncate">
-									{selectedModel
-										? selectedModel.name
-										: "Select model"}
-								</span>
-							</Button>
-						</DialogTrigger>
-						<DialogContent className="!w-[92vw] !h-[80svh] !max-h-[800px] !max-w-3xl flex flex-col border-none rounded-3xl pb-6 ">
-							<DialogHeader className="absolute top-0 left-0 w-full rounded-t-3xl bg-background z-10 h-14 px-8 flex justify-center">
-								<DialogTitle className="flex items-center gap-2">
-									<Cpu />
-									<span className="text-foreground">
-										Models
-									</span>
-								</DialogTitle>
-							</DialogHeader>
-							<div className="mt-9 px-6 flex-1 min-h-0 flex flex-col overflow-y-auto scrollbar-thin">
-								<div className="mb-2">
-									<Input
-										placeholder="Search models by name or id..."
-										value={modelSearch}
-										onChange={(e) =>
-											setModelSearch(e.target.value)
-										}
-									/>
-								</div>
-								<div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide">
-									{isLoading ? (
-										<div className="flex items-center gap-2 text-sm text-muted-foreground">
-											<Loader2 className="size-4 animate-spin" />{" "}
-											Loading models...
-										</div>
-									) : filteredModels.length === 0 ? (
-										<div className="text-sm text-muted-foreground">
-											No models match your search.
-										</div>
-									) : (
-										<div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-											{filteredModels.map((m) => (
-												<button
-													key={m.id}
-													className={`text-left p-3 rounded-lg border ${
-														selectedModel?.id ===
-														m.id
-															? "border-accent bg-accent/10"
-															: "border-border hover:bg-muted/30"
-													}`}
-													onClick={() =>
-														setSelectedModel(m)
-													}
-												>
-													<div className="text-sm font-medium text-foreground">
-														{m.name}
-													</div>
-													<div className="text-xs text-muted-foreground break-all">
-														{m.id}
-													</div>
-												</button>
-											))}
-										</div>
-									)}
-								</div>
-							</div>
-							<div className="px-6">
-								<DialogClose asChild>
-									<Button className="w-full">Done</Button>
-								</DialogClose>
-							</div>
-						</DialogContent>
-					</Dialog>
+					<ModelSelectDialog
+						value={selectedModel as any}
+						onChange={(m) => setSelectedModel(m as any)}
+					/>
 				)}
 			</div>
 

@@ -6,6 +6,7 @@ import React, {
 	useEffect,
 	useCallback,
 	Suspense,
+	useMemo,
 } from "react";
 import { useWallet } from "@/hooks/use-wallet";
 import { apiKeyManager } from "@/utils/api-key-manager";
@@ -21,6 +22,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getChatMessages } from "@/controllers/chat/chat.query";
 import { QUERY_KEYS } from "@/utils/query-keys";
 import SelectionAskJarvis from "@/components/common/selection-ask-jarvis";
+import { getAvailableModels } from "@/controllers/models/models.query";
+import SelectionCardComponent from "@/components/common/SelectionCard";
 
 interface StreamResponse {
 	type: "update" | "final" | "chat_chunk";
@@ -69,6 +72,18 @@ function ChatPageContent() {
 	const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 	const [streamingMessage, setStreamingMessage] = useState("");
 	const [isInitialLoad, setIsInitialLoad] = useState(false);
+	const [isCardStreaming, setIsCardStreaming] = useState(false);
+
+	// Right-side selection cards state (multiple small cards)
+	type SelectionCard = {
+		id: string;
+		text: string;
+		modelId?: string;
+		chatId?: string;
+		isSending?: boolean;
+		isCollapsed?: boolean;
+	};
+	const [selectionCards, setSelectionCards] = useState<SelectionCard[]>([]);
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -112,6 +127,47 @@ function ChatPageContent() {
 		staleTime: 0,
 		gcTime: 0,
 	});
+
+	// Fetch available models for the panel's model selector
+	const { data: modelsData } = useQuery<any[]>({
+		queryKey: ["available-models", address],
+		queryFn: () =>
+			getAvailableModels({
+				skyBrowser,
+				web3Context: { address },
+			}),
+		enabled: !!skyBrowser && !!address,
+		retry: false,
+		refetchOnWindowFocus: false,
+	});
+
+	const models = useMemo(() => {
+		if (!modelsData) return [] as any[];
+		// Some backends wrap the array in { data: [...] } or return an object; normalize here
+		const maybeArray = Array.isArray(modelsData)
+			? modelsData
+			: Array.isArray((modelsData as any).data)
+			? (modelsData as any).data
+			: [];
+		return maybeArray.map((m: any) => ({
+			id: m.id || m.modelId || m.value,
+			name: m.name || m.label || m.id || m.modelId,
+		}));
+	}, [modelsData]);
+
+	// Ensure newly added cards get a default model
+	useEffect(() => {
+		setSelectionCards((prev) =>
+			prev.map((c) =>
+				c.modelId
+					? c
+					: {
+							...c,
+							modelId: selectedModel?.id || models[0]?.id,
+					  }
+			)
+		);
+	}, [selectedModel, models]);
 
 	// Set messages from fetchedMessages and show bottom-most messages directly (no scroll)
 	useEffect(() => {
@@ -283,7 +339,7 @@ function ChatPageContent() {
 	]);
 
 	const handleSendMessage = useCallback(
-		async (message?: string) => {
+		async (message?: string, modelIdOverride?: string, cardId?: string) => {
 			const userMessage = message || prompt.trim();
 			if (!userMessage || isStreaming) return;
 
@@ -299,20 +355,37 @@ function ChatPageContent() {
 
 			setPrompt("");
 
-			shouldAutoScrollRef.current = true;
-			isUserScrollingRef.current = false;
-			setIsInitialLoad(false);
+			// Only add messages to current chat if this is not a card send
+			if (!cardId) {
+				shouldAutoScrollRef.current = true;
+				isUserScrollingRef.current = false;
+				setIsInitialLoad(false);
 
-			const newMessage: ChatMsg = {
-				id: Date.now().toString(),
-				type: "chat_user",
-				content: userMessage,
-				timestamp: new Date(),
-			};
-			setMessages((prev) => [...prev, newMessage]);
+				const newMessage: ChatMsg = {
+					id: Date.now().toString(),
+					type: "chat_user",
+					content: userMessage,
+					timestamp: new Date(),
+				};
+				setMessages((prev) => [...prev, newMessage]);
 
-			setIsStreaming(true);
-			setStreamingMessage("");
+				setIsStreaming(true);
+				setStreamingMessage("");
+				setIsCardStreaming(false);
+			} else {
+				// For card sends, just set streaming state
+				setIsStreaming(true);
+				setIsCardStreaming(true);
+			}
+
+			// If this is a card send, mark it as sending
+			if (cardId) {
+				setSelectionCards((prev) =>
+					prev.map((c) =>
+						c.id === cardId ? { ...c, isSending: true } : c
+					)
+				);
+			}
 
 			try {
 				const apiKey = await apiKeyManager.getApiKey(skyBrowser, {
@@ -330,8 +403,8 @@ function ChatPageContent() {
 						},
 						body: JSON.stringify({
 							prompt: userMessage,
-							chatId: currentChatId,
-							modelId: selectedModel?.id,
+							chatId: cardId ? null : currentChatId, // No chatId for card sends
+							modelId: modelIdOverride ?? selectedModel?.id,
 						}),
 						signal: abortControllerRef.current.signal,
 					}
@@ -376,28 +449,49 @@ function ChatPageContent() {
 									data.content
 								) {
 									fullMessage += data.content;
-									setStreamingMessage(fullMessage);
+									// Only show streaming message for non-card sends
+									if (!cardId) {
+										setStreamingMessage(fullMessage);
+									}
 								} else if (
 									data.type === "final" ||
 									(data.success && data.data?.result?.chatId)
 								) {
 									const chatId = data.data?.result?.chatId;
 
-									if (chatId && !currentChatId) {
+									if (chatId && !currentChatId && !cardId) {
 										setCurrentChatId(chatId);
 										updateUrlWithChatId(chatId);
 									}
 
-									const responseMessage: ChatMsg = {
-										id: (Date.now() + 1).toString(),
-										type: "chat_response",
-										content: fullMessage,
-										timestamp: new Date(),
-									};
-									setMessages((prev) => [
-										...prev,
-										responseMessage,
-									]);
+									// If this is a card send, store the chatId in the card
+									if (cardId && chatId) {
+										setSelectionCards((prev) =>
+											prev.map((c) =>
+												c.id === cardId
+													? {
+															...c,
+															chatId,
+															isSending: false,
+													  }
+													: c
+											)
+										);
+									}
+
+									// Only add response message to current chat for non-card sends
+									if (!cardId) {
+										const responseMessage: ChatMsg = {
+											id: (Date.now() + 1).toString(),
+											type: "chat_response",
+											content: fullMessage,
+											timestamp: new Date(),
+										};
+										setMessages((prev) => [
+											...prev,
+											responseMessage,
+										]);
+									}
 
 									setStreamingMessage("");
 									return;
@@ -424,7 +518,17 @@ function ChatPageContent() {
 				setStreamingMessage("");
 			} finally {
 				setIsStreaming(false);
+				setIsCardStreaming(false);
 				abortControllerRef.current = null;
+
+				// Reset card sending state
+				if (cardId) {
+					setSelectionCards((prev) =>
+						prev.map((c) =>
+							c.id === cardId ? { ...c, isSending: false } : c
+						)
+					);
+				}
 			}
 		},
 		[
@@ -494,6 +598,61 @@ function ChatPageContent() {
 		setStreamingMessage("");
 	}, []);
 
+	// Card handlers
+	const handleCardTextChange = useCallback((cardId: string, text: string) => {
+		setSelectionCards((prev) =>
+			prev.map((c) => (c.id === cardId ? { ...c, text } : c))
+		);
+	}, []);
+
+	const handleCardModelChange = useCallback(
+		(cardId: string, modelId: string) => {
+			setSelectionCards((prev) =>
+				prev.map((c) => (c.id === cardId ? { ...c, modelId } : c))
+			);
+		},
+		[]
+	);
+
+	const handleCardSend = useCallback(
+		(cardId: string, text: string, modelId: string) => {
+			handleSendMessage(text, modelId, cardId);
+		},
+		[handleSendMessage]
+	);
+
+	const handleCardOpenChat = useCallback(
+		(chatId: string) => {
+			// Clear current messages to force refetch
+			setMessages([]);
+			setCurrentChatId(null);
+			setStreamingMessage("");
+			setIsStreaming(false);
+			setIsCardStreaming(false);
+
+			// Invalidate cache for the new chat
+			queryClient.invalidateQueries({
+				queryKey: ["chat-messages", chatId],
+			});
+
+			// Navigate to the new chat
+			router.push(`/chat?chatId=${chatId}`);
+		},
+		[queryClient, router]
+	);
+
+	const handleCardRemove = useCallback((cardId: string) => {
+		setSelectionCards((prev) => prev.filter((c) => c.id !== cardId));
+	}, []);
+
+	const handleCardToggleCollapse = useCallback((cardId: string) => {
+		setSelectionCards((prev) =>
+			prev.map((c) =>
+				c.id === cardId ? { ...c, isCollapsed: !c.isCollapsed } : c
+			)
+		);
+	}, []);
+
 	return (
 		<div className="flex flex-col h-screen max-h-screen bg-background relative">
 			<div className="flex-1 min-h-0">
@@ -506,14 +665,23 @@ function ChatPageContent() {
 						height: "calc(100vh - 8rem)",
 					}}
 				>
-					<div className="pb-4 px-6 mx-auto max-w-7xl relative chat-page-messages-root">
+					<div className="pb-4 px-6 mx-auto max-w-6xl relative chat-page-messages-root">
 						<SelectionAskJarvis
 							rootSelector=".chat-page-messages-root"
 							onAsk={(text) => {
-								const prefix = prompt?.trim()
-									? `${prompt}\n\n`
-									: "";
-								setPrompt(`${prefix}"${text}"\n`);
+								const id = `${Date.now()}_${Math.random()
+									.toString(36)
+									.slice(2, 7)}`;
+								setSelectionCards((prev) => [
+									{
+										id,
+										text,
+										modelId:
+											selectedModel?.id || models[0]?.id,
+										isCollapsed: true,
+									},
+									...prev,
+								]);
 							}}
 						/>
 						{messages.map((message, idx) => (
@@ -525,37 +693,60 @@ function ChatPageContent() {
 						))}
 
 						{/* Streaming message */}
-						{isStreaming && streamingMessage && (
-							<ChatMessage
-								message={{
-									id: "streaming",
-									type: "chat_response",
-									content: streamingMessage,
-									timestamp: new Date(),
-									showLoadingDots: true,
-								}}
-								isLast={true}
-							/>
-						)}
+						{isStreaming &&
+							streamingMessage &&
+							!isCardStreaming && (
+								<ChatMessage
+									message={{
+										id: "streaming",
+										type: "chat_response",
+										content: streamingMessage,
+										timestamp: new Date(),
+										showLoadingDots: true,
+									}}
+									isLast={true}
+								/>
+							)}
 
 						{/* Typing indicator */}
-						{isStreaming && !streamingMessage && (
-							<ChatMessage
-								message={{
-									id: "typing",
-									type: "chat_response",
-									content: "",
-									timestamp: new Date(),
-									showLoadingDots: true,
-								}}
-								isLast={true}
-							/>
-						)}
+						{isStreaming &&
+							!streamingMessage &&
+							!isCardStreaming && (
+								<ChatMessage
+									message={{
+										id: "typing",
+										type: "chat_response",
+										content: "",
+										timestamp: new Date(),
+										showLoadingDots: true,
+									}}
+									isLast={true}
+								/>
+							)}
 					</div>
 					<div ref={messagesEndRef} />
 				</div>
 
-				<div className="absolute bottom-4 left-0 right-0 px-6 mx-auto max-w-7xl">
+				{selectionCards.length > 0 && (
+					<div className="absolute top-0 right-6 bottom-0 w-96 flex flex-col gap-3 overflow-x-hidden overflow-y-auto scrollbar-hide py-4">
+						{selectionCards.map((card) => (
+							<SelectionCardComponent
+								key={card.id}
+								card={card}
+								models={models}
+								selectedModel={selectedModel}
+								isStreaming={isStreaming}
+								onTextChange={handleCardTextChange}
+								onModelChange={handleCardModelChange}
+								onSend={handleCardSend}
+								onOpenChat={handleCardOpenChat}
+								onRemove={handleCardRemove}
+								onToggleCollapse={handleCardToggleCollapse}
+							/>
+						))}
+					</div>
+				)}
+				<div className="absolute bottom-4 left-0 right-0 px-6 mx-auto max-w-6xl">
 					<ChatInput
 						onSend={handleSendMessage}
 						onStop={handleStopStreaming}
@@ -577,7 +768,7 @@ export default function ChatPage() {
 	return (
 		<Suspense
 			fallback={
-				<div className="flex items-center justify-center h-screen px-6 mx-auto max-w-7xl">
+				<div className="flex items-center justify-center h-screen px-6 mx-auto max-w-6xl">
 					<ChatSkeleton />
 				</div>
 			}
