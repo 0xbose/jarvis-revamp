@@ -14,6 +14,7 @@ interface SelectionCard {
 	modelId?: string;
 	agentId?: string;
 	chatId?: string;
+	workflowId?: string;
 	isSending?: boolean;
 	isCollapsed?: boolean;
 }
@@ -92,6 +93,16 @@ export default function SelectionCardComponent({
 	const isCollapsed = card.isCollapsed ?? true;
 	const gradientClass = Gradients[getGradientIndex(card.id)];
 
+	// Debug logging
+	console.log("🔍 SelectionCard render:", {
+		cardId: card.id,
+		chatId: card.chatId,
+		workflowId: card.workflowId,
+		agentId: card.agentId,
+		isSending: card.isSending,
+		hasOpenButton: !!(card.chatId || card.workflowId),
+	});
+
 	if (isCollapsed) {
 		return (
 			<div className="flex justify-end">
@@ -121,7 +132,7 @@ export default function SelectionCardComponent({
 							<Loader2 className="size-2 animate-spin text-white" />
 						</div>
 					)}
-					{card.chatId && !card.isSending && (
+					{(card.chatId || card.workflowId) && !card.isSending && (
 						<div className="absolute -top-0.5 -right-0 size-3 bg-green-500 rounded-full"></div>
 					)}
 				</button>
@@ -186,10 +197,15 @@ export default function SelectionCardComponent({
 				</div>
 
 				<div className="flex gap-2">
-					{card.chatId ? (
+					{card.chatId || card.workflowId ? (
 						<Button
 							variant="outline"
-							onClick={() => onOpenChat(card.chatId!, card.id)}
+							onClick={() =>
+								onOpenChat(
+									card.chatId || card.workflowId!,
+									card.id
+								)
+							}
 							className="flex items-center gap-2 bg-sidebar hover:bg-sidebar/80 cursor-pointer"
 						>
 							<svg

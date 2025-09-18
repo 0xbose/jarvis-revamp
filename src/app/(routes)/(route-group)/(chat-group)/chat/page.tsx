@@ -83,6 +83,7 @@ function ChatPageContent() {
 		modelId?: string;
 		agentId?: string;
 		chatId?: string;
+		workflowId?: string;
 		isSending?: boolean;
 		isCollapsed?: boolean;
 	};
@@ -584,6 +585,27 @@ function ChatPageContent() {
 						workflowId
 					);
 
+					// Store workflowId in the SelectionCard if this is a card send
+					if (cardId) {
+						console.log(
+							"🔄 Storing workflowId in SelectionCard:",
+							workflowId,
+							"for cardId:",
+							cardId
+						);
+						setSelectionCards((prev) =>
+							prev.map((c) =>
+								c.id === cardId
+									? {
+											...c,
+											workflowId,
+											isSending: false,
+									  }
+									: c
+							)
+						);
+					}
+
 					// Invalidate chat history queries after agent workflow starts
 					setTimeout(() => {
 						console.log(
@@ -867,6 +889,9 @@ function ChatPageContent() {
 
 	const handleCardOpenChat = useCallback(
 		(chatId: string, cardId: string) => {
+			const card = selectionCards.find((c) => c.id === cardId);
+			if (!card) return;
+
 			setSelectionCards((prev) => prev.filter((c) => c.id !== cardId));
 
 			// Clear messages and reset state
@@ -882,7 +907,35 @@ function ChatPageContent() {
 			isUserScrollingRef.current = false;
 			lastMessageCountRef.current = 0;
 
-			// Remove any existing cache for this chat to force fresh fetch
+			// Check if this is an agent request
+			if (card.agentId && card.workflowId && selectedAgent) {
+				// For agent requests, navigate to agent response page
+				const agentAddress =
+					("collection_address" in selectedAgent
+						? selectedAgent.collection_address
+						: null) ||
+					("collection_id" in selectedAgent
+						? selectedAgent.collection_id
+						: null) ||
+					("nft_address" in selectedAgent
+						? selectedAgent.nft_address
+						: null);
+				const nftId =
+					"nft_id" in selectedAgent ? selectedAgent.nft_id : null;
+
+				if (agentAddress && nftId) {
+					console.log(
+						"✅ Navigating to agent response page:",
+						agentAddress
+					);
+					router.push(
+						`/chat/agent/${agentAddress}?nftId=${nftId}&workflowId=${card.workflowId}`
+					);
+					return;
+				}
+			}
+
+			// For regular chat requests, remove any existing cache and navigate to chat
 			queryClient.removeQueries({
 				queryKey: ["chat-messages", chatId],
 			});
@@ -890,7 +943,7 @@ function ChatPageContent() {
 			// Navigate to the new chat
 			router.push(`/chat?chatId=${chatId}`);
 		},
-		[queryClient, router]
+		[queryClient, router, selectionCards, selectedAgent]
 	);
 
 	const handleCardRemove = useCallback((cardId: string) => {
