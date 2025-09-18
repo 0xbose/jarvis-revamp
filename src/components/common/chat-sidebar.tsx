@@ -202,13 +202,6 @@ const WorkflowItem = React.memo(
 						`/chat/agent/${agentAddress}?workflowId=${workflowId}&nftId=${workflow.agentIDFromCollection}`
 					);
 					break;
-				case "Compare":
-					if (currentWorkflowId && currentAgentId) {
-						router.push(
-							`/chat/agent/${currentAgentId}?workflowId=${currentWorkflowId}&compare=${workflowId}&nftId=${workflow.agentIDFromCollection}`
-						);
-					}
-					break;
 				default:
 					break;
 			}

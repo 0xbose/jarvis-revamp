@@ -186,8 +186,7 @@ function ChatPageContent() {
 			fetchedMessages.success &&
 			Array.isArray(fetchedMessages.data?.messages) &&
 			!isStreaming &&
-			chatIdFromUrl && // Ensure we have a chatId from URL
-			currentChatId === chatIdFromUrl // Ensure we're loading the correct chat
+			chatIdFromUrl // Ensure we have a chatId from URL
 		) {
 			const mapped = mapFetchedMessagesToChatMsgs(fetchedMessages);
 
@@ -240,7 +239,7 @@ function ChatPageContent() {
 				const mergedMessages = [...mapped, ...localMessagesToKeep];
 				setMessages(mergedMessages);
 			} else {
-				// Fresh chat or different chat - use server data directly
+				// Fresh chat, different chat, or initial load - use server data directly
 				console.log(
 					"📥 Fresh chat load, using server data:",
 					mapped.length
@@ -606,18 +605,17 @@ function ChatPageContent() {
 						);
 					}
 
-					// Invalidate chat history queries after agent workflow starts
 					setTimeout(() => {
-						console.log(
-							"🔄 Invalidating chat history queries after agent workflow start"
-						);
 						queryClient.invalidateQueries({
-							queryKey: [QUERY_KEYS.HISTORY, address],
+							queryKey: [
+								"chat-messages",
+								chatIdFromUrl,
+								QUERY_KEYS.HISTORY,
+								address,
+							],
 						});
-					}, 1000); // 1 second delay
+					}, 1000);
 
-					// For agent requests, we don't need to handle streaming response
-					// The workflow executor handles the polling and status updates
 					setStreamingMessage("");
 					return;
 				}
@@ -755,13 +753,14 @@ function ChatPageContent() {
 						}
 					}
 				} finally {
-					// Delay query invalidation to give server time to save messages
 					setTimeout(() => {
-						console.log(
-							"🔄 Invalidating chat history queries after delay"
-						);
 						queryClient.invalidateQueries({
-							queryKey: [QUERY_KEYS.HISTORY, address],
+							queryKey: [
+								"chat-messages",
+								chatIdFromUrl,
+								QUERY_KEYS.HISTORY,
+								address,
+							],
 						});
 					}, 1000); // 1 second delay
 					reader.releaseLock();
