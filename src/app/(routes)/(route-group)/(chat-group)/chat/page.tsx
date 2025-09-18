@@ -26,6 +26,9 @@ import { getAvailableModels } from "@/controllers/models/models.query";
 import SelectionCardComponent from "@/components/common/SelectionCard";
 import { workflowExecutor } from "@/utils/workflow-executor";
 import { getAgentDetailByCollectionAndNftId } from "@/controllers/agents/agents.query";
+import { AgentChatContainer } from "@/components/common/agent-chat-container";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface StreamResponse {
 	type: "update" | "final" | "chat_chunk";
@@ -89,6 +92,16 @@ function ChatPageContent() {
 	};
 	const [selectionCards, setSelectionCards] = useState<SelectionCard[]>([]);
 
+	// Comparison mode state
+	const [isComparisonMode, setIsComparisonMode] = useState(false);
+	const [comparisonData, setComparisonData] = useState<{
+		cardId: string;
+		chatId: string;
+		agentId: string;
+		agentAddress?: string;
+		nftId?: string;
+	} | null>(null);
+
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const messagesContainerRef = useRef<HTMLDivElement>(null);
 	const chatInputRef = useRef<HTMLTextAreaElement>(null);
@@ -122,13 +135,11 @@ function ChatPageContent() {
 	} = useQuery<any>({
 		queryKey: ["chat-messages", chatIdFromUrl],
 		queryFn: async () => {
-			console.log("🔍 Fetching messages for chatId:", chatIdFromUrl);
 			const result = await getChatMessages({
 				chatId: chatIdFromUrl as string,
 				skyBrowser,
 				web3Context: { address },
 			});
-			console.log("📥 Fetched messages result:", result);
 			return result;
 		},
 		enabled: !!chatIdFromUrl,
@@ -190,15 +201,6 @@ function ChatPageContent() {
 		) {
 			const mapped = mapFetchedMessagesToChatMsgs(fetchedMessages);
 
-			console.log(
-				"Loading messages for chatId:",
-				chatIdFromUrl,
-				"Messages count:",
-				mapped.length,
-				"Current messages count:",
-				messages.length
-			);
-
 			// Always use server data when switching chats to avoid stale data
 			// Only merge local messages if we're in the same chat and have streaming messages
 			if (
@@ -206,24 +208,12 @@ function ChatPageContent() {
 				mapped.length >= messages.length
 			) {
 				// Server has same or more messages, use server data
-				console.log(
-					"📥 Server has same/more messages, using server data:",
-					mapped.length,
-					"vs local:",
-					messages.length
-				);
 				setMessages(mapped);
 			} else if (
 				currentChatId === chatIdFromUrl &&
 				messages.length > mapped.length
 			) {
 				// Local has more messages (likely streaming messages), keep local but merge with server
-				console.log(
-					"📥 Local has more messages, merging with server data:",
-					messages.length,
-					"vs server:",
-					mapped.length
-				);
 
 				// Find the last server message timestamp to avoid duplicates
 				const lastServerMessage = mapped[mapped.length - 1];
@@ -240,18 +230,10 @@ function ChatPageContent() {
 				setMessages(mergedMessages);
 			} else {
 				// Fresh chat, different chat, or initial load - use server data directly
-				console.log(
-					"📥 Fresh chat load, using server data:",
-					mapped.length
-				);
 				setMessages(mapped);
 			}
 
 			if (fetchedMessages.data?.chatId && !currentChatId) {
-				console.log(
-					"🔄 Setting currentChatId from fetched messages:",
-					fetchedMessages.data.chatId
-				);
 				setCurrentChatId(fetchedMessages.data.chatId);
 			}
 
@@ -368,14 +350,7 @@ function ChatPageContent() {
 	);
 
 	useEffect(() => {
-		console.log(
-			"🔄 chatIdFromUrl changed:",
-			chatIdFromUrl,
-			"currentChatId:",
-			currentChatId
-		);
 		if (chatIdFromUrl && chatIdFromUrl !== currentChatId) {
-			console.log("🔄 Updating currentChatId from URL:", chatIdFromUrl);
 			setCurrentChatId(chatIdFromUrl);
 
 			// Clear local messages state when switching to a different chat
@@ -480,10 +455,6 @@ function ChatPageContent() {
 				};
 				setMessages((prev) => {
 					const updated = [...prev, newMessage];
-					console.log(
-						"📋 Local messages after adding user message:",
-						updated.length
-					);
 					return updated;
 				});
 
@@ -511,22 +482,8 @@ function ChatPageContent() {
 				});
 				abortControllerRef.current = new AbortController();
 
-				console.log(
-					"📤 Sending message with chatId:",
-					currentChatId,
-					"cardId:",
-					cardId,
-					"agentId:",
-					agentId
-				);
-
 				// Handle agent-based requests
 				if (agentId && selectedAgent) {
-					console.log(
-						"🤖 Executing agent workflow for:",
-						selectedAgent.name
-					);
-
 					// Fetch full agent details with subnet_list
 					let agentDetail;
 					try {
@@ -550,8 +507,6 @@ function ChatPageContent() {
 						if (!agentDetail) {
 							throw new Error("Failed to fetch agent details");
 						}
-
-						console.log("✅ Fetched agent details:", agentDetail);
 					} catch (error) {
 						console.error(
 							"❌ Failed to fetch agent details:",
@@ -571,27 +526,12 @@ function ChatPageContent() {
 							skyBrowser,
 							{ address },
 							(data) => {
-								console.log(
-									"🔄 Agent workflow status update:",
-									data
-								);
 								// Handle agent workflow status updates here if needed
 							}
 						);
 
-					console.log(
-						"✅ Agent workflow started with ID:",
-						workflowId
-					);
-
 					// Store workflowId in the SelectionCard if this is a card send
 					if (cardId) {
-						console.log(
-							"🔄 Storing workflowId in SelectionCard:",
-							workflowId,
-							"for cardId:",
-							cardId
-						);
 						setSelectionCards((prev) =>
 							prev.map((c) =>
 								c.id === cardId
@@ -724,19 +664,11 @@ function ChatPageContent() {
 											timestamp: new Date(),
 										};
 
-										console.log(
-											"📝 Adding response message locally:",
-											responseMessage.id
-										);
 										setMessages((prev) => {
 											const updated = [
 												...prev,
 												responseMessage,
 											];
-											console.log(
-												"📋 Local messages after adding response:",
-												updated.length
-											);
 											return updated;
 										});
 									}
@@ -923,10 +855,6 @@ function ChatPageContent() {
 					"nft_id" in selectedAgent ? selectedAgent.nft_id : null;
 
 				if (agentAddress && nftId) {
-					console.log(
-						"✅ Navigating to agent response page:",
-						agentAddress
-					);
 					router.push(
 						`/chat/agent/${agentAddress}?nftId=${nftId}&workflowId=${card.workflowId}`
 					);
@@ -956,6 +884,37 @@ function ChatPageContent() {
 			)
 		);
 	}, []);
+
+	const handleCardCompare = useCallback(
+		(cardId: string, chatIdOrWorkflowId: string, agentId: string) => {
+			const card = selectionCards.find((c) => c.id === cardId);
+			if (!card) return;
+
+			// Get agent details to extract address and nftId
+			const agentAddress =
+				("collection_address" in selectedAgent
+					? selectedAgent.collection_address
+					: null) ||
+				("collection_id" in selectedAgent
+					? selectedAgent.collection_id
+					: null) ||
+				("nft_address" in selectedAgent
+					? selectedAgent.nft_address
+					: null);
+			const nftId =
+				"nft_id" in selectedAgent ? selectedAgent.nft_id : null;
+
+			setComparisonData({
+				cardId,
+				chatId: card.chatId || chatIdOrWorkflowId, // Use chatId if available, otherwise use the passed value
+				agentId,
+				agentAddress: agentAddress || undefined,
+				nftId: nftId || undefined,
+			});
+			setIsComparisonMode(true);
+		},
+		[selectionCards, selectedAgent]
+	);
 
 	// Handler for "Ask Jarvis" - focus input and scroll to bottom
 	const handleAskJarvis = useCallback(
@@ -988,6 +947,139 @@ function ChatPageContent() {
 			...prev,
 		]);
 	}, []);
+
+	if (isComparisonMode && comparisonData) {
+		return (
+			<div className="flex h-screen max-h-screen bg-background">
+				{/* Left side - Model Chat */}
+				<div className="flex-1 flex flex-col min-h-0 border-r border-border">
+					{/* Model Chat Header */}
+					<div className="px-6 py-4 border-b border-border bg-sidebar/30">
+						<div className="flex items-center gap-2">
+							<div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+							<h3 className="text-sm font-semibold text-foreground">
+								Model Response
+							</h3>
+						</div>
+					</div>
+					<div className="flex-1 min-h-0 flex flex-col">
+						<div
+							ref={messagesContainerRef}
+							className="flex-1 px-4 pt-6 overflow-y-auto scrollbar-hide"
+							onScroll={handleScroll}
+						>
+							<div className="pb-4 px-6 mx-auto max-w-4xl relative chat-page-messages-root">
+								<SelectionAskJarvis
+									rootSelector=".chat-page-messages-root"
+									onAsk={handleAskJarvis}
+									onInstructAgent={handleInstructAgent}
+								/>
+								{messages.map((message, idx) => (
+									<ChatMessage
+										key={message.id}
+										message={message}
+										isLast={idx === messages.length - 1}
+									/>
+								))}
+
+								{/* Streaming message */}
+								{isStreaming &&
+									streamingMessage &&
+									!isCardStreaming && (
+										<ChatMessage
+											message={{
+												id: "streaming",
+												type: "chat_response",
+												content: streamingMessage,
+												timestamp: new Date(),
+												showLoadingDots: true,
+											}}
+											isLast={true}
+										/>
+									)}
+
+								{/* Typing indicator */}
+								{isStreaming &&
+									!streamingMessage &&
+									!isCardStreaming && (
+										<ChatMessage
+											message={{
+												id: "typing",
+												type: "chat_response",
+												content: "",
+												timestamp: new Date(),
+												showLoadingDots: true,
+											}}
+											isLast={true}
+										/>
+									)}
+							</div>
+							<div ref={messagesEndRef} />
+						</div>
+						{/* Model Chat Input */}
+						<div className="px-6 py-4">
+							<ChatInput
+								ref={chatInputRef}
+								onSend={handleSendMessage}
+								onStop={handleStopStreaming}
+								mode={mode}
+								setMode={setMode}
+								prompt={prompt}
+								setPrompt={setPrompt}
+								isExecuting={isStreaming}
+								workflowStatus={
+									isStreaming ? "running" : "completed"
+								}
+								disableAgentSelection={true}
+							/>
+						</div>
+					</div>
+				</div>
+
+				{/* Right side - Agent Chat */}
+				<div className="flex-1 flex flex-col min-h-0">
+					{/* Agent Chat Header */}
+					<div className="px-6 py-4 border-b border-border bg-sidebar/30">
+						<div className="flex items-center gap-2">
+							<div className="w-2 h-2 bg-green-500 rounded-full"></div>
+							<h3 className="text-sm font-semibold text-foreground">
+								Agent Response
+							</h3>
+						</div>
+					</div>
+					<div className="flex-1 min-h-0">
+						{comparisonData.agentAddress && comparisonData.nftId ? (
+							<AgentChatContainer
+								agentAddress={comparisonData.agentAddress}
+								nftId={comparisonData.nftId}
+								urlWorkflowId={comparisonData.chatId} // Use chatId as workflowId for agent requests
+								className="flex-1 h-full"
+								showChatInput={true}
+								showSkeleton={true}
+							/>
+						) : (
+							<div className="flex-1 flex items-center justify-center">
+								<p className="text-muted-foreground">
+									Agent details not available for comparison
+								</p>
+							</div>
+						)}
+					</div>
+				</div>
+
+				{/* Close comparison button */}
+				<Button
+					onClick={() => {
+						setIsComparisonMode(false);
+						setComparisonData(null);
+					}}
+					className="absolute top-1.5 right-4 z-10 p-2 h-10 bg-background border border-border rounded-full shadow-lg hover:bg-sidebar transition-colors"
+				>
+					<X className="size-4" />
+				</Button>
+			</div>
+		);
+	}
 
 	return (
 		<div className="flex flex-col h-screen max-h-screen bg-background relative">
@@ -1069,6 +1161,7 @@ function ChatPageContent() {
 								}
 								onRemove={handleCardRemove}
 								onToggleCollapse={handleCardToggleCollapse}
+								onCompare={handleCardCompare}
 							/>
 						))}
 					</div>

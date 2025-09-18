@@ -4,7 +4,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Trash2, X } from "lucide-react";
+import { GitCompare, Loader2, Trash2, X } from "lucide-react";
 import ModelSelectDialog from "@/components/common/ModelSelectDialog";
 import Marketplace from "../market-place/user-agent-selector";
 
@@ -37,6 +37,7 @@ interface SelectionCardProps {
 	onOpenChat: (chatId: string, cardId: string) => void;
 	onRemove: (cardId: string) => void;
 	onToggleCollapse: (cardId: string) => void;
+	onCompare?: (cardId: string, chatId: string, agentId?: string) => void;
 }
 
 // Generate a consistent gradient index based on card ID
@@ -89,6 +90,7 @@ export default function SelectionCardComponent({
 	onOpenChat,
 	onRemove,
 	onToggleCollapse,
+	onCompare,
 }: SelectionCardProps) {
 	const isCollapsed = card.isCollapsed ?? true;
 	const gradientClass = Gradients[getGradientIndex(card.id)];
@@ -165,66 +167,89 @@ export default function SelectionCardComponent({
 			</div>
 
 			<div className="flex gap-2 justify-between items-end pt-2">
-				<div className="space-y-0.5">
-					<Label className="text-xs font-normal">
-						{card.agentId ? "Agent" : "Model"}
-					</Label>
-					<div className="mt-1">
-						{card.agentId ? (
-							<Marketplace disabled={false} />
-						) : (
-							<ModelSelectDialog
-								buttonSize="sm"
-								buttonClassName="!h-8"
-								value={
-									card.modelId
-										? ({
-												id: card.modelId,
-												name:
-													models.find(
-														(m: any) =>
-															m.id ===
-															card.modelId
-													)?.name || card.modelId,
-										  } as any)
-										: null
-								}
-								disableGlobalSync={true}
-								onChange={(m) => onModelChange(card.id, m.id)}
-							/>
-						)}
+				{/* Show agent/model selection only if no chat/workflow exists */}
+				{!(card.chatId || card.workflowId) && (
+					<div className="space-y-0.5">
+						<Label className="text-xs font-normal">
+							{card.agentId ? "Agent" : "Model"}
+						</Label>
+						<div className="mt-1">
+							{card.agentId ? (
+								<Marketplace disabled={false} />
+							) : (
+								<ModelSelectDialog
+									buttonSize="sm"
+									buttonClassName="!h-8"
+									value={
+										card.modelId
+											? ({
+													id: card.modelId,
+													name:
+														models.find(
+															(m: any) =>
+																m.id ===
+																card.modelId
+														)?.name || card.modelId,
+											  } as any)
+											: null
+									}
+									disableGlobalSync={true}
+									onChange={(m) =>
+										onModelChange(card.id, m.id)
+									}
+								/>
+							)}
+						</div>
 					</div>
-				</div>
+				)}
+
+				{/* Show compare button in place of agent selection when chat/workflow exists */}
+				{(card.chatId || card.workflowId) &&
+					card.agentId &&
+					onCompare && (
+						<Button
+							variant="outline"
+							onClick={() =>
+								onCompare(
+									card.id,
+									card.chatId || card.workflowId!,
+									card.agentId
+								)
+							}
+							className="flex items-center gap-2 bg-accent-foreground text-background hover:bg-accent-foreground/90 hover:text-background"
+						>
+							<GitCompare />
+							<span>Compare</span>
+						</Button>
+					)}
 
 				<div className="flex gap-2">
 					{card.chatId || card.workflowId ? (
-						<>
-							<Button
-								variant="outline"
-								onClick={() =>
-									onOpenChat(
-										card.chatId || card.workflowId!,
-										card.id
-									)
-								}
-								className="flex items-center gap-2 bg-sidebar hover:bg-sidebar/80 cursor-pointer"
+						<Button
+							variant="outline"
+							onClick={() =>
+								onOpenChat(
+									card.chatId || card.workflowId!,
+									card.id
+								)
+							}
+							className="flex items-center gap-2 bg-sidebar hover:bg-sidebar/80 cursor-pointer"
+						>
+							<svg
+								width="10"
+								height="10"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								strokeWidth="2"
+								strokeLinecap="round"
+								strokeLinejoin="round"
 							>
-								<svg
-									width="10"
-									height="10"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									strokeWidth="2"
-									strokeLinecap="round"
-									strokeLinejoin="round"
-								>
-									<path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
-									<path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
-								</svg>
-								<span>Open</span>
-							</Button>
-						</>
+								<path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
+								<path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
+							</svg>
+							<span>Open</span>
+						</Button>
 					) : (
 						<Button
 							disabled={
