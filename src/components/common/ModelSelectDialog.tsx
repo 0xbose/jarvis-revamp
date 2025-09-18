@@ -37,6 +37,7 @@ export default function ModelSelectDialog({
 }: ModelSelectDialogProps) {
 	const { selectedModel, setSelectedModel } = useGlobalStore();
 	const { skyBrowser, address } = useWallet();
+	const [open, setOpen] = React.useState(false);
 
 	const { data: models, isLoading } = useQuery<any>({
 		queryKey: ["models-dialog"],
@@ -70,7 +71,7 @@ export default function ModelSelectDialog({
 	const active = disableGlobalSync ? value : value || selectedModel;
 
 	return (
-		<Dialog>
+		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
 				<Button
 					size={buttonSize}
@@ -126,6 +127,7 @@ export default function ModelSelectDialog({
 											if (!disableGlobalSync) {
 												setSelectedModel(m);
 											}
+											setOpen(false);
 										}}
 									>
 										<div className="text-sm font-medium text-foreground">

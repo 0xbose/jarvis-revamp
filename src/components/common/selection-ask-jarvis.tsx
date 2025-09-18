@@ -8,6 +8,8 @@ interface SelectionAskJarvisProps {
 	rootSelector: string;
 	// Called when the user clicks Ask Jarvis
 	onAsk: (selectedText: string) => void;
+	// Called when the user clicks Instruct Agent
+	onInstructAgent: (selectedText: string) => void;
 	// Optional: label override
 	label?: string;
 }
@@ -16,6 +18,7 @@ interface SelectionAskJarvisProps {
 export default function SelectionAskJarvis({
 	rootSelector,
 	onAsk,
+	onInstructAgent,
 	label = "Ask Jarvis",
 }: SelectionAskJarvisProps) {
 	const [visible, setVisible] = useState(false);
@@ -59,7 +62,7 @@ export default function SelectionAskJarvis({
 			}
 
 			setSelectedText(text);
-			const tooltipWidth = 120; // Approximate width of the tooltip
+			const tooltipWidth = 240; // Approximate width of the tooltip with two buttons
 			setPosition({
 				top: Math.max(4, rect.top + window.scrollY - 45), // Position above selection
 				left: Math.max(
@@ -135,10 +138,10 @@ export default function SelectionAskJarvis({
 				left: position.left,
 			}}
 		>
-			<div className="pointer-events-auto">
+			<div className="pointer-events-auto flex gap-2">
 				<Button
 					size="sm"
-					className="h-8 px-3 rounded-md bg-background hover:bg-background/80 border border-border/50 text-white text-sm flex items-center gap-2 transition-all duration-200 hover:cursor-pointer"
+					className="h-8 px-3 rounded-md bg-background hover:bg-background/95 border border-border/50 text-white text-sm flex items-center gap-2 transition-all duration-200 hover:cursor-pointer"
 					onMouseDown={(e) => e.preventDefault()}
 					onClick={() => {
 						onAsk(selectedText);
@@ -159,7 +162,33 @@ export default function SelectionAskJarvis({
 						<path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
 						<path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
 					</svg>
-					{label}
+					Ask Jarvis
+				</Button>
+				<Button
+					size="sm"
+					className="h-8 px-3 rounded-md bg-background hover:bg-background/95 border border-border/50 text-white text-sm flex items-center gap-2 transition-all duration-200 hover:cursor-pointer"
+					onMouseDown={(e) => e.preventDefault()}
+					onClick={() => {
+						onInstructAgent(selectedText);
+						setVisible(false);
+					}}
+				>
+					<svg
+						width="14"
+						height="14"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="2"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						className="flex-shrink-0"
+					>
+						<path d="M12 2L2 7l10 5 10-5-10-5z" />
+						<path d="M2 17l10 5 10-5" />
+						<path d="M2 12l10 5 10-5" />
+					</svg>
+					Instruct Agent
 				</Button>
 			</div>
 		</div>

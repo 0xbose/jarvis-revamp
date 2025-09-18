@@ -87,6 +87,7 @@ function ChatPageContent() {
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const messagesContainerRef = useRef<HTMLDivElement>(null);
+	const chatInputRef = useRef<HTMLTextAreaElement>(null);
 	const abortControllerRef = useRef<AbortController | null>(null);
 	const hasAutoSubmittedRef = useRef<boolean>(false);
 
@@ -115,12 +116,16 @@ function ChatPageContent() {
 		refetch: refetchMessages,
 	} = useQuery<any>({
 		queryKey: ["chat-messages", chatIdFromUrl],
-		queryFn: () =>
-			getChatMessages({
+		queryFn: async () => {
+			console.log("🔍 Fetching messages for chatId:", chatIdFromUrl);
+			const result = await getChatMessages({
 				chatId: chatIdFromUrl as string,
 				skyBrowser,
 				web3Context: { address },
-			}),
+			});
+			console.log("📥 Fetched messages result:", result);
+			return result;
+		},
 		enabled: !!chatIdFromUrl,
 		retry: false,
 		refetchOnWindowFocus: false,
@@ -184,13 +189,50 @@ function ChatPageContent() {
 				"Loading messages for chatId:",
 				chatIdFromUrl,
 				"Messages count:",
-				mapped.length
+				mapped.length,
+				"Current messages count:",
+				messages.length
 			);
 
-			// Always update messages if we have new fetched data, regardless of current message length
-			setMessages(mapped);
+			// Smart message merging: preserve local messages that haven't been saved to server yet
+			if (mapped.length >= messages.length) {
+				// Server has same or more messages, use server data
+				console.log(
+					"📥 Server has same/more messages, using server data:",
+					mapped.length,
+					"vs local:",
+					messages.length
+				);
+				setMessages(mapped);
+			} else {
+				// Local has more messages (likely streaming messages), keep local but merge with server
+				console.log(
+					"📥 Local has more messages, merging with server data:",
+					messages.length,
+					"vs server:",
+					mapped.length
+				);
+
+				// Find the last server message timestamp to avoid duplicates
+				const lastServerMessage = mapped[mapped.length - 1];
+				const lastServerTime =
+					lastServerMessage?.timestamp?.getTime() || 0;
+
+				// Keep local messages that are newer than the last server message
+				const localMessagesToKeep = messages.filter(
+					(msg) => msg.timestamp.getTime() > lastServerTime
+				);
+
+				// Merge server messages with newer local messages
+				const mergedMessages = [...mapped, ...localMessagesToKeep];
+				setMessages(mergedMessages);
+			}
 
 			if (fetchedMessages.data?.chatId && !currentChatId) {
+				console.log(
+					"🔄 Setting currentChatId from fetched messages:",
+					fetchedMessages.data.chatId
+				);
 				setCurrentChatId(fetchedMessages.data.chatId);
 			}
 
@@ -297,7 +339,14 @@ function ChatPageContent() {
 	);
 
 	useEffect(() => {
-		if (chatIdFromUrl && !currentChatId) {
+		console.log(
+			"🔄 chatIdFromUrl changed:",
+			chatIdFromUrl,
+			"currentChatId:",
+			currentChatId
+		);
+		if (chatIdFromUrl && chatIdFromUrl !== currentChatId) {
+			console.log("🔄 Updating currentChatId from URL:", chatIdFromUrl);
 			setCurrentChatId(chatIdFromUrl);
 		}
 	}, [chatIdFromUrl, currentChatId]);
@@ -377,7 +426,14 @@ function ChatPageContent() {
 					content: userMessage,
 					timestamp: new Date(),
 				};
-				setMessages((prev) => [...prev, newMessage]);
+				setMessages((prev) => {
+					const updated = [...prev, newMessage];
+					console.log(
+						"📋 Local messages after adding user message:",
+						updated.length
+					);
+					return updated;
+				});
 
 				setIsStreaming(true);
 				setStreamingMessage("");
@@ -402,6 +458,13 @@ function ChatPageContent() {
 					address,
 				});
 				abortControllerRef.current = new AbortController();
+
+				console.log(
+					"📤 Sending message with chatId:",
+					currentChatId,
+					"cardId:",
+					cardId
+				);
 
 				const response = await fetch(
 					`${API_CONFIG.CHAT_ACCESSPOINT_URL}/natural-request?stream=true`,
@@ -465,7 +528,9 @@ function ChatPageContent() {
 									}
 								} else if (
 									data.type === "final" ||
-									(data.success && data.data?.result?.chatId)
+									(data.success &&
+										data.data?.result?.chatId) ||
+									data.done
 								) {
 									const chatId = data.data?.result?.chatId;
 
@@ -497,10 +562,22 @@ function ChatPageContent() {
 											content: fullMessage,
 											timestamp: new Date(),
 										};
-										setMessages((prev) => [
-											...prev,
-											responseMessage,
-										]);
+
+										console.log(
+											"📝 Adding response message locally:",
+											responseMessage.id
+										);
+										setMessages((prev) => {
+											const updated = [
+												...prev,
+												responseMessage,
+											];
+											console.log(
+												"📋 Local messages after adding response:",
+												updated.length
+											);
+											return updated;
+										});
 									}
 
 									setStreamingMessage("");
@@ -515,9 +592,15 @@ function ChatPageContent() {
 						}
 					}
 				} finally {
-					queryClient.invalidateQueries({
-						queryKey: [QUERY_KEYS.HISTORY, address],
-					});
+					// Delay query invalidation to give server time to save messages
+					setTimeout(() => {
+						console.log(
+							"🔄 Invalidating chat history queries after delay"
+						);
+						queryClient.invalidateQueries({
+							queryKey: [QUERY_KEYS.HISTORY, address],
+						});
+					}, 1000); // 1 second delay
 					reader.releaseLock();
 				}
 			} catch (error) {
@@ -635,6 +718,7 @@ function ChatPageContent() {
 		(chatId: string, cardId: string) => {
 			setSelectionCards((prev) => prev.filter((c) => c.id !== cardId));
 
+			// Clear messages and reset state
 			setMessages([]);
 			setCurrentChatId(null);
 			setStreamingMessage("");
@@ -649,13 +733,13 @@ function ChatPageContent() {
 			// Navigate to the new chat
 			router.push(`/chat?chatId=${chatId}`);
 
-			// Force refetch after navigation
+			// Force refetch after navigation with a longer delay to ensure server has processed the messages
 			setTimeout(() => {
 				console.log("Force refetching messages for chatId:", chatId);
 				queryClient.refetchQueries({
 					queryKey: ["chat-messages", chatId],
 				});
-			}, 100);
+			}, 500); // Increased delay to 500ms
 		},
 		[queryClient, router]
 	);
@@ -672,6 +756,43 @@ function ChatPageContent() {
 		);
 	}, []);
 
+	// Handler for "Ask Jarvis" - focus input and scroll to bottom
+	const handleAskJarvis = useCallback(
+		(selectedText: string) => {
+			// Set the prompt with the selected text
+			setPrompt(selectedText);
+
+			// Focus the chat input
+			setTimeout(() => {
+				if (chatInputRef.current) {
+					chatInputRef.current.focus();
+					// Scroll to bottom to show the input
+					scrollToBottom(true, true);
+				}
+			}, 100);
+		},
+		[scrollToBottom]
+	);
+
+	// Handler for "Instruct Agent" - create a card (existing behavior)
+	const handleInstructAgent = useCallback(
+		(selectedText: string) => {
+			const id = `${Date.now()}_${Math.random()
+				.toString(36)
+				.slice(2, 7)}`;
+			setSelectionCards((prev) => [
+				{
+					id,
+					text: selectedText,
+					modelId: selectedModel?.id || models[0]?.id,
+					isCollapsed: true,
+				},
+				...prev,
+			]);
+		},
+		[selectedModel, models]
+	);
+
 	return (
 		<div className="flex flex-col h-screen max-h-screen bg-background relative">
 			<div className="flex-1 min-h-0">
@@ -687,21 +808,8 @@ function ChatPageContent() {
 					<div className="pb-4 px-6 mx-auto max-w-6xl relative chat-page-messages-root">
 						<SelectionAskJarvis
 							rootSelector=".chat-page-messages-root"
-							onAsk={(text) => {
-								const id = `${Date.now()}_${Math.random()
-									.toString(36)
-									.slice(2, 7)}`;
-								setSelectionCards((prev) => [
-									{
-										id,
-										text,
-										modelId:
-											selectedModel?.id || models[0]?.id,
-										isCollapsed: true,
-									},
-									...prev,
-								]);
-							}}
+							onAsk={handleAskJarvis}
+							onInstructAgent={handleInstructAgent}
 						/>
 						{messages.map((message, idx) => (
 							<ChatMessage
@@ -769,6 +877,7 @@ function ChatPageContent() {
 				)}
 				<div className="absolute bottom-4 left-0 right-0 px-6 mx-auto max-w-6xl">
 					<ChatInput
+						ref={chatInputRef}
 						onSend={handleSendMessage}
 						onStop={handleStopStreaming}
 						mode={mode}
