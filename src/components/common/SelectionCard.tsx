@@ -6,11 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Trash2, X } from "lucide-react";
 import ModelSelectDialog from "@/components/common/ModelSelectDialog";
+import Marketplace from "../market-place/user-agent-selector";
 
 interface SelectionCard {
 	id: string;
 	text: string;
 	modelId?: string;
+	agentId?: string;
 	chatId?: string;
 	isSending?: boolean;
 	isCollapsed?: boolean;
@@ -20,10 +22,17 @@ interface SelectionCardProps {
 	card: SelectionCard;
 	models: any[];
 	selectedModel: any;
+	selectedAgent: any;
 	isStreaming: boolean;
 	onTextChange: (cardId: string, text: string) => void;
 	onModelChange: (cardId: string, modelId: string) => void;
-	onSend: (cardId: string, text: string, modelId: string) => void;
+	onAgentChange: (cardId: string, agentId: string) => void;
+	onSend: (
+		cardId: string,
+		text: string,
+		modelId?: string,
+		agentId?: string
+	) => void;
 	onOpenChat: (chatId: string, cardId: string) => void;
 	onRemove: (cardId: string) => void;
 	onToggleCollapse: (cardId: string) => void;
@@ -70,9 +79,11 @@ export default function SelectionCardComponent({
 	card,
 	models,
 	selectedModel,
+	selectedAgent,
 	isStreaming,
 	onTextChange,
 	onModelChange,
+	onAgentChange,
 	onSend,
 	onOpenChat,
 	onRemove,
@@ -144,26 +155,33 @@ export default function SelectionCardComponent({
 
 			<div className="flex gap-2 justify-between items-end pt-2">
 				<div className="space-y-0.5">
-					<Label className="text-xs font-normal">Model</Label>
+					<Label className="text-xs font-normal">
+						{card.agentId ? "Agent" : "Model"}
+					</Label>
 					<div className="mt-1">
-						<ModelSelectDialog
-							buttonSize="sm"
-							buttonClassName="!h-8"
-							value={
-								card.modelId
-									? ({
-											id: card.modelId,
-											name:
-												models.find(
-													(m: any) =>
-														m.id === card.modelId
-												)?.name || card.modelId,
-									  } as any)
-									: null
-							}
-							disableGlobalSync={true}
-							onChange={(m) => onModelChange(card.id, m.id)}
-						/>
+						{card.agentId ? (
+							<Marketplace disabled={false} />
+						) : (
+							<ModelSelectDialog
+								buttonSize="sm"
+								buttonClassName="!h-8"
+								value={
+									card.modelId
+										? ({
+												id: card.modelId,
+												name:
+													models.find(
+														(m: any) =>
+															m.id ===
+															card.modelId
+													)?.name || card.modelId,
+										  } as any)
+										: null
+								}
+								disableGlobalSync={true}
+								onChange={(m) => onModelChange(card.id, m.id)}
+							/>
+						)}
 					</div>
 				</div>
 
@@ -194,15 +212,23 @@ export default function SelectionCardComponent({
 							disabled={
 								!card.text.trim() ||
 								isStreaming ||
-								card.isSending
+								card.isSending ||
+								(card.agentId && !card.agentId) ||
+								(!card.agentId &&
+									!card.modelId &&
+									!selectedModel?.id &&
+									!models[0]?.id)
 							}
 							onClick={() =>
 								onSend(
 									card.id,
 									card.text,
-									card.modelId ||
-										selectedModel?.id ||
-										models[0]?.id
+									card.agentId
+										? undefined
+										: card.modelId ||
+												selectedModel?.id ||
+												models[0]?.id,
+									card.agentId
 								)
 							}
 							className="border border-border hover:bg-sidebar/70 cursor-pointer"

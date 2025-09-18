@@ -42,7 +42,10 @@ export const useGlobalStore = create<GlobalStore>()(
 		mode: "agent",
 		prompt: "",
 		selectedAgent: null,
-		selectedModel: null,
+		selectedModel: {
+			id: "skynet/t800-thinking",
+			name: "Skynet: T-800 Thinking",
+		},
 		autoMode: false,
 
 		// Wallet & NFT Management Actions
@@ -83,7 +86,10 @@ export const useGlobalStore = create<GlobalStore>()(
 				mode: "agent",
 				prompt: "",
 				selectedAgent: null,
-				selectedModel: null,
+				selectedModel: {
+					id: "skynet/t800-thinking",
+					name: "Skynet: T-800 Thinking",
+				},
 			}),
 	}))
 );

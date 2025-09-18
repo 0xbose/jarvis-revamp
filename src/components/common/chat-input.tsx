@@ -112,7 +112,7 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
 			isFetched,
 			refetch,
 		} = useQuery<any>({
-			queryKey: [QUERY_KEYS.MODELS],
+			queryKey: [QUERY_KEYS.MODELS, address],
 			queryFn: () =>
 				getAvailableModels({
 					skyBrowser,
@@ -120,6 +120,9 @@ const ChatInput = forwardRef<HTMLTextAreaElement, ChatInputProps>(
 				}),
 			enabled: !!address,
 			retry: true,
+			refetchOnWindowFocus: false,
+			refetchOnMount: false,
+			refetchOnReconnect: false,
 			gcTime: 24 * 60 * 60 * 1000, // one day
 			staleTime: 24 * 60 * 60 * 1000, // one day
 		});

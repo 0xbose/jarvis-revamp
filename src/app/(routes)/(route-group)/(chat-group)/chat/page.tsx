@@ -24,6 +24,8 @@ import { QUERY_KEYS } from "@/utils/query-keys";
 import SelectionAskJarvis from "@/components/common/selection-ask-jarvis";
 import { getAvailableModels } from "@/controllers/models/models.query";
 import SelectionCardComponent from "@/components/common/SelectionCard";
+import { workflowExecutor } from "@/utils/workflow-executor";
+import { getAgentDetailByCollectionAndNftId } from "@/controllers/agents/agents.query";
 
 interface StreamResponse {
 	type: "update" | "final" | "chat_chunk";
@@ -79,6 +81,7 @@ function ChatPageContent() {
 		id: string;
 		text: string;
 		modelId?: string;
+		agentId?: string;
 		chatId?: string;
 		isSending?: boolean;
 		isCollapsed?: boolean;
@@ -103,6 +106,7 @@ function ChatPageContent() {
 		prompt: globalPrompt,
 		setPrompt: setGlobalPrompt,
 		selectedModel,
+		selectedAgent,
 	} = useGlobalStore();
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -441,7 +445,12 @@ function ChatPageContent() {
 	]);
 
 	const handleSendMessage = useCallback(
-		async (message?: string, modelIdOverride?: string, cardId?: string) => {
+		async (
+			message?: string,
+			modelIdOverride?: string,
+			cardId?: string,
+			agentId?: string
+		) => {
 			const userMessage = message || prompt.trim();
 			if (!userMessage || isStreaming) return;
 
@@ -506,9 +515,98 @@ function ChatPageContent() {
 					"📤 Sending message with chatId:",
 					currentChatId,
 					"cardId:",
-					cardId
+					cardId,
+					"agentId:",
+					agentId
 				);
 
+				// Handle agent-based requests
+				if (agentId && selectedAgent) {
+					console.log(
+						"🤖 Executing agent workflow for:",
+						selectedAgent.name
+					);
+
+					// Fetch full agent details with subnet_list
+					let agentDetail;
+					try {
+						const agentAddress =
+							("collection_address" in selectedAgent
+								? selectedAgent.collection_address
+								: null) ||
+							("nft_address" in selectedAgent
+								? selectedAgent.nft_address
+								: null);
+
+						if (!agentAddress) {
+							throw new Error("No agent address found");
+						}
+
+						agentDetail = await getAgentDetailByCollectionAndNftId(
+							agentAddress,
+							selectedAgent.nft_id
+						);
+
+						if (!agentDetail) {
+							throw new Error("Failed to fetch agent details");
+						}
+
+						console.log("✅ Fetched agent details:", agentDetail);
+					} catch (error) {
+						console.error(
+							"❌ Failed to fetch agent details:",
+							error
+						);
+						toast.error(
+							"Failed to fetch agent details. Please try again."
+						);
+						return;
+					}
+
+					const workflowId =
+						await workflowExecutor.executeAgentWorkflow(
+							agentDetail as any,
+							userMessage,
+							address,
+							skyBrowser,
+							{ address },
+							(data) => {
+								console.log(
+									"🔄 Agent workflow status update:",
+									data
+								);
+								// Handle agent workflow status updates here if needed
+							}
+						);
+
+					console.log(
+						"✅ Agent workflow started with ID:",
+						workflowId
+					);
+
+					// Invalidate chat history queries after agent workflow starts
+					setTimeout(() => {
+						console.log(
+							"🔄 Invalidating chat history queries after agent workflow start"
+						);
+						queryClient.invalidateQueries({
+							queryKey: [QUERY_KEYS.HISTORY, address],
+						});
+					}, 1000); // 1 second delay
+
+					// For agent requests, we don't need to handle streaming response
+					// The workflow executor handles the polling and status updates
+					setStreamingMessage("");
+					return;
+				}
+
+				// Check if we have an agentId but no selectedAgent
+				if (agentId && !selectedAgent) {
+					toast.error("Please select an agent first");
+					return;
+				}
+
+				// Handle chat-based requests (existing logic)
 				const response = await fetch(
 					`${API_CONFIG.CHAT_ACCESSPOINT_URL}/natural-request?stream=true`,
 					{
@@ -675,6 +773,7 @@ function ChatPageContent() {
 			currentChatId,
 			updateUrlWithChatId,
 			selectedModel,
+			selectedAgent,
 		]
 	);
 
@@ -750,9 +849,18 @@ function ChatPageContent() {
 		[]
 	);
 
+	const handleCardAgentChange = useCallback(
+		(cardId: string, agentId: string) => {
+			setSelectionCards((prev) =>
+				prev.map((c) => (c.id === cardId ? { ...c, agentId } : c))
+			);
+		},
+		[]
+	);
+
 	const handleCardSend = useCallback(
-		(cardId: string, text: string, modelId: string) => {
-			handleSendMessage(text, modelId, cardId);
+		(cardId: string, text: string, modelId?: string, agentId?: string) => {
+			handleSendMessage(text, modelId, cardId, agentId);
 		},
 		[handleSendMessage]
 	);
@@ -815,24 +923,19 @@ function ChatPageContent() {
 		[scrollToBottom]
 	);
 
-	// Handler for "Instruct Agent" - create a card (existing behavior)
-	const handleInstructAgent = useCallback(
-		(selectedText: string) => {
-			const id = `${Date.now()}_${Math.random()
-				.toString(36)
-				.slice(2, 7)}`;
-			setSelectionCards((prev) => [
-				{
-					id,
-					text: selectedText,
-					modelId: selectedModel?.id || models[0]?.id,
-					isCollapsed: true,
-				},
-				...prev,
-			]);
-		},
-		[selectedModel, models]
-	);
+	// Handler for "Instruct Agent" - create a card with agent selection
+	const handleInstructAgent = useCallback((selectedText: string) => {
+		const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+		setSelectionCards((prev) => [
+			{
+				id,
+				text: selectedText,
+				agentId: "agent", // This will trigger agent selection UI
+				isCollapsed: true,
+			},
+			...prev,
+		]);
+	}, []);
 
 	return (
 		<div className="flex flex-col h-screen max-h-screen bg-background relative">
@@ -903,9 +1006,11 @@ function ChatPageContent() {
 								card={card}
 								models={models}
 								selectedModel={selectedModel}
+								selectedAgent={selectedAgent}
 								isStreaming={isStreaming}
 								onTextChange={handleCardTextChange}
 								onModelChange={handleCardModelChange}
+								onAgentChange={handleCardAgentChange}
 								onSend={handleCardSend}
 								onOpenChat={(chatId, cardId) =>
 									handleCardOpenChat(chatId, cardId)
