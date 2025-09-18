@@ -129,8 +129,8 @@ function ChatPageContent() {
 		enabled: !!chatIdFromUrl,
 		retry: false,
 		refetchOnWindowFocus: false,
-		staleTime: 0,
-		gcTime: 0,
+		staleTime: 1000 * 60 * 5, // 5 minutes - data is fresh for 5 minutes
+		gcTime: 1000 * 60 * 30, // 30 minutes - keep in cache for 30 minutes
 	});
 
 	// Fetch available models for the panel's model selector
@@ -181,7 +181,8 @@ function ChatPageContent() {
 			fetchedMessages.success &&
 			Array.isArray(fetchedMessages.data?.messages) &&
 			!isStreaming &&
-			chatIdFromUrl // Ensure we have a chatId from URL
+			chatIdFromUrl && // Ensure we have a chatId from URL
+			currentChatId === chatIdFromUrl // Ensure we're loading the correct chat
 		) {
 			const mapped = mapFetchedMessagesToChatMsgs(fetchedMessages);
 
@@ -194,8 +195,12 @@ function ChatPageContent() {
 				messages.length
 			);
 
-			// Smart message merging: preserve local messages that haven't been saved to server yet
-			if (mapped.length >= messages.length) {
+			// Always use server data when switching chats to avoid stale data
+			// Only merge local messages if we're in the same chat and have streaming messages
+			if (
+				currentChatId === chatIdFromUrl &&
+				mapped.length >= messages.length
+			) {
 				// Server has same or more messages, use server data
 				console.log(
 					"📥 Server has same/more messages, using server data:",
@@ -204,7 +209,10 @@ function ChatPageContent() {
 					messages.length
 				);
 				setMessages(mapped);
-			} else {
+			} else if (
+				currentChatId === chatIdFromUrl &&
+				messages.length > mapped.length
+			) {
 				// Local has more messages (likely streaming messages), keep local but merge with server
 				console.log(
 					"📥 Local has more messages, merging with server data:",
@@ -226,6 +234,13 @@ function ChatPageContent() {
 				// Merge server messages with newer local messages
 				const mergedMessages = [...mapped, ...localMessagesToKeep];
 				setMessages(mergedMessages);
+			} else {
+				// Fresh chat or different chat - use server data directly
+				console.log(
+					"📥 Fresh chat load, using server data:",
+					mapped.length
+				);
+				setMessages(mapped);
 			}
 
 			if (fetchedMessages.data?.chatId && !currentChatId) {
@@ -258,7 +273,13 @@ function ChatPageContent() {
 				}, 100);
 			}, 50);
 		}
-	}, [fetchedMessages, isStreaming, currentChatId, chatIdFromUrl]);
+	}, [
+		fetchedMessages,
+		isStreaming,
+		currentChatId,
+		chatIdFromUrl,
+		messages.length,
+	]);
 
 	const isNearBottom = useCallback(() => {
 		const container = messagesContainerRef.current;
@@ -318,12 +339,16 @@ function ChatPageContent() {
 					isUserScrollingRef.current = false;
 					shouldAutoScrollRef.current = true;
 				}
-			} else if (!isStreaming && !isInitialLoad) {
-				isUserScrollingRef.current = true;
-				shouldAutoScrollRef.current = false;
+			} else {
+				// User has scrolled away from bottom - disable auto-scroll
+				// This should happen regardless of streaming state
+				if (!isInitialLoad) {
+					isUserScrollingRef.current = true;
+					shouldAutoScrollRef.current = false;
+				}
 			}
 		}, 50);
-	}, [isNearBottom, isStreaming, isInitialLoad]);
+	}, [isNearBottom, isInitialLoad]);
 
 	const updateUrlWithChatId = useCallback(
 		(chatId: string) => {
@@ -348,13 +373,29 @@ function ChatPageContent() {
 		if (chatIdFromUrl && chatIdFromUrl !== currentChatId) {
 			console.log("🔄 Updating currentChatId from URL:", chatIdFromUrl);
 			setCurrentChatId(chatIdFromUrl);
+
+			// Clear local messages state when switching to a different chat
+			setMessages([]);
+			setStreamingMessage("");
+			setIsStreaming(false);
+			setIsCardStreaming(false);
+
+			// Reset scroll state
+			setIsInitialLoad(false);
+			shouldAutoScrollRef.current = true;
+			isUserScrollingRef.current = false;
+			lastMessageCountRef.current = 0;
 		}
 	}, [chatIdFromUrl, currentChatId]);
 
 	useEffect(() => {
 		if (isStreaming && streamingMessage && shouldAutoScrollRef.current) {
 			const scrollInterval = setInterval(() => {
-				if (shouldAutoScrollRef.current) {
+				// Only auto-scroll if user hasn't manually scrolled away
+				if (
+					shouldAutoScrollRef.current &&
+					!isUserScrollingRef.current
+				) {
 					scrollToBottom(false, true);
 				}
 			}, 100);
@@ -371,6 +412,7 @@ function ChatPageContent() {
 		if (hasNewMessages && !isInitialLoad) {
 			lastMessageCountRef.current = currentMessageCount;
 
+			// Only auto-scroll if user is near bottom or auto-scroll is enabled
 			if (shouldAutoScrollRef.current || isNearBottom()) {
 				shouldAutoScrollRef.current = true;
 				scrollToBottom(true, true);
@@ -385,7 +427,8 @@ function ChatPageContent() {
 			messages.length > 0 &&
 			!isInitialLoad
 		) {
-			if (shouldAutoScrollRef.current) {
+			// Only auto-scroll when streaming ends if user hasn't manually scrolled away
+			if (shouldAutoScrollRef.current && !isUserScrollingRef.current) {
 				setTimeout(() => scrollToBottom(true, true), 100);
 			}
 		}
@@ -725,21 +768,19 @@ function ChatPageContent() {
 			setIsStreaming(false);
 			setIsCardStreaming(false);
 
-			// Invalidate cache for the new chat and force refetch
-			queryClient.invalidateQueries({
+			// Reset scroll state
+			setIsInitialLoad(false);
+			shouldAutoScrollRef.current = true;
+			isUserScrollingRef.current = false;
+			lastMessageCountRef.current = 0;
+
+			// Remove any existing cache for this chat to force fresh fetch
+			queryClient.removeQueries({
 				queryKey: ["chat-messages", chatId],
 			});
 
 			// Navigate to the new chat
 			router.push(`/chat?chatId=${chatId}`);
-
-			// Force refetch after navigation with a longer delay to ensure server has processed the messages
-			setTimeout(() => {
-				console.log("Force refetching messages for chatId:", chatId);
-				queryClient.refetchQueries({
-					queryKey: ["chat-messages", chatId],
-				});
-			}, 500); // Increased delay to 500ms
 		},
 		[queryClient, router]
 	);

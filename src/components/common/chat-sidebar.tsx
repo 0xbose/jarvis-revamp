@@ -164,6 +164,7 @@ const WorkflowItem = React.memo(
 		handleDelete: (item: WorkflowItem) => void;
 	}) => {
 		const router = useRouter();
+		const queryClient = useQueryClient();
 		const Icon =
 			workflow.type === "chat"
 				? MessageCircleMoreIcon
@@ -243,6 +244,24 @@ const WorkflowItem = React.memo(
 									: `/chat/agent/${workflow.agentAddress}?workflowId=${workflow.requestId}&nftId=${workflow.agentIDFromCollection}`
 							}
 							className="w-full flex items-center justify-center gap-x-1.5"
+							onClick={() => {
+								// Clear cache for the chat being navigated to
+								if (
+									workflow.type === "chat" &&
+									workflow.chatId
+								) {
+									console.log(
+										"🔄 Clearing cache for chat:",
+										workflow.chatId
+									);
+									queryClient.removeQueries({
+										queryKey: [
+											"chat-messages",
+											workflow.chatId,
+										],
+									});
+								}
+							}}
 							onMouseEnter={() => {
 								// Debug logging
 								console.log("🔍 Link Debug:", {
@@ -394,6 +413,7 @@ const ChatSidebar = React.memo(() => {
 	const searchParams = useSearchParams();
 	const currentAgentAddress = params?.agentAddress as string;
 	const currentWorkflowId = searchParams?.get("workflowId");
+	const currentChatId = searchParams?.get("chatId");
 
 	const hasWallet = !!address;
 
@@ -813,10 +833,13 @@ const ChatSidebar = React.memo(() => {
 								{visibleItems.map(
 									(workflow: WorkflowItem, index: number) => {
 										const isSelected =
-											currentAgentAddress ===
-												workflow.agentAddress &&
-											currentWorkflowId ===
-												workflow.requestId;
+											workflow.type === "chat"
+												? currentChatId ===
+												  workflow.chatId
+												: currentAgentAddress ===
+														workflow.agentAddress &&
+												  currentWorkflowId ===
+														workflow.requestId;
 
 										const isRunning =
 											workflow.status === "in_progress" ||

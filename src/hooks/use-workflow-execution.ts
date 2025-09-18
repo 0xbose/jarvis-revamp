@@ -53,11 +53,11 @@ export const useWorkflowExecution = ({
 		setPollingTimers,
 		updateExecutionStatus,
 	} = useWorkflowExecutionStore();
-	
+
 	const { updateTestStatus } = useUIStore();
-	
+
 	const queryClient = useQueryClient();
-	
+
 	// Use the subnet cache hook for subnet operations
 	const { clearWorkflowCache, clearWorkflowTracking } = useSubnetCache();
 

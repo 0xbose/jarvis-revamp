@@ -20,19 +20,16 @@ export const useChatScroll = () => {
 			chatContainerRef.current;
 		const isAtBottom = scrollHeight - scrollTop - clientHeight < 50; // 50px threshold
 
-		
 		if (!isAtBottom) {
 			setIsUserScrolling(true);
 		} else {
 			setIsUserScrolling(false);
 		}
 
-		
 		if (scrollTimeoutRef.current) {
 			clearTimeout(scrollTimeoutRef.current);
 		}
 
-		
 		scrollTimeoutRef.current = setTimeout(() => {
 			const { scrollTop, scrollHeight, clientHeight } =
 				chatContainerRef.current!;
@@ -41,10 +38,9 @@ export const useChatScroll = () => {
 			if (isAtBottom) {
 				setIsUserScrolling(false);
 			}
-		}, 1000); 
+		}, 1000);
 	}, []);
 
-	
 	const useScrollOnNewMessages = (messageCount: number) => {
 		useEffect(() => {
 			if (messageCount > lastMessageCountRef.current) {
@@ -54,7 +50,6 @@ export const useChatScroll = () => {
 		}, [messageCount, scrollToBottom]);
 	};
 
-		
 	useEffect(() => {
 		return () => {
 			if (scrollTimeoutRef.current) {
