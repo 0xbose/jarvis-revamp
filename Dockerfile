@@ -2,28 +2,22 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Install pnpm globally
-RUN npm install -g pnpm
-
 # Copy package files
 COPY package.json package-lock.json ./
 
 # Install dependencies using pnpm
-RUN pnpm install --frozen-lockfile
+RUN npm install -f
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
-
-# Install pnpm globally
-RUN npm install -g pnpm
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Build the application using pnpm
-RUN pnpm run build
+RUN npm run build
 
 # Stage 3: Runner
 FROM node:20-alpine AS runner
