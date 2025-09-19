@@ -941,11 +941,15 @@ function ChatPageContent() {
 			{
 				id,
 				text: selectedText,
-				agentId: "agent", // This will trigger agent selection UI
-				isCollapsed: true,
+				agentId: "agent",
+				isCollapsed: false,
 			},
-			...prev,
+			...prev.map((card) => ({ ...card, isCollapsed: true })),
 		]);
+	}, []);
+
+	const handleCopy = useCallback((selectedText: string) => {
+		navigator.clipboard.writeText(selectedText);
 	}, []);
 
 	if (isComparisonMode && comparisonData) {
@@ -973,6 +977,7 @@ function ChatPageContent() {
 									rootSelector=".chat-page-messages-root"
 									onAsk={handleAskJarvis}
 									onInstructAgent={handleInstructAgent}
+									onCopy={handleCopy}
 								/>
 								{messages.map((message, idx) => (
 									<ChatMessage
@@ -1098,6 +1103,7 @@ function ChatPageContent() {
 							rootSelector=".chat-page-messages-root"
 							onAsk={handleAskJarvis}
 							onInstructAgent={handleInstructAgent}
+							onCopy={handleCopy}
 						/>
 						{messages.map((message, idx) => (
 							<ChatMessage

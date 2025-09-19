@@ -2,25 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
+import { Copy, Layers, Quote } from "lucide-react";
 
-interface SelectionAskJarvisProps {
-	// Any element matching this selector will be treated as the selectable area
+interface SelectionTooltipProps {
 	rootSelector: string;
-	// Called when the user clicks Ask Jarvis
 	onAsk: (selectedText: string) => void;
-	// Called when the user clicks Instruct Agent
 	onInstructAgent: (selectedText: string) => void;
-	// Optional: label override
-	label?: string;
+	onCopy: (selectedText: string) => void;
 }
 
-// Lightweight floating tooltip that appears near current selection
-export default function SelectionAskJarvis({
+export default function SelectionTooltip({
 	rootSelector,
 	onAsk,
 	onInstructAgent,
-	label = "Ask Jarvis",
-}: SelectionAskJarvisProps) {
+	onCopy,
+}: SelectionTooltipProps) {
 	const [visible, setVisible] = useState(false);
 	const [position, setPosition] = useState<{ top: number; left: number }>({
 		top: 0,
@@ -36,7 +32,6 @@ export default function SelectionAskJarvis({
 			const containerEl = document.querySelector(rootSelector);
 			if (!containerEl) return;
 
-			// Ensure selection is inside root container
 			const common = range.commonAncestorContainer as HTMLElement | null;
 			const nodeEl = (
 				common?.nodeType === 1 ? common : common?.parentElement
@@ -62,9 +57,9 @@ export default function SelectionAskJarvis({
 			}
 
 			setSelectedText(text);
-			const tooltipWidth = 240; // Approximate width of the tooltip with two buttons
+			const tooltipWidth = 320; // Approximate width for three buttons
 			setPosition({
-				top: Math.max(4, rect.top + window.scrollY - 45), // Position above selection
+				top: Math.max(4, rect.top + window.scrollY - 55), // Position above selection with more space
 				left: Math.max(
 					8,
 					rect.left +
@@ -138,58 +133,59 @@ export default function SelectionAskJarvis({
 				left: position.left,
 			}}
 		>
-			<div className="pointer-events-auto flex gap-2">
-				<Button
-					size="sm"
-					className="h-8 px-3 rounded-md bg-background hover:bg-background/95 border border-border/50 text-white text-sm flex items-center gap-2 transition-all duration-200 hover:cursor-pointer"
-					onMouseDown={(e) => e.preventDefault()}
-					onClick={() => {
-						onAsk(selectedText);
-						setVisible(false);
-					}}
-				>
-					<svg
-						width="14"
-						height="14"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="2"
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						className="flex-shrink-0"
-					>
-						<path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
-						<path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
-					</svg>
-					Ask Jarvis
-				</Button>
-				<Button
-					size="sm"
-					className="h-8 px-3 rounded-md bg-background hover:bg-background/95 border border-border/50 text-white text-sm flex items-center gap-2 transition-all duration-200 hover:cursor-pointer"
-					onMouseDown={(e) => e.preventDefault()}
-					onClick={() => {
-						onInstructAgent(selectedText);
-						setVisible(false);
-					}}
-				>
-					<svg
-						width="14"
-						height="14"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						strokeWidth="2"
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						className="flex-shrink-0"
-					>
-						<path d="M12 2L2 7l10 5 10-5-10-5z" />
-						<path d="M2 17l10 5 10-5" />
-						<path d="M2 12l10 5 10-5" />
-					</svg>
-					Instruct Agent
-				</Button>
+			<div className="pointer-events-auto relative">
+				<div className="flex gap-1 bg-[#bedfff] text-background rounded-lg shadow-lg border-b-2 border-[#0091ff] border-x-[1px] p-1">
+					<div className="divide-x divide-border space-x-1 py-0.5 flex items-center h-8">
+						<Button
+							size="sm"
+							variant="ghost"
+							className="rounded-none h-6 px-3 text-sm flex items-center gap-2 hover:text-background/90 hover:bg-transparent"
+							onMouseDown={(e) => e.preventDefault()}
+							onClick={() => {
+								onAsk(selectedText);
+								setVisible(false);
+							}}
+						>
+							<div className="flex items-center gap-2 scale-100 hover:scale-[102%] transition-all duration-200 cursor-pointer">
+								<Quote />
+								Ask Jarvis
+							</div>
+						</Button>
+						<Button
+							size="sm"
+							variant="ghost"
+							className="rounded-none h-6 px-3 text-sm flex items-center gap-2 hover:text-background/90 hover:bg-transparent"
+							onMouseDown={(e) => e.preventDefault()}
+							onClick={() => {
+								onInstructAgent(selectedText);
+								setVisible(false);
+							}}
+						>
+							<div className="flex items-center gap-2 scale-100 hover:scale-[102%] transition-all duration-200 cursor-pointer">
+								<Layers />
+								Instruct Agent
+							</div>
+						</Button>
+						<Button
+							size="sm"
+							variant="ghost"
+							className="rounded-none h-6 px-3 text-sm flex items-center gap-2 hover:text-background/90 hover:bg-transparent"
+							onMouseDown={(e) => e.preventDefault()}
+							onClick={() => {
+								onCopy(selectedText);
+								setVisible(false);
+							}}
+						>
+							<div className="flex items-center gap-2 scale-100 hover:scale-[104%] transition-all duration-200 cursor-pointer">
+								<Copy />
+							</div>
+						</Button>
+					</div>
+				</div>
+			</div>
+			<div className="absolute top-full left-1/2 transform -translate-x-1/2">
+				<div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[7px] border-l-transparent border-r-transparent border-t-[#0091ff]"></div>
+				<div className="w-0 h-0 border-l-[7px] border-r-[7px] border-t-[7px] border-l-transparent border-r-transparent border-t-[#bedfff] absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-[2px]"></div>
 			</div>
 		</div>
 	);

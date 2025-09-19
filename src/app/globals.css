@@ -233,3 +233,15 @@ body {
 .spline-logo {
 	display: none !important;
 }
+
+
+/* INSERT_YOUR_CODE */
+::selection {
+	background: #91c7fe;
+	color: #fff;
+}
+
+::-moz-selection {
+	background: #91c7fe;
+	color: #fff;
+}
