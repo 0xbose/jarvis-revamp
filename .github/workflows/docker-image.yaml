@@ -4,8 +4,7 @@ name: Build and Publish Next.js Docker Image
 on:
   push:
     branches:
-      - master
-      - uirendering
+      - main
 
 jobs:
   build-and-publish:
