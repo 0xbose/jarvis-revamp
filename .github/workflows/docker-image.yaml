@@ -1,0 +1,38 @@
+
+name: Build and Publish Next.js Docker Image
+
+on:
+  push:
+    branches:
+      - master
+      - uirendering
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Hub login
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          
+      - name: Generate .env file
+        run: |
+          chmod +x .github/workflows/generate-env.sh
+          .github/workflows/generate-env.sh
+
+      - name: Build Docker image
+        run: |
+          # Use BuildKit for better Docker builds
+          DOCKER_BUILDKIT=1 docker build \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/skynet_intelligence_preview:${{ github.run_number }} .
+
+      - name: Push Docker image to Docker Hub
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/skynet_intelligence_preview:${{ github.run_number }}
