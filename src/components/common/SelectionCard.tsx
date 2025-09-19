@@ -4,7 +4,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { GitCompare, Loader2, Trash2, X } from "lucide-react";
+import { Loader2, Trash2, X, ExternalLink, ArrowUpRight } from "lucide-react";
 import ModelSelectDialog from "@/components/common/ModelSelectDialog";
 import Marketplace from "../market-place/user-agent-selector";
 
@@ -203,7 +203,7 @@ export default function SelectionCardComponent({
 					</div>
 				)}
 
-				{/* Show compare button in place of agent selection when chat/workflow exists */}
+				{/* Show small open icon in place of agent selection when chat/workflow exists */}
 				{(card.chatId || card.workflowId) &&
 					card.agentId &&
 					onCompare && (
@@ -218,8 +218,7 @@ export default function SelectionCardComponent({
 							}
 							className="flex items-center gap-2 bg-accent-foreground text-background hover:bg-accent-foreground/90 hover:text-background"
 						>
-							<GitCompare />
-							<span>Compare</span>
+							<ArrowUpRight className="size-4" />
 						</Button>
 					)}
 
@@ -233,22 +232,9 @@ export default function SelectionCardComponent({
 									card.id
 								)
 							}
-							className="flex items-center gap-2 bg-sidebar hover:bg-sidebar/80 cursor-pointer"
+							className="flex items-center gap-2 bg-sidebar hover:bg-sidebar/80 cursor-pointer border-none"
 						>
-							<svg
-								width="10"
-								height="10"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								strokeWidth="2"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							>
-								<path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
-								<path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
-							</svg>
-							<span>Open</span>
+							<ExternalLink className="size-4" />
 						</Button>
 					) : (
 						<Button

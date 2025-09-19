@@ -171,7 +171,7 @@ const WorkflowItem = React.memo(
 				: getWorkflowIcon(workflow.status as string);
 		const iconColor =
 			workflow.type === "chat"
-				? "text-amber-600"
+				? "text-gray-400"
 				: getWorkflowIconColor(workflow.status as string);
 		const iconAnimation =
 			workflow.type === "chat"
