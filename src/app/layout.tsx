@@ -23,6 +23,9 @@ export default function RootLayout({
 }) {
 	return (
 		<html lang="en">
+			<head>
+				<link rel="icon" type="image/png" href="/icon.png" />
+			</head>
 			<body className={inter.className} suppressHydrationWarning>
 				<QueryProviderWrapper>
 					<Web3AuthProvider>
