@@ -700,7 +700,7 @@ export const generateAgentWithValidation = async (
 		throw new Error("Web3 context address is required");
 	}
 
-	const apiUrl = process.env.NEXT_PUBLIC_SKYINTEL_API_URL;
+	const apiUrl = API_CONFIG.SKYINTEL_API;
 	if (!apiUrl) {
 		throw new Error("SkyIntel API URL not configured");
 	}
@@ -793,7 +793,7 @@ export const createContractService = (
 export const createSkyBrowser = (
 	contractService: SkyEtherContractService
 ): SkyMainBrowser => {
-	const storageApiUrl = process.env.NEXT_PUBLIC_STORAGE_API_URL;
+	const storageApiUrl = API_CONFIG.STORAGE_API;
 	if (!storageApiUrl) {
 		throw new Error("Storage API URL not configured");
 	}

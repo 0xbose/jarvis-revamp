@@ -1,7 +1,7 @@
 import { CHAIN_NAMESPACES, WEB3AUTH_NETWORK } from "@web3auth/base";
 import { Web3AuthOptions } from "@web3auth/modal";
 import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
-import { NETWORK_CONFIG } from "./constants";
+import { API_CONFIG, NETWORK_CONFIG } from "./constants";
 
 export type ChainType = "mainnet";
 
@@ -24,7 +24,7 @@ const CHAIN_CONFIG: ChainConfig = {
 	tickerName: NETWORK_CONFIG.SKYNET.TICKER_NAME,
 };
 
-const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID;
+const clientId = API_CONFIG.WEB3AUTH_CLIENT_ID;
 
 // EVM Chain Config
 const chainConfig = {

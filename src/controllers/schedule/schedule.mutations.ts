@@ -2,6 +2,7 @@ import { getAxiosInstanceWithApiKey } from "@/lib/axios";
 import { AgentPayload } from "@/types/schedule";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
 import { Web3Context } from "@/types/skynet";
+import { API_CONFIG } from "@/config/constants";
 
 export const scheduleWorkflowWithPrompt = async ({
 	prompt,
@@ -14,7 +15,7 @@ export const scheduleWorkflowWithPrompt = async ({
 	skyBrowser?: SkyMainBrowser;
 	web3Context?: Web3Context;
 }) => {
-	const baseUrl = `${process.env.NEXT_PUBLIC_TASK_SCHEDULER_ACCESSPOINT_URL}`;
+	const baseUrl = `${API_CONFIG.TASK_SCHEDULER_ACCESSPOINT_URL}`;
 	const axiosInstance = await getAxiosInstanceWithApiKey(
 		baseUrl,
 		skyBrowser,

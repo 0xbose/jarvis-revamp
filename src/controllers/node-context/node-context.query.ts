@@ -1,7 +1,8 @@
 import axios from "axios";
 import { NodeContext } from "../../types/memory";
 import { apiKeyManager } from "@/utils/api-key-manager";
-
+import { API_CONFIG } from "@/config/constants";
+	
 export const getNodeContextMemory = async ({
 	agentID,
 	skyBrowser,
@@ -18,14 +19,14 @@ export const getNodeContextMemory = async ({
 		throw new Error("apiKey is required");
 	}
 	const response = await axios.get(
-		`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections/node-context`,
+		`${API_CONFIG.API_BASE_URL}/collections/node-context`,
 		{
 			params: {
 				apiKey: apiKey,
 				agentID,
 			},
 			headers: {
-				"x-api-key": `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+				"x-api-key": `${API_CONFIG.X_API_KEY}`,
 			},
 		}
 	);
@@ -61,14 +62,14 @@ export const getMemoryRecall = async ({
 	}
 
 	const response = await axios.get(
-		`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections/memory-recall`,
+		`${API_CONFIG.API_BASE_URL}/collections/memory-recall`,
 		{
 			params: {
 				apiKey: apiKey,
 				agentID,
 			},
 			headers: {
-				"x-api-key": `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+				"x-api-key": `${API_CONFIG.X_API_KEY}`,
 			},
 		}
 	);

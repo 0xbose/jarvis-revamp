@@ -134,7 +134,7 @@ export default function SelectionTooltip({
 			}}
 		>
 			<div className="pointer-events-auto relative">
-				<div className="flex gap-1 bg-[#bedfff] text-background rounded-lg shadow-lg border-b-2 border-[#0091ff] border-x-[1px] p-1">
+				<div className="flex gap-1 bg-[#ecf5ff] text-background rounded-lg shadow-lg border-b-2 border-[#0091ff] border-x-[1px] p-1">
 					<div className="divide-x divide-border space-x-1 py-0.5 flex items-center h-8">
 						<Button
 							size="sm"
@@ -185,7 +185,7 @@ export default function SelectionTooltip({
 			</div>
 			<div className="absolute top-full left-1/2 transform -translate-x-1/2">
 				<div className="w-0 h-0 border-l-[8px] border-r-[8px] border-t-[7px] border-l-transparent border-r-transparent border-t-[#0091ff]"></div>
-				<div className="w-0 h-0 border-l-[7px] border-r-[7px] border-t-[7px] border-l-transparent border-r-transparent border-t-[#bedfff] absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-[2px]"></div>
+				<div className="w-0 h-0 border-l-[7px] border-r-[7px] border-t-[7px] border-l-transparent border-r-transparent border-t-[#ecf5ff] absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-[2px]"></div>
 			</div>
 		</div>
 	);

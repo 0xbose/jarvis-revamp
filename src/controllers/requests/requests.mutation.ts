@@ -1,6 +1,7 @@
 import { getAxiosInstanceWithApiKey } from "@/lib/axios";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
 import { Web3Context } from "@/types/wallet";
+import { API_CONFIG } from "@/config/constants";
 
 /**
  * Deletes a workflow request by its ID.
@@ -15,7 +16,7 @@ export const deleteWorkflowRequest = async (
   web3Context: Web3Context
 ): Promise<any> => {
   const axiosInstance = await getAxiosInstanceWithApiKey(
-    process.env.NEXT_PUBLIC_NFT_USER_AGENT_URL || "",
+    API_CONFIG.NFT_USER_AGENT_URL || "",
     skyBrowser,
     web3Context
   );

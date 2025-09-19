@@ -4,6 +4,7 @@ import {
 	NodeContextResponse,
 } from "../../types/memory";
 import { apiKeyManager } from "@/utils/api-key-manager";
+import { API_CONFIG } from "@/config/constants";
 
 /**
  * Upsert (save or update) collection node memory for a given (agent_id, api_key, item_id) combination.
@@ -45,7 +46,7 @@ export const upsertNodeContextMemory = async ({
 	}
 
 	const response = await axios.post<NodeContextResponse>(
-		`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections/node-context`,
+		`${API_CONFIG.API_BASE_URL}/collections/node-context`,
 		{
 			agent_id,
 			agentCollection,
@@ -54,7 +55,7 @@ export const upsertNodeContextMemory = async ({
 		},
 		{
 			headers: {
-				"x-api-key": `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+				"x-api-key": `${API_CONFIG.X_API_KEY}`,
 				"Content-Type": "application/json",
 			},
 		}
@@ -101,7 +102,7 @@ export const upsertMemoryRecall = async ({
 	}
 
 	const response = await axios.post(
-		`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections/memory-recall`,
+		`${API_CONFIG.API_BASE_URL}/collections/memory-recall`,
 		{
 			agent_id,
 			agentCollection,
@@ -109,7 +110,7 @@ export const upsertMemoryRecall = async ({
 		},
 		{
 			headers: {
-				"x-api-key": `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+				"x-api-key": `${API_CONFIG.X_API_KEY}`,
 				"Content-Type": "application/json",
 			},
 		}
@@ -153,11 +154,11 @@ export const deleteNodeContextMemory = async ({
 	}
 
 	const response = await axios.delete(
-		`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections/node-context`,
+		`${API_CONFIG.API_BASE_URL}/collections/node-context`,
 		{
 			params,
 			headers: {
-				"x-api-key": `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+				"x-api-key": `${API_CONFIG.X_API_KEY}`,
 				"Content-Type": "application/json",
 			},
 		}
@@ -201,11 +202,11 @@ export const deleteMemoryRecall = async ({
 	}
 
 	const response = await axios.delete(
-		`${process.env.NEXT_PUBLIC_API_BASE_URL}/collections/memory-recall`,
+		`${API_CONFIG.API_BASE_URL}/collections/memory-recall`,
 		{
 			params,
 			headers: {
-				"x-api-key": `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+				"x-api-key": `${API_CONFIG.X_API_KEY}`,
 				"Content-Type": "application/json",
 			},
 		}

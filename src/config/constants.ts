@@ -1,10 +1,21 @@
 // API Configuration
 export const API_CONFIG = {
-	STORAGE_API: process.env.NEXT_PUBLIC_STORAGE_API_URL,
-	SKYINTEL_API: process.env.NEXT_PUBLIC_SKYINTEL_API_URL,
-	NFT_USER_AGENT_URL: process.env.NEXT_PUBLIC_NFT_USER_AGENT_URL,
-	REDIS_USER_AGENT_URL: process.env.NEXT_PUBLIC_REDIS_USER_AGENT_URL,
-	CHAT_ACCESSPOINT_URL: process.env.NEXT_PUBLIC_CHAT_ACCESSPOINT_URL,
+	API_BASE_URL: "https://skynetagent-c0n525.stackos.io/api",
+	X_API_KEY:
+		"sky_9b158f1e696bdc687e101a65c69335282630c2c134512b0d0276f64f45c2364b",
+
+	NFT_USER_AGENT_URL: "https://useragent-c0n639.stackos.io",
+	REDIS_USER_AGENT_URL: "https://redisagent-c0n639.stackos.io",
+
+	STORAGE_API: "https://lighthouseservice-c0n1.stackos.io",
+	SKYINTEL_API: "https://skyintel-c0n1.stackos.io/",
+
+	CHAT_ACCESSPOINT_URL: "https://jarvischat-c0n648.stackos.io",
+	TASK_SCHEDULER_ACCESSPOINT_URL: "https://taskschedular-c0n648.stackos.io",
+
+	WEB3AUTH_CLIENT_ID:
+		"BFMHaURTzER--ksK8FwGk3Dv242l-YmrkErFJwnsjl4i4-NiHOqNow8WgjnZQi4QegSt7u9pURyRs9ptwImZqy0",
+
 	BATCH_SIZE: 20,
 	MAX_RETRIES: 3,
 	RETRY_DELAY: 2000,
@@ -12,7 +23,7 @@ export const API_CONFIG = {
 
 // Socket Configuration ONLY for Agent Generation
 export const NATURAL_REQUEST_SOCKET_CONFIG = {
-	URL: process.env.NEXT_PUBLIC_SKYINTEL_API_URL,
+	URL: API_CONFIG.SKYINTEL_API,
 	TRANSPORTS: ["websocket"] as const,
 	TIMEOUT: 600000,
 	RECONNECTION: true,
@@ -23,11 +34,11 @@ export const NATURAL_REQUEST_SOCKET_CONFIG = {
 // Workflow Execution URLs
 export const WORKFLOW_ENDPOINTS = {
 	// Full workflow execution
-	FULL_WORKFLOW: `${process.env.NEXT_PUBLIC_NFT_USER_AGENT_URL}/natural-request`,
-	FULL_WORKFLOW_STATUS: `${process.env.NEXT_PUBLIC_REDIS_USER_AGENT_URL}/api/workflows`,
+	FULL_WORKFLOW: `${API_CONFIG.NFT_USER_AGENT_URL}/natural-request`,
+	FULL_WORKFLOW_STATUS: `${API_CONFIG.REDIS_USER_AGENT_URL}/api/workflows`,
 	// Emergency stop and resume endpoints
-	EMERGENCY_STOP: `${process.env.NEXT_PUBLIC_NFT_USER_AGENT_URL}/natural-request`,
-	RESUME_WORKFLOW: `${process.env.NEXT_PUBLIC_NFT_USER_AGENT_URL}/natural-request`,
+	EMERGENCY_STOP: `${API_CONFIG.NFT_USER_AGENT_URL}/natural-request`,
+	RESUME_WORKFLOW: `${API_CONFIG.NFT_USER_AGENT_URL}/natural-request`,
 } as const;
 
 // API Key Generation
@@ -43,10 +54,8 @@ export const NETWORK_CONFIG = {
 	SKYNET: {
 		CHAIN_ID: 619,
 		CHAIN_ID_HEX: "0x26B",
-		RPC_URL: process.env.NEXT_PUBLIC_RPC_URL || "https://rpc.skynet.io",
-		EXPLORER_URL:
-			process.env.NEXT_PUBLIC_EXPLORER_URL ||
-			"https://explorer.skynet.io",
+		RPC_URL: "https://rpc.skynet.io",
+		EXPLORER_URL: "https://explorer.skynet.io",
 		TICKER: "sUSD",
 		TICKER_NAME: "sUSD",
 		DISPLAY_NAME: "Skynet",
@@ -82,4 +91,3 @@ export const STATUS = {
 	TEST_COMPLETED: "test_completed",
 	FAILED: "failed",
 } as const;
-

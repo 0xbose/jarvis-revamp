@@ -1,3 +1,4 @@
+import { API_CONFIG } from "@/config/constants";
 import axios from "axios";
 
 export const createUserAgent = async (
@@ -24,11 +25,11 @@ export const createUserAgent = async (
   }
 
   const response = await axios.post(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/agents/user/${userAddress}`,
+    `${API_CONFIG.API_BASE_URL}/agents/user/${userAddress}`,
     payload,
     {
       headers: {
-        "x-api-key": `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+        "x-api-key": `${API_CONFIG.X_API_KEY}`,
         "Content-Type": "application/json",
       },
     }
@@ -51,11 +52,11 @@ export const updateUserAgent = async (
   }
 
   const response = await axios.put(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/agents/user/${userAddress}`,
+    `${API_CONFIG.API_BASE_URL}/agents/user/${userAddress}`,
     payload,
     {
       headers: {
-        "x-api-key": `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+        "x-api-key": `${API_CONFIG.X_API_KEY}`,
         "Content-Type": "application/json",
       },
     }

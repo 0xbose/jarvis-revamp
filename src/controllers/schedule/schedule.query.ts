@@ -1,6 +1,7 @@
 import { getAxiosInstanceWithApiKey } from "@/lib/axios";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
 import { Web3Context } from "@/types/skynet";
+import { API_CONFIG } from "@/config/constants";
 
 // Fetches all scheduled tasks for the API key
 export const fetchScheduledTasks = async ({
@@ -10,7 +11,7 @@ export const fetchScheduledTasks = async ({
 	skyBrowser?: SkyMainBrowser;
 	web3Context?: Web3Context;
 }) => {
-	const baseUrl = `${process.env.NEXT_PUBLIC_TASK_SCHEDULER_ACCESSPOINT_URL}`;
+	const baseUrl = `${API_CONFIG.TASK_SCHEDULER_ACCESSPOINT_URL}`;
 	const axiosInstance = await getAxiosInstanceWithApiKey(
 		baseUrl,
 		skyBrowser,
@@ -30,7 +31,7 @@ export const fetchTaskDetails = async ({
 	skyBrowser?: SkyMainBrowser;
 	web3Context?: Web3Context;
 }) => {
-	const baseUrl = `${process.env.NEXT_PUBLIC_TASK_SCHEDULER_ACCESSPOINT_URL}`;
+		const baseUrl = `${API_CONFIG.TASK_SCHEDULER_ACCESSPOINT_URL}`;
 	const axiosInstance = await getAxiosInstanceWithApiKey(
 		baseUrl,
 		skyBrowser,

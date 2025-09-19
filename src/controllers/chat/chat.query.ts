@@ -1,6 +1,7 @@
 import { getAxiosInstanceWithApiKey } from "@/lib/axios";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
 import { Web3Context } from "@/types/skynet";
+import { API_CONFIG } from "@/config/constants";
 
 export const getChatMessages = async ({
 	chatId,
@@ -12,12 +13,12 @@ export const getChatMessages = async ({
 	web3Context?: Web3Context;
 }): Promise<any> => {
 	const axiosInstance = await getAxiosInstanceWithApiKey(
-		process.env.NEXT_PUBLIC_NFT_USER_AGENT_URL || "",
+		API_CONFIG.NFT_USER_AGENT_URL || "",
 		skyBrowser,
 		web3Context
 	);
 	const response = await axiosInstance.get(
-		`${process.env.NEXT_PUBLIC_CHAT_ACCESSPOINT_URL}/chat-messages`,
+		`${API_CONFIG.CHAT_ACCESSPOINT_URL}/chat-messages`,
 		{
 			params: { chatId },
 		}

@@ -2,9 +2,10 @@ import axios from "axios";
 import { apiKeyManager } from "@/utils/api-key-manager";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
 import { Web3Context } from "@/types/wallet";
+import { API_CONFIG } from "@/config/constants";
 
 const axiosInstance = axios.create({
-	baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
+	baseURL: API_CONFIG.API_BASE_URL,
 	headers: {
 		"Content-Type": "application/json",
 	},

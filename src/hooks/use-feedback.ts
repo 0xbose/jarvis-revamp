@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { ChatMsg } from "@/types/chat";
 import { apiKeyManager } from "@/utils/api-key-manager";
-import { useQueryClient } from "@tanstack/react-query";
 import { useSubnetCache } from "./use-subnet-cache";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
-import { Web3Context } from "@/types/wallet";
+import { API_CONFIG } from "@/config/constants";
 
 interface UseFeedbackProps {
 	currentWorkflowId: string | null;
@@ -34,31 +33,42 @@ export const useFeedback = ({
 	refetchHistory,
 }: UseFeedbackProps) => {
 	const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
-	const [retryingSubnetIndex, setRetryingSubnetIndex] = useState<number | null>(null);
-	
+	const [retryingSubnetIndex, setRetryingSubnetIndex] = useState<
+		number | null
+	>(null);
+
 	// Use the subnet cache hook for subnet operations
 	const { updateSubnetStatus } = useSubnetCache();
 
-	const submitFeedbackToAPI = async ({question, answer}: {question?: string, answer: string}) => {
-		console.log(`🔍 submitFeedbackToAPI called with:`, { question, answer });
+	const submitFeedbackToAPI = async ({
+		question,
+		answer,
+	}: {
+		question?: string;
+		answer: string;
+	}) => {
+		console.log(`🔍 submitFeedbackToAPI called with:`, {
+			question,
+			answer,
+		});
 		console.log(`🔍 Required data check:`, {
 			currentWorkflowId: !!currentWorkflowId,
 			skyBrowser: !!skyBrowser,
-			address: !!address
+			address: !!address,
 		});
-		
+
 		if (!currentWorkflowId || !skyBrowser || !address) {
 			console.error(`❌ Missing required data:`, {
 				currentWorkflowId,
 				skyBrowser: !!skyBrowser,
-				address
+				address,
 			});
 			throw new Error("Missing required data for feedback submission");
 		}
 
-		const nftUserAgentUrl = process.env.NEXT_PUBLIC_NFT_USER_AGENT_URL;
+		const nftUserAgentUrl = API_CONFIG.NFT_USER_AGENT_URL;
 		console.log(`🔍 NFT User Agent URL:`, nftUserAgentUrl);
-		
+
 		if (!nftUserAgentUrl) {
 			console.error(`❌ Feedback submission endpoint not configured`);
 			throw new Error("Feedback submission endpoint not configured");
@@ -66,10 +76,12 @@ export const useFeedback = ({
 
 		console.log(`🔑 Getting API key...`);
 		const apiKey = await apiKeyManager.getApiKey(skyBrowser, { address });
-		console.log(`🔑 API key result:`, apiKey ? 'Success' : 'Failed');
-		
+		console.log(`🔑 API key result:`, apiKey ? "Success" : "Failed");
+
 		if (!apiKey) {
-			console.error(`❌ Failed to authenticate feedback submission - no API key`);
+			console.error(
+				`❌ Failed to authenticate feedback submission - no API key`
+			);
 			throw new Error("Failed to authenticate feedback submission");
 		}
 
@@ -78,7 +90,6 @@ export const useFeedback = ({
 			answer: answer,
 			question: question || undefined,
 		};
-		
 
 		const response = await fetch(`${nftUserAgentUrl}/natural-request`, {
 			method: "POST",
@@ -89,14 +100,18 @@ export const useFeedback = ({
 			body: JSON.stringify(contextPayload),
 		});
 
-		console.log(`📥 Response status:`, response.status, response.statusText);
+		console.log(
+			`📥 Response status:`,
+			response.status,
+			response.statusText
+		);
 
 		if (!response.ok) {
 			const errorText = await response.text();
 			console.error(`❌ API request failed:`, {
 				status: response.status,
 				statusText: response.statusText,
-				errorText
+				errorText,
 			});
 			throw new Error(
 				`Failed to submit feedback: ${response.status} ${response.statusText}`
@@ -116,10 +131,10 @@ export const useFeedback = ({
 		// Generate unique ID for this feedback answer
 		const sessionId = Date.now();
 		const feedbackAnswerId = `feedback_answer_${sessionId}`;
-		
+
 		// Find the subnet that has the SPECIFIC question being answered
-		const subnetWithQuestionIndex =
-			currentWorkflowData?.subnets?.findIndex((subnet: any) => {
+		const subnetWithQuestionIndex = currentWorkflowData?.subnets?.findIndex(
+			(subnet: any) => {
 				// Check if the subnet has the question directly
 				if (subnet.question?.text === question) {
 					return true;
@@ -137,12 +152,15 @@ export const useFeedback = ({
 				}
 
 				return false;
-			});
+			}
+		);
 
 		// Create retry handler for this specific feedback submission
 		const retrySubmission = async () => {
 			// Remove the failed message and retry
-			setChatMessages((prev) => prev.filter(msg => msg.id !== feedbackAnswerId));
+			setChatMessages((prev) =>
+				prev.filter((msg) => msg.id !== feedbackAnswerId)
+			);
 			await handleFeedbackSubmit(question, answer, feedback);
 		};
 
@@ -153,12 +171,19 @@ export const useFeedback = ({
 			content: feedback,
 			timestamp: new Date(),
 			isFeedbackAnswer: true,
-			subnetIndex: subnetWithQuestionIndex >= 0 ? subnetWithQuestionIndex : undefined,
-			toolName: subnetWithQuestionIndex >= 0 ? currentWorkflowData?.subnets?.[subnetWithQuestionIndex]?.toolName : undefined,
+			subnetIndex:
+				subnetWithQuestionIndex >= 0
+					? subnetWithQuestionIndex
+					: undefined,
+			toolName:
+				subnetWithQuestionIndex >= 0
+					? currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+							?.toolName
+					: undefined,
 			feedbackSubmissionState: {
 				status: "sending",
 				feedbackText: feedback,
-				retryHandler: retrySubmission
+				retryHandler: retrySubmission,
 			},
 		};
 
@@ -169,7 +194,7 @@ export const useFeedback = ({
 
 			return newMessages;
 		});
-		
+
 		try {
 			setIsSubmittingFeedback(true);
 
@@ -187,8 +212,9 @@ export const useFeedback = ({
 			}
 
 			// Use the subnet we already found instead of searching again
-			const subnetWithQuestion = currentWorkflowData?.subnets?.[subnetWithQuestionIndex];
-			
+			const subnetWithQuestion =
+				currentWorkflowData?.subnets?.[subnetWithQuestionIndex];
+
 			// If we couldn't find the specific subnet, fall back to finding any subnet with a question
 			if (!subnetWithQuestion?.question?.text) {
 				const fallbackSubnet = currentWorkflowData?.subnets?.find(
@@ -197,32 +223,30 @@ export const useFeedback = ({
 							(subnet.status === "pending" && subnet.question)) &&
 						subnet.question?.text
 				);
-				
+
 				if (!fallbackSubnet?.question?.text) {
 					throw new Error("No question found to answer");
 				}
-			
-				await submitFeedbackToAPI(
-					{
-						question: fallbackSubnet.question.text,
-						answer: feedback
-					}
-				);
+
+				await submitFeedbackToAPI({
+					question: fallbackSubnet.question.text,
+					answer: feedback,
+				});
 			} else {
 				// Use the original subnet's question
-				await submitFeedbackToAPI(
-					{
-						question: subnetWithQuestion.question.text,
-						answer: feedback
-					}
-				);
+				await submitFeedbackToAPI({
+					question: subnetWithQuestion.question.text,
+					answer: feedback,
+				});
 			}
 
 			setPrompt("");
 
 			// Refetch chat sidebar history after successful feedback submission
 			if (refetchHistory) {
-				console.log("🔄 Refetching chat sidebar history after successful feedback submission");
+				console.log(
+					"🔄 Refetching chat sidebar history after successful feedback submission"
+				);
 				refetchHistory();
 			}
 
@@ -251,7 +275,7 @@ export const useFeedback = ({
 			);
 		} catch (error) {
 			console.error("Error submitting feedback:", error);
-			
+
 			// Update feedback answer message to show error with retry option
 			setChatMessages((prev) =>
 				prev.map((msg) =>
@@ -261,7 +285,10 @@ export const useFeedback = ({
 								feedbackSubmissionState: {
 									...msg.feedbackSubmissionState!,
 									status: "failed" as const,
-									error: error instanceof Error ? error.message : "Failed to submit feedback",
+									error:
+										error instanceof Error
+											? error.message
+											: "Failed to submit feedback",
 								},
 						  }
 						: msg
@@ -276,10 +303,10 @@ export const useFeedback = ({
 		// Generate unique ID for this feedback answer
 		const sessionId = Date.now();
 		const proceedAnswerId = `proceed_answer_${sessionId}`;
-		
+
 		// Find the subnet that has the SPECIFIC question being answered
-		const subnetWithQuestionIndex =
-			currentWorkflowData?.subnets?.findIndex((subnet: any) => {
+		const subnetWithQuestionIndex = currentWorkflowData?.subnets?.findIndex(
+			(subnet: any) => {
 				// Check if the subnet has the question directly
 				if (subnet.question?.text === question) {
 					return true;
@@ -297,12 +324,15 @@ export const useFeedback = ({
 				}
 
 				return false;
-			});
+			}
+		);
 
 		// Create retry handler for this specific feedback submission
 		const retrySubmission = async () => {
 			// Remove the failed message and retry
-			setChatMessages((prev) => prev.filter(msg => msg.id !== proceedAnswerId));
+			setChatMessages((prev) =>
+				prev.filter((msg) => msg.id !== proceedAnswerId)
+			);
 			await handleFeedbackProceed(question, answer);
 		};
 
@@ -313,12 +343,19 @@ export const useFeedback = ({
 			content: "Yes, proceed",
 			timestamp: new Date(),
 			isFeedbackAnswer: true,
-			subnetIndex: subnetWithQuestionIndex >= 0 ? subnetWithQuestionIndex : undefined,
-			toolName: subnetWithQuestionIndex >= 0 ? currentWorkflowData?.subnets?.[subnetWithQuestionIndex]?.toolName : undefined,
+			subnetIndex:
+				subnetWithQuestionIndex >= 0
+					? subnetWithQuestionIndex
+					: undefined,
+			toolName:
+				subnetWithQuestionIndex >= 0
+					? currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+							?.toolName
+					: undefined,
 			feedbackSubmissionState: {
 				status: "sending",
 				feedbackText: "Yes, proceed",
-				retryHandler: retrySubmission
+				retryHandler: retrySubmission,
 			},
 		};
 
@@ -329,7 +366,7 @@ export const useFeedback = ({
 
 			return newMessages;
 		});
-		
+
 		try {
 			setIsSubmittingFeedback(true);
 
@@ -346,8 +383,9 @@ export const useFeedback = ({
 				);
 			}
 
-			const subnetWithQuestion = currentWorkflowData?.subnets?.[subnetWithQuestionIndex];
-			
+			const subnetWithQuestion =
+				currentWorkflowData?.subnets?.[subnetWithQuestionIndex];
+
 			// If we couldn't find the specific subnet, fall back to finding any subnet with a question
 			if (!subnetWithQuestion?.question?.text) {
 				const fallbackSubnet = currentWorkflowData?.subnets?.find(
@@ -356,23 +394,21 @@ export const useFeedback = ({
 							(subnet.status === "pending" && subnet.question)) &&
 						subnet.question?.text
 				);
-				
+
 				if (!fallbackSubnet?.question?.text) {
 					throw new Error("No question found to answer");
 				}
 
 				await submitFeedbackToAPI({
 					question: question,
-					answer: "Yes, proceed"
+					answer: "Yes, proceed",
 				});
 			} else {
-
 				await submitFeedbackToAPI({
 					question: question,
-					answer: "Yes, proceed"
+					answer: "Yes, proceed",
 				});
 			}
-
 
 			setPrompt("");
 
@@ -385,7 +421,6 @@ export const useFeedback = ({
 			setIsInFeedbackMode(false);
 
 			if (resumePolling) {
-
 				setTimeout(() => {
 					resumePolling();
 				}, 1000);
@@ -403,7 +438,7 @@ export const useFeedback = ({
 			);
 		} catch (error) {
 			console.error("Error proceeding with feedback:", error);
-			
+
 			setChatMessages((prev) =>
 				prev.map((msg) =>
 					msg.id === proceedAnswerId
@@ -412,7 +447,10 @@ export const useFeedback = ({
 								feedbackSubmissionState: {
 									...msg.feedbackSubmissionState!,
 									status: "failed" as const,
-									error: error instanceof Error ? error.message : "Failed to proceed with feedback",
+									error:
+										error instanceof Error
+											? error.message
+											: "Failed to proceed with feedback",
 								},
 						  }
 						: msg
@@ -427,20 +465,21 @@ export const useFeedback = ({
 		// Generate unique ID for this feedback answer
 		const sessionId = Date.now();
 		const responseAnswerId = `response_answer_${sessionId}`;
-		
+
 		// Find the first subnet that has a question (for general feedback responses)
-		const subnetWithQuestionIndex =
-			currentWorkflowData?.subnets?.findIndex(
-				(subnet: any) =>
-					(subnet.status === "awaiting_response" ||
-						(subnet.status === "pending" && subnet.question)) &&
-					subnet.question
-			);
+		const subnetWithQuestionIndex = currentWorkflowData?.subnets?.findIndex(
+			(subnet: any) =>
+				(subnet.status === "awaiting_response" ||
+					(subnet.status === "pending" && subnet.question)) &&
+				subnet.question
+		);
 
 		// Create retry handler for this specific feedback submission
 		const retrySubmission = async () => {
 			// Remove the failed message and retry
-			setChatMessages((prev) => prev.filter(msg => msg.id !== responseAnswerId));
+			setChatMessages((prev) =>
+				prev.filter((msg) => msg.id !== responseAnswerId)
+			);
 			await handleFeedbackResponse(feedback);
 		};
 
@@ -451,12 +490,19 @@ export const useFeedback = ({
 			content: feedback,
 			timestamp: new Date(),
 			isFeedbackAnswer: true,
-			subnetIndex: subnetWithQuestionIndex >= 0 ? subnetWithQuestionIndex : undefined,
-			toolName: subnetWithQuestionIndex >= 0 ? currentWorkflowData?.subnets?.[subnetWithQuestionIndex]?.toolName : undefined,
+			subnetIndex:
+				subnetWithQuestionIndex >= 0
+					? subnetWithQuestionIndex
+					: undefined,
+			toolName:
+				subnetWithQuestionIndex >= 0
+					? currentWorkflowData?.subnets?.[subnetWithQuestionIndex]
+							?.toolName
+					: undefined,
 			feedbackSubmissionState: {
 				status: "sending",
 				feedbackText: feedback,
-				retryHandler: retrySubmission
+				retryHandler: retrySubmission,
 			},
 		};
 
@@ -467,7 +513,7 @@ export const useFeedback = ({
 
 			return newMessages;
 		});
-		
+
 		try {
 			setIsSubmittingFeedback(true);
 
@@ -485,8 +531,9 @@ export const useFeedback = ({
 			}
 
 			// Use the subnet we already found instead of searching again
-			const subnetWithQuestion = currentWorkflowData?.subnets?.[subnetWithQuestionIndex];
-			
+			const subnetWithQuestion =
+				currentWorkflowData?.subnets?.[subnetWithQuestionIndex];
+
 			// If we couldn't find the specific subnet, fall back to finding any subnet with a question
 			if (!subnetWithQuestion?.question?.text) {
 				const fallbackSubnet = currentWorkflowData?.subnets?.find(
@@ -495,26 +542,21 @@ export const useFeedback = ({
 							(subnet.status === "pending" && subnet.question)) &&
 						subnet.question?.text
 				);
-				
+
 				if (!fallbackSubnet?.question?.text) {
 					throw new Error("No question found to answer");
 				}
-			
 
-				await submitFeedbackToAPI(
-					{
-						question: fallbackSubnet.question.text,
-						answer: feedback
-					}
-				);
+				await submitFeedbackToAPI({
+					question: fallbackSubnet.question.text,
+					answer: feedback,
+				});
 			} else {
 				// Use the original subnet's question
-				await submitFeedbackToAPI(
-					{
-						question: subnetWithQuestion.question.text,
-						answer: feedback
-					}
-				);
+				await submitFeedbackToAPI({
+					question: subnetWithQuestion.question.text,
+					answer: feedback,
+				});
 			}
 
 			setPrompt("");
@@ -529,7 +571,6 @@ export const useFeedback = ({
 			setIsInFeedbackMode(false);
 
 			if (resumePolling) {
-
 				setTimeout(() => {
 					resumePolling();
 				}, 1000);
@@ -548,7 +589,7 @@ export const useFeedback = ({
 			);
 		} catch (error) {
 			console.error("Error submitting feedback response:", error);
-			
+
 			// Update feedback answer message to show error with retry option
 			setChatMessages((prev) =>
 				prev.map((msg) =>
@@ -558,7 +599,10 @@ export const useFeedback = ({
 								feedbackSubmissionState: {
 									...msg.feedbackSubmissionState!,
 									status: "failed" as const,
-									error: error instanceof Error ? error.message : "Failed to submit feedback response",
+									error:
+										error instanceof Error
+											? error.message
+											: "Failed to submit feedback response",
 								},
 						  }
 						: msg
@@ -570,17 +614,16 @@ export const useFeedback = ({
 	};
 
 	const handleRetrySubnet = async (subnetIndex: number) => {
-		
 		// Get the subnet data for the specified index
 		const subnet = currentWorkflowData?.subnets?.[subnetIndex];
 		if (!subnet) {
 			throw new Error(`Subnet at index ${subnetIndex} not found`);
 		}
-		
+
 		try {
 			setRetryingSubnetIndex(subnetIndex);
 			setIsSubmittingFeedback(true);
-		
+
 			setChatMessages((prev) =>
 				prev.map((msg) =>
 					msg.subnetIndex === subnetIndex
@@ -588,42 +631,45 @@ export const useFeedback = ({
 						: msg
 				)
 			);
-			
+
 			// Update subnet status to pending in frontend cache
 			if (currentWorkflowId) {
-				updateSubnetStatus(
-					currentWorkflowId,
-					subnetIndex,
-					"pending"
-				);
+				updateSubnetStatus(currentWorkflowId, subnetIndex, "pending");
 			} else {
-				console.warn(`⚠️ No currentWorkflowId available for subnet retry`);
+				console.warn(
+					`⚠️ No currentWorkflowId available for subnet retry`
+				);
 			}
-			
+
 			// Send retry request to backend via natural-request endpoint
 			if (currentWorkflowId && skyBrowser && address) {
-				
 				try {
 					await submitFeedbackToAPI({
-						answer: `Please retry ${subnet.toolName || ''} agent`,
+						answer: `Please retry ${subnet.toolName || ""} agent`,
 					});
 				} catch (apiError) {
-					console.warn(`⚠️ Backend retry request failed, but continuing with frontend retry:`, apiError);
+					console.warn(
+						`⚠️ Backend retry request failed, but continuing with frontend retry:`,
+						apiError
+					);
 					// Continue with frontend retry even if backend request fails
 				}
 			} else {
-				console.warn(`⚠️ Missing required data for backend retry request:`, {
-					currentWorkflowId: !!currentWorkflowId,
-					skyBrowser: !!skyBrowser,
-					address: !!address
-				});
+				console.warn(
+					`⚠️ Missing required data for backend retry request:`,
+					{
+						currentWorkflowId: !!currentWorkflowId,
+						skyBrowser: !!skyBrowser,
+						address: !!address,
+					}
+				);
 			}
-			
+
 			// Set workflow status to trigger re-execution
 			setWorkflowStatus("in_progress");
 			setIsExecuting(true);
 			setIsInFeedbackMode(false);
-			
+
 			// Resume polling to monitor the retry execution
 			if (resumePolling) {
 				setTimeout(() => {
@@ -632,14 +678,16 @@ export const useFeedback = ({
 			} else {
 				console.warn("⚠️ No resumePolling function available");
 			}
-			
 		} catch (error) {
 			console.error("❌ Error retrying subnet:", error);
-			
+
 			// Show user-friendly error message
-			const errorMessage = error instanceof Error ? error.message : "Failed to retry subnet";
+			const errorMessage =
+				error instanceof Error
+					? error.message
+					: "Failed to retry subnet";
 			console.error(`❌ Subnet retry failed: ${errorMessage}`);
-			
+
 			// Reset subnet status back to failed
 			setChatMessages((prev) =>
 				prev.map((msg) =>
@@ -648,7 +696,7 @@ export const useFeedback = ({
 						: msg
 				)
 			);
-			
+
 			throw error;
 		} finally {
 			setRetryingSubnetIndex(null);

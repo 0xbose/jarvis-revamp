@@ -1,3 +1,4 @@
+import { API_CONFIG } from "@/config/constants";
 import {
 	AgentDetailResponse,
 	UserAgentCollectionsResponse,
@@ -28,11 +29,11 @@ export const getUserMintedAgents = async (params: {
 	}
 
 	const response = await axios.get(
-		`${process.env.NEXT_PUBLIC_API_BASE_URL}/agents/user/${params.address}`,
+		`${API_CONFIG.API_BASE_URL}/agents/user/${params.address}`,
 		{
 			params: queryParams,
 			headers: {
-				"x-api-key": `${process.env.NEXT_PUBLIC_X_API_KEY}`,
+				"x-api-key": `${API_CONFIG.X_API_KEY}`,
 			},
 		}
 	);
@@ -47,8 +48,8 @@ export const getAgentDetailByCollectionAndNftId = async (
 		throw new Error("Both collectionAddress and nftId are required");
 	}
 
-	const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-	const apiKey = process.env.NEXT_PUBLIC_X_API_KEY;
+	const apiBaseUrl = API_CONFIG.API_BASE_URL;
+	const apiKey = API_CONFIG.X_API_KEY;
 	const requestUrl = `${apiBaseUrl}/agents/${collectionAddress}/${nftId}`;
 
 	console.log("🔍 Agent API Request Details:", {

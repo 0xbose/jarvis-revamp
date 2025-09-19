@@ -237,11 +237,11 @@ body {
 
 /* INSERT_YOUR_CODE */
 ::selection {
-	background: #91c7fe;
+	background: #9dceff;
 	color: #fff;
 }
 
 ::-moz-selection {
-	background: #91c7fe;
+	background: #9fcfff;
 	color: #fff;
 }

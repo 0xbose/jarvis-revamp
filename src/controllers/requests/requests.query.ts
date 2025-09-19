@@ -2,6 +2,7 @@ import { getAxiosInstanceWithApiKey } from "@/lib/axios";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
 import { Web3Context } from "@/types/wallet";
 import { WorkflowRequestsResponse } from "@/types/requests";
+import { API_CONFIG } from "@/config/constants";
 
 export const getOriginalPayload = async (
 	workflowId: string,
@@ -9,7 +10,7 @@ export const getOriginalPayload = async (
 	web3Context: Web3Context
 ): Promise<any> => {
 	const axiosInstance = await getAxiosInstanceWithApiKey(
-		process.env.NEXT_PUBLIC_NFT_USER_AGENT_URL || "",
+		API_CONFIG.NFT_USER_AGENT_URL || "",
 		skyBrowser,
 		web3Context
 	);
@@ -39,7 +40,7 @@ export const getHistory = async (
 	web3Context?: Web3Context
 ): Promise<WorkflowRequestsResponse> => {
 	const axiosInstance = await getAxiosInstanceWithApiKey(
-		process.env.NEXT_PUBLIC_NFT_USER_AGENT_URL || "",
+		API_CONFIG.NFT_USER_AGENT_URL || "",
 		skyBrowser,
 		web3Context
 	);
@@ -82,7 +83,7 @@ export const getHistoryByAgent = async (
 	web3Context?: Web3Context
 ): Promise<WorkflowRequestsResponse> => {
 	const axiosInstance = await getAxiosInstanceWithApiKey(
-		process.env.NEXT_PUBLIC_NFT_USER_AGENT_URL || "",
+		API_CONFIG.NFT_USER_AGENT_URL || "",
 		skyBrowser,
 		web3Context
 	);
@@ -111,7 +112,7 @@ export const getChatMessages = async (
 	web3Context?: Web3Context
 ): Promise<any> => {
 	const axiosInstance = await getAxiosInstanceWithApiKey(
-		process.env.NEXT_PUBLIC_NFT_USER_AGENT_URL || "",
+		API_CONFIG.NFT_USER_AGENT_URL || "",
 		skyBrowser,
 		web3Context
 	);

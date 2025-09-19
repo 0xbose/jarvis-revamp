@@ -1,6 +1,7 @@
 import { getAxiosInstanceWithApiKey } from "@/lib/axios";
 import SkyMainBrowser from "@decloudlabs/skynet/lib/services/SkyMainBrowser";
 import { Web3Context } from "@/types/wallet";
+import { API_CONFIG } from "@/config/constants";
 
 export const getAvailableModels = async ({
 	skyBrowser,
@@ -9,7 +10,7 @@ export const getAvailableModels = async ({
 	skyBrowser?: SkyMainBrowser;
 	web3Context?: Web3Context;
 }): Promise<any[]> => {
-	const url = process.env.NEXT_PUBLIC_CHAT_ACCESSPOINT_URL;
+	const url = API_CONFIG.CHAT_ACCESSPOINT_URL;
 	const axiosInstance = await getAxiosInstanceWithApiKey(
 		url || "",
 		skyBrowser,
