@@ -9,7 +9,14 @@ import {
 	DialogTrigger,
 	DialogClose,
 } from "@/components/ui/dialog";
-import { Plus, XIcon, Loader2, BotIcon } from "lucide-react";
+import {
+	Plus,
+	XIcon,
+	Loader2,
+	BotIcon,
+	StoreIcon,
+	ArrowRight,
+} from "lucide-react";
 import { useGlobalStore } from "@/stores/global-store";
 import { useWallet } from "@/hooks/use-wallet";
 import { checkAgentNFTOwnership } from "@/utils/skynetHelper";
@@ -21,6 +28,7 @@ import { getUserMintedAgents } from "@/controllers/agents/agents.query";
 import { useQuery } from "@tanstack/react-query";
 import { UserAgentCollection } from "@/types/agents";
 import { QUERY_KEYS } from "@/utils/query-keys";
+import { useRouter } from "next/navigation";
 
 interface MarketplaceProps {
 	disabled?: boolean;
@@ -44,6 +52,7 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
 	const { skyBrowser, address } = useWallet();
 	const [selectedAgentNFTId, setSelectedAgentNFTId] = useState<string>("");
 	const [minting, setMinting] = useState<MintingState>({});
+	const router = useRouter();
 
 	// Fetch agents with search param
 	const {
@@ -139,6 +148,12 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
 		}
 	};
 
+	// Navigate to marketplace handler
+	const handleGoToMarketplace = () => {
+		setIsOpen(false);
+		router.push("/marketplace");
+	};
+
 	return (
 		<Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
 			<DialogTrigger asChild>
@@ -224,10 +239,38 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
 										"Failed to load agents. Please try again."}
 								</div>
 							) : agents.length === 0 ? (
-								<div className="col-span-full text-center text-muted-foreground py-8">
-									{searchQuery
-										? "No agents found matching your search."
-										: "No agents available."}
+								<div className="col-span-full text-center py-8">
+									{searchQuery ? (
+										<div className="text-muted-foreground">
+											No agents found matching your
+											search.
+										</div>
+									) : (
+										<div className="space-y-4">
+											<div className="w-16 h-16 mx-auto bg-muted/30 rounded-full flex items-center justify-center mb-4">
+												<BotIcon className="size-8 text-muted-foreground" />
+											</div>
+											<div className="space-y-2">
+												<h3 className="text-lg font-semibold text-foreground">
+													No Agents Yet
+												</h3>
+												<p className="text-muted-foreground max-w-md mx-auto">
+													You haven't minted any
+													agents yet. Visit the
+													marketplace to discover and
+													mint your first AI agent.
+												</p>
+											</div>
+											<Button
+												onClick={handleGoToMarketplace}
+												className="mt-4 bg-primary hover:bg-primary/90 text-white"
+											>
+												<StoreIcon className="size-4 mr-2" />
+												Go to Marketplace
+												<ArrowRight className="size-4 ml-2" />
+											</Button>
+										</div>
+									)}
 								</div>
 							) : (
 								agents.map((agent: UserAgentCollection) => {
