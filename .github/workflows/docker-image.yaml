@@ -22,7 +22,7 @@ jobs:
         run: |
           # Use BuildKit for better Docker builds
           DOCKER_BUILDKIT=1 docker build \
-            -t ${{ secrets.DOCKERHUB_USERNAME }}/skynet_intelligence_preview:${{ github.run_number }} .
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/jarvis_new:${{ github.run_number }} .
 
       - name: Push Docker image to Docker Hub
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/skynet_intelligence_preview:${{ github.run_number }}
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/jarvis_new:${{ github.run_number }}
