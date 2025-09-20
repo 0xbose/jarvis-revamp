@@ -237,7 +237,7 @@ function ScheduledTasksInner() {
 		{
 			accessorKey: "originalPrompt",
 			header: () => (
-				<div className="text-gray-400 font-semibold flex items-center gap-2 w-[350px]">
+				<div className="text-gray-400 font-semibold flex items-center gap-2 w-40 md:w-[350px]">
 					<Calendar className="size-4" />
 					<span>Task</span>
 				</div>
@@ -245,10 +245,10 @@ function ScheduledTasksInner() {
 			cell: ({ row }) => (
 				<Link
 					href={`/schedule/${row.original.taskId}`}
-					className="flex items-center gap-x-2 text-sm text-gray-300 text-left w-full max-w-[350px] overflow-hidden whitespace-nowrap text-ellipsis"
+					className="flex items-center gap-x-2 text-sm text-gray-300 text-left w-full max-w-40 md:max-w-[350px] overflow-hidden whitespace-nowrap text-ellipsis"
 					title={row.original.originalPrompt || "Untitled task"}
 				>
-					<span className="max-w-64 truncate">
+					<span className="max-w-32 md:max-w-64 truncate">
 						{row.original.originalPrompt || "Untitled task"}
 					</span>
 
@@ -335,7 +335,7 @@ function ScheduledTasksInner() {
 	const maxPages = Math.ceil(effectiveTotal / pageSize);
 
 	return (
-		<div className="p-6">
+		<div className="md:p-6">
 			<div className="relative border-b border-border/40">
 				<div className="flex flex-col lg:flex-row items-start justify-between gap-8">
 					<div className="space-y-3 pb-4">

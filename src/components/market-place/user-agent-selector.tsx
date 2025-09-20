@@ -191,7 +191,7 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
 					)}
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="!w-[92vw] !h-[90svh] !max-h-[900px] !max-w-6xl flex flex-col border-none rounded-3xl pb-6 ">
+			<DialogContent className="!w-[92vw] !h-[90svh] !max-h-[700px] md:!max-h-[900px] !max-w-6xl flex flex-col border-none rounded-3xl pb-6 ">
 				<DialogHeader className="absolute top-0 left-0 w-full rounded-t-3xl bg-background z-10 h-16 px-6 md:px-10 flex justify-center">
 					<DialogTitle className="flex items-center gap-3">
 						{/* <StoreIcon /> */}

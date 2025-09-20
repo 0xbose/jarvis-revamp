@@ -189,8 +189,8 @@ export default function Page() {
 
 	return (
 		<div className="min-h-screen bg-background">
-			<div className="p-6 space-y-8">
-				<div className="flex items-center justify-between">
+			<div className="md:p-6 space-y-8">
+				<div className="flex items-start md:items-center justify-between">
 					<h4 className="text-2xl font-medium text-foreground">
 						Schedule Your Agent
 					</h4>

@@ -146,7 +146,7 @@ function ScheduleDetailInner() {
 	}, [task]);
 
 	return (
-		<div className="p-6">
+		<div className="md:p-6">
 			<h1 className="text-xl font-semibold mb-4">Scheduled Task</h1>
 			<div className="space-y-6">
 				<div className="space-y-2">

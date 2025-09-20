@@ -287,7 +287,7 @@ export default function ScheduleInterface({
 						</div>
 					</div>
 					{config.type === "one-time" && (
-						<Check className="h-5 w-5 text-green-600" />
+						<Check className="h-5 w-5 text-green-600 hidden sm:block" />
 					)}
 				</button>
 
@@ -317,7 +317,7 @@ export default function ScheduleInterface({
 						</div>
 					</div>
 					{config.type === "recurring" && (
-						<Check className="h-5 w-5 text-green-600" />
+						<Check className="h-5 w-5 text-green-600 hidden sm:block" />
 					)}
 				</button>
 			</div>
@@ -442,7 +442,7 @@ export default function ScheduleInterface({
 										</div>
 									</div>
 									{config.scheduleType === key && (
-										<Check className="h-5 w-5 text-green-600" />
+										<Check className="h-5 w-5 text-green-600 hidden sm:block" />
 									)}
 								</button>
 							))}
@@ -470,7 +470,7 @@ export default function ScheduleInterface({
 									</div>
 								</div>
 								{config.scheduleType === "monthly" && (
-									<Check className="h-5 w-5 text-green-600" />
+									<Check className="h-5 w-5 text-green-600 hidden sm:block" />
 								)}
 							</button>
 						</div>
