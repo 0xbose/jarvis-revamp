@@ -192,7 +192,7 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
 				</Button>
 			</DialogTrigger>
 			<DialogContent className="!w-[92vw] !h-[90svh] !max-h-[900px] !max-w-6xl flex flex-col border-none rounded-3xl pb-6 ">
-				<DialogHeader className="absolute top-0 left-0 w-full rounded-t-3xl bg-background z-10 h-16 px-10 flex justify-center">
+				<DialogHeader className="absolute top-0 left-0 w-full rounded-t-3xl bg-background z-10 h-16 px-6 md:px-10 flex justify-center">
 					<DialogTitle className="flex items-center gap-3">
 						{/* <StoreIcon /> */}
 						<BotIcon />
@@ -202,13 +202,13 @@ export default function Marketplace({ disabled = false }: MarketplaceProps) {
 						<XIcon className="size-6" />
 					</DialogClose>
 				</DialogHeader>
-				<div className="mt-7 px-4 w-full flex flex-col gap-y-4 relative flex-1 min-h-0 overflow-y-auto scrollbar-thin pr-2">
+				<div className="mt-7 md:px-4 w-full flex flex-col gap-y-4 relative flex-1 min-h-0 overflow-y-auto scrollbar-thin pr-2">
 					<div className="flex flex-col gap-y-4 h-full max-h-full mt-3 pt-5">
 						<SearchBar
 							value={searchInput}
 							onChange={handleSearchChange}
 							onSearch={handleSearch}
-							className="w-96 mx-auto"
+							className="md:w-96 mx-auto"
 							placeholder="Search agents..."
 							debounceTime={300}
 						/>

@@ -1098,7 +1098,7 @@ function ChatPageContent() {
 						height: "calc(100vh - 8rem)",
 					}}
 				>
-					<div className="pb-4 px-6 mx-auto max-w-6xl relative chat-page-messages-root">
+					<div className="pb-4 md:px-6 mx-auto max-w-6xl relative chat-page-messages-root">
 						<SelectionAskJarvis
 							rootSelector=".chat-page-messages-root"
 							onAsk={handleAskJarvis}
@@ -1149,7 +1149,7 @@ function ChatPageContent() {
 				</div>
 
 				{selectionCards.length > 0 && (
-					<div className="absolute top-0 right-6 bottom-0 w-96 flex flex-col gap-3 overflow-x-hidden overflow-y-auto scrollbar-hide py-4">
+					<div className="absolute top-0 right-6 bottom-0 md:w-96 w-full flex flex-col gap-3 overflow-x-hidden overflow-y-auto scrollbar-hide py-4">
 						{selectionCards.map((card) => (
 							<SelectionCardComponent
 								key={card.id}

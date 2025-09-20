@@ -87,14 +87,14 @@ export default function ModelSelectDialog({
 					</span>
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="!w-[92vw] !h-[80svh] !max-h-[800px] !max-w-3xl flex flex-col border-none rounded-3xl pb-6 ">
-				<DialogHeader className="absolute top-0 left-0 w-full rounded-t-3xl bg-background z-10 h-14 px-8 flex justify-center">
+			<DialogContent className="!w-[92vw] !h-[80svh] max-h-[600px] md:!max-h-[800px] !max-w-3xl flex flex-col border-none rounded-3xl pb-6 ">
+				<DialogHeader className="absolute top-0 left-0 w-full rounded-t-3xl bg-background z-10 h-14 pt-2 px-6 md:px-8 flex justify-center">
 					<DialogTitle className="flex items-center gap-2">
 						<Cpu />
 						<span className="text-foreground">Models</span>
 					</DialogTitle>
 				</DialogHeader>
-				<div className="mt-9 px-6 flex-1 min-h-0 flex flex-col overflow-y-auto scrollbar-thin">
+				<div className="mt-9 md:px-6 flex-1 min-h-0 flex flex-col overflow-y-auto scrollbar-thin">
 					<div className="mb-2">
 						<Input
 							placeholder="Search models by name or id..."
@@ -142,7 +142,7 @@ export default function ModelSelectDialog({
 						)}
 					</div>
 				</div>
-				<div className="px-6">
+				<div className="md:px-6">
 					<DialogClose asChild>
 						<Button className="w-full">Done</Button>
 					</DialogClose>

@@ -193,7 +193,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 									isMobile ? "w-full" : "w-fit"
 								} hover:text-primary-foreground cursor-pointer`}
 							>
-								<CustomTooltip content="Logout">
+								<CustomTooltip content="Logout" disabled={isMobile}>
 									<div
 										className={`flex items-center gap-3 ${
 											isMobile

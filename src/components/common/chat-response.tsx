@@ -114,9 +114,9 @@ export function ChatResponse({ message }: ChatResponseProps) {
 
 	return (
 		<div className="mb-6 flex">
-			<div className="flex items-start gap-3 max-w-[85%]">
+			<div className="flex items-start gap-3 md:max-w-[85%]">
 				{/* Avatar */}
-				<div className="size-10 rounded-full bg-secondary/30 border border-secondary flex items-center justify-center flex-shrink-0">
+				<div className="hidden md:flex size-10 rounded-full bg-secondary/30 border border-secondary items-center justify-center flex-shrink-0">
 					<video
 						muted
 						autoPlay

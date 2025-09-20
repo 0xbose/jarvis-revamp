@@ -152,26 +152,6 @@ export function ChatMessage({
 	onRetrySubnet,
 	retryingSubnetIndex,
 }: ChatMessageProps) {
-	// Debug logging for retry functionality
-	if (
-		message.subnetStatus === "failed" ||
-		(message.content && message.content.toLowerCase().includes("failed")) ||
-		(message.content &&
-			message.content.toLowerCase().includes("retry subnet execution"))
-	) {
-		console.log("🔍 ChatMessage received for retry-eligible message:", {
-			id: message.id,
-			type: message.type,
-			subnetStatus: message.subnetStatus,
-			subnetIndex: message.subnetIndex,
-			toolName: message.toolName,
-			onRetrySubnet: !!onRetrySubnet,
-			isFeedbackHistoryRetry: message.content
-				?.toLowerCase()
-				.includes("retry subnet execution"),
-			content: message.content?.slice(0, 100),
-		});
-	}
 	// Create unique state keys based on message ID and workflow context to prevent state mixing
 	const messageStateKey = `${message.id}_${
 		message.sourceId || message.toolName || "default"
@@ -199,26 +179,11 @@ export function ChatMessage({
 	const shouldShowRefreshUI = () => {
 		// Case 1: Show refresh UI for timeout messages
 		if (message.isTimeoutMessage && message.showRefreshButton) {
-			console.log(
-				"🔍 Debug: Should show refresh UI - Case 1: timeout message with showRefreshButton",
-				{
-					messageId: message.id,
-					isTimeoutMessage: message.isTimeoutMessage,
-					showRefreshButton: message.showRefreshButton,
-				}
-			);
 			return true;
 		}
 
 		// Case 2: Show refresh UI when polling has stopped for more than 5 minutes
 		if (!pollingStoppedAt || !onRefreshPolling) {
-			console.log(
-				"🔍 Debug: Should show refresh UI - Case 2: missing requirements",
-				{
-					pollingStoppedAt: !!pollingStoppedAt,
-					onRefreshPolling: !!onRefreshPolling,
-				}
-			);
 			return false;
 		}
 
@@ -231,31 +196,8 @@ export function ChatMessage({
 			message.subnetStatus === "awaiting_response" &&
 			isLast;
 
-		console.log(
-			"🔍 Debug: Should show refresh UI - Case 2: calculated result",
-			{
-				workflowStatus,
-				timeSinceStoppedMs,
-				fiveMinutesMs,
-				messageSubnetStatus: message.subnetStatus,
-				isLast,
-				shouldShow,
-			}
-		);
-
 		return shouldShow;
 	};
-
-	// Debug logging for timeout messages
-	if (message.isTimeoutMessage) {
-		console.log("🔍 Debug: Processing timeout message", {
-			messageId: message.id,
-			isTimeoutMessage: message.isTimeoutMessage,
-			showRefreshButton: message.showRefreshButton,
-			messageType: message.type,
-			shouldShowRefreshUI: shouldShowRefreshUI(),
-		});
-	}
 
 	const isWorkflowActivelyExecuting = () => {
 		// Don't consider workflow as executing if it's completed, failed, or stopped
@@ -320,10 +262,6 @@ export function ChatMessage({
 		return shouldHide;
 	};
 
-	const shouldHideMessageContent = () => {
-		return false;
-	};
-
 	const shouldHideAuthButton = () =>
 		shouldHideInteractiveElements() || hideAuthButton;
 	const shouldHideFeedbackButtons = () => {
@@ -337,20 +275,6 @@ export function ChatMessage({
 			message.type === "question" &&
 			message.questionData?.type === "feedback"
 		) {
-			console.log(
-				`🔍 shouldHideFeedbackButtons for feedback question (agent: ${message.toolName}):`,
-				{
-					messageId: message.id,
-					toolName: message.toolName,
-					sourceId: message.sourceId,
-					hideFeedbackButtons,
-					feedbackProcessed,
-					workflowStatus,
-					questionText: message.questionData?.text?.slice(0, 30),
-					finalResult: hideFeedbackButtons, // Only hide if explicitly set to hide
-				}
-			);
-
 			return hideFeedbackButtons; // Only hide if explicitly set to hide, ignore interactive elements logic
 		}
 
@@ -365,23 +289,10 @@ export function ChatMessage({
 	// Reset button states when workflow completes or is no longer actively executing
 	useEffect(() => {
 		if (!isWorkflowActivelyExecuting()) {
-			console.log(
-				"🔄 Workflow no longer executing for agent:",
-				message.toolName,
-				"message:",
-				message.id,
-				"resetting button states"
-			);
 			setClickedButtonType(null);
 			setIsButtonPending(false);
 			// When workflow completes, hide the buttons that were interacted with
 			if (clickedButtonType) {
-				console.log(
-					"🔄 Hiding buttons based on clicked type:",
-					clickedButtonType,
-					"for agent:",
-					message.toolName
-				);
 				if (clickedButtonType.includes("notification")) {
 					setHideNotificationButtons(true);
 				}
@@ -415,27 +326,6 @@ export function ChatMessage({
 		setClickedButtonType(null);
 		setIsButtonPending(false);
 	}, [message.id]);
-
-	// Debug logging for retry button
-	useEffect(() => {
-		if (
-			message.subnetStatus === "failed" &&
-			message.type === "workflow_subnet"
-		) {
-			console.log("🔍 Debug retry button conditions:", {
-				subnetStatus: message.subnetStatus,
-				type: message.type,
-				toolName: message.toolName,
-				subnetIndex: message.subnetIndex,
-				shouldShow: true,
-			});
-		}
-	}, [
-		message.subnetStatus,
-		message.type,
-		message.toolName,
-		message.subnetIndex,
-	]);
 
 	if (message.type === "user") {
 		return (
