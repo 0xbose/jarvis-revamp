@@ -32,6 +32,7 @@ import ChatSidebar from "./chat-sidebar";
 import { useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/utils/query-keys";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const navItems = [
 	{
@@ -73,6 +74,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	const { reset: resetGlobalStore } = useGlobalStore();
 	const { reset: resetChatStore } = useChatStore();
 	const { reset: resetWorkflowExecutionStore } = useWorkflowExecutionStore();
+	const isMobile = useIsMobile();
 	const isChat =
 		pathname.includes("/chat") ||
 		(pathname.includes("/create") &&
@@ -100,38 +102,62 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			>
 				<Sidebar
 					collapsible="none"
-					className={` w-[calc(var(--sidebar-width-icon)+1px)]! ${
-						isChat ? "rounded-l-lg border-r " : "rounded-lg"
-					}`}
+					className={`${
+						isMobile
+							? "w-auto"
+							: "w-[calc(var(--sidebar-width-icon)+1px)]!"
+					} ${isChat ? "rounded-l-lg border-r " : "rounded-lg"}`}
 				>
-					<SidebarHeader className="pt-4 pb-6">
+					<SidebarHeader className="pt-4 pb-6 px-4 md:px-1.5">
 						<SidebarMenu>
 							<SidebarMenuItem>
 								<Link href="/create">
-									<Image
-										src="/logo.png"
-										alt="logo"
-										className="w-9"
-										width={500}
-										height={500}
-									/>
+									{isMobile ? (
+										<Image
+											src="/skynet-full-logo.svg"
+											alt="logo"
+											className="invert h-8 w-fit"
+											width={5000}
+											height={5000}
+										/>
+									) : (
+										<Image
+											src="/logo.svg"
+											alt="logo"
+											className="w-9"
+											width={5000}
+											height={5000}
+										/>
+									)}
 								</Link>
 							</SidebarMenuItem>
 						</SidebarMenu>
 					</SidebarHeader>
 					<SidebarContent>
 						<SidebarGroup>
-							<SidebarMenu className="gap-y-5 flex flex-col items-center">
+							<SidebarMenu
+								className={`gap-y-5 flex flex-col ${
+									isMobile
+										? "items-start px-4"
+										: "items-center"
+								}`}
+							>
 								{navItems.map((item) => (
 									<SidebarMenuItem
 										key={item.title}
-										className="w-fit"
+										className={
+											isMobile ? "w-full" : "w-fit"
+										}
 									>
 										<SidebarMenuButton asChild>
-											<CustomTooltip content={item.title}>
+											<CustomTooltip content={item.title} disabled={isMobile}>
 												<Link
 													href={item.url}
-													className="font-medium hover:text-primary-foreground"
+													className={`font-medium hover:text-primary-foreground flex items-center gap-3 h-7.5 w-fit ${
+														isMobile
+															? "w-full justify-start"
+															: ""
+													}`}
 													onClick={() => {
 														queryClient.invalidateQueries(
 															{
@@ -143,6 +169,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 													}}
 												>
 													{item.icon}
+													{isMobile && (
+														<span className="text-sm font-medium">
+															{item.title}
+														</span>
+													)}
 												</Link>
 											</CustomTooltip>
 										</SidebarMenuButton>
@@ -152,20 +183,39 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 						</SidebarGroup>
 					</SidebarContent>
 					<SidebarFooter className="pb-4">
-						<SidebarMenu className="flex flex-col items-center">
-							<SidebarMenuItem className="w-fit hover:text-primary-foreground cursor-pointer">
+						<SidebarMenu
+							className={`flex flex-col ${
+								isMobile ? "items-start px-4" : "items-center"
+							}`}
+						>
+							<SidebarMenuItem
+								className={`${
+									isMobile ? "w-full" : "w-fit"
+								} hover:text-primary-foreground cursor-pointer`}
+							>
 								<CustomTooltip content="Logout">
-									<LogOutIcon
-										className="size-5"
+									<div
+										className={`flex items-center gap-3 ${
+											isMobile
+												? "w-full justify-start"
+												: ""
+										}`}
 										onClick={handleLogout}
-									/>
+									>
+										<LogOutIcon className="size-5" />
+										{isMobile && (
+											<span className="text-sm font-medium">
+												Logout
+											</span>
+										)}
+									</div>
 								</CustomTooltip>
 							</SidebarMenuItem>
 						</SidebarMenu>
 					</SidebarFooter>
 				</Sidebar>
 
-				{isChat && (
+				{isChat && !isMobile && (
 					<Suspense fallback={<Skeleton className="w-56 h-full" />}>
 						<ChatSidebar />
 					</Suspense>

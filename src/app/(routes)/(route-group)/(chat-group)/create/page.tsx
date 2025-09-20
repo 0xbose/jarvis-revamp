@@ -53,12 +53,23 @@ export default function CreatePage() {
 	};
 
 	return (
-		<div className="flex flex-col items-center h-full w-full relative ">
-			<div className="w-full h-full max-h-[50%] relative">
+		<div className="flex flex-col items-center h-full w-full relative">
+			<div className="w-full relative flex-1 max-h-[50vh] min-h-[180px] sm:min-h-[240px] md:min-h-[320px]">
 				<Spline scene="https://prod.spline.design/XGG3yvqNuvg63wOA/scene.splinecode" />
 				<div className="absolute bottom-5 right-5 h-10 w-36 bg-background"></div>
 			</div>
-			<div className="w-fit min-w-4xl">
+			<div
+				className="
+					w-full
+					px-2
+					sm:px-4
+					md:px-0
+					max-w-2xl
+					flex
+					justify-center
+					mt-4
+				"
+			>
 				<ChatInput
 					onSend={handlePromptSubmit}
 					mode={mode}
