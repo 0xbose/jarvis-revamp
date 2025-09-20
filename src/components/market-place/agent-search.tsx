@@ -61,7 +61,7 @@ export default function SearchAndCategories({
     >
       <div
         className={`bg-card flex h-12 ${
-          isDashboard ? "w-1/4" : "w-1/3"
+          isDashboard ? "md:w-1/4" : "md:w-1/3"
         } items-center rounded-md`}
       >
         <Search className="ml-3 size-4 text-[#D7D7D7]" />

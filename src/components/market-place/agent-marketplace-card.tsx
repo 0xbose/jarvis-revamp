@@ -35,7 +35,7 @@ export default function AgentMarketplaceCard({
 					  }`
 			}
 		>
-			<div className="group relative bg-background/50 border border-border/40 rounded-xl overflow-hidden h-80 flex flex-col transition-all duration-300 hover:border-border/60 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1">
+			<div className="group relative bg-background/50 border border-border/40 rounded-xl overflow-hidden md:h-80 flex flex-col transition-all duration-300 hover:border-border/60 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-1">
 				{/* Agent Image */}
 				<div className="relative aspect-video w-full overflow-hidden flex-shrink-0">
 					<Image

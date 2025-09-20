@@ -88,7 +88,7 @@ export default function MarketPlacePage() {
 		<div className="h-full w-full bg-background">
 			{/* Hero Section */}
 			<div className="relative border-b border-border/40">
-				<div className="py-8">
+				<div className="md:py-8">
 					<div className="flex flex-col lg:flex-row items-start justify-between gap-8">
 						<div className="space-y-4">
 							<h1 className="text-4xl font-bold text-foreground tracking-tight">

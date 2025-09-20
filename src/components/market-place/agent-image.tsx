@@ -3,7 +3,7 @@ import Image from "next/image";
 
 export const AgentImage = ({ src, alt, isVerified }: { src?: string, alt: string, isVerified?: boolean }) => (
     <div className="relative group">
-      <div className="w-48 h-48 relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-border/40 shadow-xl">
+      <div className="size-48 relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-border/40 shadow-xl">
         <Image
           src={src || "/agent-mock.webp"}
           alt={alt}
