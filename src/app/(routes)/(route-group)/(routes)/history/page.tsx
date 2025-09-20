@@ -262,7 +262,7 @@ function WorkflowHistoryInner() {
 		{
 			accessorKey: "userPrompt",
 			header: () => (
-				<div className="text-gray-400 font-semibold flex items-center gap-2 w-[350px]">
+				<div className="text-gray-400 font-semibold flex items-center gap-2 w-40 md:w-[350px]">
 					<Clock className="size-4" />
 					<span>Workflow</span>
 				</div>
@@ -273,10 +273,10 @@ function WorkflowHistoryInner() {
 						const workflowId = row.original.requestId;
 						const agentAddress = row.original.agentAddress;
 						router.push(
-							`/chat/agent/${agentAddress}?workflowId=${workflowId}`
+							`/chat/agent/${agentAddress}?workflowId=${workflowId}&nftId=${row.original.agentIDFromCollection}`
 						);
 					}}
-					className="text-sm text-gray-300 block hover:text-blue-400 transition-colors cursor-pointer text-left w-full max-w-[350px] overflow-hidden whitespace-nowrap text-ellipsis"
+					className="text-sm text-gray-300 block hover:text-blue-400 transition-colors cursor-pointer text-left w-full max-w-40 md:max-w-[350px] overflow-hidden whitespace-nowrap text-ellipsis"
 					title={row.original.userPrompt || "Untitled workflow"}
 				>
 					{row.original.userPrompt || "Untitled workflow"}
@@ -296,24 +296,26 @@ function WorkflowHistoryInner() {
 		{
 			accessorKey: "updatedAt",
 			header: () => (
-				<div className="text-gray-400 font-semibold flex items-center gap-2 min-w-24">
+				<div className="text-gray-400 font-semibold flex items-center gap-2 w-full min-w-24">
 					<TimerIcon className="size-4" />
 					<span>Last Updated</span>
 				</div>
 			),
 			cell: ({ row }) => (
-				<span className="text-sm text-gray-400">
-					{new Date(row.original.updatedAt).toLocaleDateString(
-						"en-US",
-						{
-							month: "short",
-							day: "numeric",
-							hour: "numeric",
-							minute: "2-digit",
-							hour12: true,
-						}
-					)}
-				</span>
+				<div className="text-sm text-gray-400 w-full flex">
+					<span className="flex-1 truncate">
+						{new Date(row.original.updatedAt).toLocaleDateString(
+							"en-US",
+							{
+								month: "short",
+								day: "numeric",
+								hour: "numeric",
+								minute: "2-digit",
+								hour12: true,
+							}
+						)}
+					</span>
+				</div>
 			),
 		},
 		{
@@ -389,7 +391,7 @@ function WorkflowHistoryInner() {
 		?.nextPageUrl as string | undefined;
 
 	return (
-		<div className="p-6">
+		<div className="md:p-6">
 			<div>
 				<div className="mb-6">
 					<h1 className="text-2xl font-semibold mb-4">History</h1>
