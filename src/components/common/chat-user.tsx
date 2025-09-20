@@ -15,7 +15,7 @@ export function ChatUser({ message }: ChatUserProps) {
 			<div className="flex justify-end">
 				<div className="flex items-start gap-3 max-w-[80%] flex-row-reverse">
 					{/* User Avatar - moved to left side */}
-					<div className="hidden md:flex-shrink-0 size-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
+					<div className="hidden md:flex flex-shrink-0 size-8 rounded-full bg-primary/20 border border-primary/30  items-center justify-center">
 						<User className="size-4 text-primary" />
 					</div>
 					<div className="flex-1 min-w-0">

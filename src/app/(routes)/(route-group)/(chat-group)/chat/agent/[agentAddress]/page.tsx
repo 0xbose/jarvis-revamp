@@ -13,7 +13,7 @@ function AgentChatPageContent() {
 	const urlWorkflowId = searchParams.get("workflowId");
 
 	return (
-		<div className="h-full flex-1">
+		<div className=" h-full flex-1">
 			<AgentChatContainer
 				agentAddress={agentAddress}
 				nftId={nftId}
@@ -30,7 +30,7 @@ export default function AgentChatPage() {
 			fallback={
 				<div
 					className="
-		px-6 mx-auto max-w-6xl"
+		md:px-6 mx-auto max-w-6xl"
 				>
 					<ChatSkeleton />
 				</div>

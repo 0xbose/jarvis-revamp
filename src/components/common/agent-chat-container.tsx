@@ -856,7 +856,7 @@ export function AgentChatContainer({
 	if (isLoading) {
 		return (
 			<div
-				className={`relative h-full flex-1 flex flex-col p-4 px-6 mx-auto max-w-6xl ${className}`}
+				className={`relative h-full flex-1 flex flex-col p-4 pt-8 md:pt-4 md:px-6 mx-auto max-w-6xl ${className}`}
 			>
 				<ChatSkeleton />
 				<div className="absolute bottom-4 left-0 right-0 px-4 space-y-2">

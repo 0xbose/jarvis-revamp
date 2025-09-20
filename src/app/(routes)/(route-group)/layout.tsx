@@ -13,14 +13,14 @@ export default function layout({ children }: { children: React.ReactNode }) {
 				}
 			>
 				<AppSidebar />
-				<div className="w-full h-full flex-1 px-3 mx-auto">
+				<div className="w-full h-full flex-1">
 					{/* Mobile sidebar trigger */}
 					<div className="md:hidden fixed top-4 left-4 z-50">
 						<SidebarTrigger />
 					</div>
-					{children}
 				</div>
 			</SidebarProvider>
+			<div className="w-full h-full flex-1 px-3 mx-auto">{children}</div>
 		</div>
 	);
 }

@@ -114,7 +114,7 @@ export function ChatMessagesContainer({
 
 	// Layout options
 	containerClassName = "relative w-full h-full flex flex-col",
-	messagesContainerClassName = "flex-1 p-4 pb-20 min-h-0 w-full overflow-y-auto scrollbar-hide h-[calc(100vh-11rem)]",
+	messagesContainerClassName = "flex-1 pt-8 md:pt-4 md:p-4 pb-20 min-h-0 w-full overflow-y-auto scrollbar-hide h-[calc(100vh-8rem)] md:h-[calc(100vh-11rem)]",
 	inputContainerClassName = "absolute bottom-4 left-0 right-0 px-4",
 
 	// Scroll handling
@@ -138,7 +138,7 @@ export function ChatMessagesContainer({
 		<div className={containerClassName}>
 			{chatMessages.length === 0 ? (
 				showSkeleton ? (
-					<div className="w-full p-4 px-6 mx-auto max-w-7xl">
+					<div className="w-full p-4 pt-8 md:pt-4 md:px-6 mx-auto max-w-7xl">
 						<ChatSkeleton />
 					</div>
 				) : null
@@ -147,7 +147,7 @@ export function ChatMessagesContainer({
 					<div className={messagesContainerClassName}>
 						<div
 							ref={finalChatContainerRef}
-							className="flex flex-col gap-4 px-6 mx-auto max-w-7xl"
+							className="flex flex-col gap-4 px-4 md:px-6 mx-auto max-w-7xl"
 							onScroll={handleScroll}
 						>
 							<ChatMessagesGrouped
