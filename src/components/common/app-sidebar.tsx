@@ -10,6 +10,7 @@ import {
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
+	SidebarSeparator,
 	SidebarTrigger,
 	useSidebar,
 } from "@/components/ui/sidebar";
@@ -102,7 +103,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 		<>
 			<Sidebar
 				variant="floating"
-				className="overflow-hidden *:data-[sidebar=sidebar]:flex-row !w-fit z-[9999]"
+				className="overflow-hidden *:data-[sidebar=sidebar]:flex-row !w-fit z-[9999] md:z-0"
 				{...props}
 			>
 				<Sidebar
@@ -111,9 +112,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 						isMobile
 							? "w-auto border-r-none"
 							: "w-[calc(var(--sidebar-width-icon)+1px)]!"
-					} ${isChat ? "rounded-l-lg border-r-none md:border-r" : "rounded-lg"}`}
+					} ${isChat ? "rounded-l-lg border-r-none md:border-r" : "md:rounded-lg"}`}
 				>
-					<SidebarHeader className="pt-4 pb-6 px-4 md:px-1.5 z-[9999] flex flex-row md:flex-col items-center justify-between">
+					<SidebarHeader className="pt-4 pb-3.5 md:pb-6 px-4 md:px-1.5 z-[9999] flex flex-row md:flex-col items-center justify-between">
 						<SidebarMenu>
 							<SidebarMenuItem>
 								<Link href="/create">
@@ -138,10 +139,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 							<X className="size-5" />
 						</Button>
 					</SidebarHeader>
-					<SidebarContent className="z-[9999]">
+					<SidebarContent className="z-[9999] md:z-0 scrollbar-hide">
 						<SidebarGroup>
 							<SidebarMenu
-								className={`gap-y-5 flex flex-col ${
+								className={`gap-y-3.5 md:gap-y-5 flex flex-col ${
 									isMobile
 										? "items-start px-4"
 										: "items-center"
@@ -151,7 +152,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 									<SidebarMenuItem
 										key={item.title}
 										className={
-											isMobile ? "w-full" : "w-fit"
+											isMobile ? "w-full -px-1.5" : "w-fit"
 										}
 									>
 										<SidebarMenuButton asChild>
@@ -188,9 +189,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 									</SidebarMenuItem>
 								))}
 							</SidebarMenu>
+							<SidebarSeparator className="mt-3.5 mb-1.5 md:mt-0 md:mb-0 h-0.5 md:hidden" />
+							<SidebarMenu className="md:hidden">
+								<ChatSidebar isMobile={isMobile} />
+							</SidebarMenu>
 						</SidebarGroup>
 					</SidebarContent>
 					<SidebarFooter className="pb-4">
+						<SidebarSeparator className="mb-1 h-1" />
 						<SidebarMenu
 							className={`flex flex-col ${
 								isMobile ? "items-start px-4" : "items-center"

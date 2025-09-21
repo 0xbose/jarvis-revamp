@@ -298,7 +298,7 @@ const WorkflowItem = React.memo(
 													</span>
 												</TooltipTrigger>
 												<TooltipContent>
-													<p className="max-w-xs text-ellipsis whitespace-nowrap overflow-hidden">
+													<p className="z-[99999] max-w-xs text-ellipsis whitespace-nowrap overflow-hidden">
 														{workflow.type ===
 														"chat"
 															? workflow
@@ -321,7 +321,7 @@ const WorkflowItem = React.memo(
 								onOpenChange={handleMenuSelectOpenChange}
 								onValueChange={handleMenuSelect}
 							>
-								<SelectTrigger className="!border-none">
+								<SelectTrigger className="!border-none [&_.lucide-chevron-down]:hidden">
 									<MoreVerticalIcon
 										className="!size-4 flex-shrink-0"
 										strokeWidth={1.5}
@@ -354,7 +354,7 @@ const WorkflowItem = React.memo(
 
 WorkflowItem.displayName = "WorkflowItem";
 
-const ChatSidebar = React.memo(() => {
+const ChatSidebar = React.memo(({ isMobile }: { isMobile?: boolean }) => {
 	const [chatCount, setChatCount] = useState(() => {
 		if (typeof window !== "undefined") {
 			try {
@@ -715,8 +715,11 @@ const ChatSidebar = React.memo(() => {
 		<Sidebar
 			ref={sidebarRef}
 			collapsible="none"
+			// On mobile, always expanded by default
 			className={`rounded-lg transition-all duration-300 ease-in-out flex flex-col ${
-				!sidebarIsExpanded
+				isMobile
+					? "!w-full"
+					: !sidebarIsExpanded
 					? "w-[calc(var(--sidebar-width-icon)+5px)]!"
 					: "!w-56"
 			}`}
@@ -728,15 +731,18 @@ const ChatSidebar = React.memo(() => {
 					<SidebarMenu className="w-full px-1">
 						<SidebarMenuItem
 							className={`flex items-center gap-x-2 w-full transition-all duration-200 ${
-								sidebarIsExpanded
+								isMobile || sidebarIsExpanded
 									? "justify-between"
 									: "justify-center"
 							}`}
 						>
 							<Label
-								className={`text-sm font-medium transition-opacity duration-200 hidden text-primary-foreground ${
-									sidebarIsExpanded && "block"
-								}`}
+								className={`text-sm font-medium transition-opacity duration-200 ${
+									isMobile
+										? "block"
+										: "hidden " +
+										  (sidebarIsExpanded ? "block" : "")
+								} text-primary-foreground`}
 							>
 								Recents
 							</Label>
@@ -748,7 +754,7 @@ const ChatSidebar = React.memo(() => {
 								>
 									<SelectTrigger
 										className={`!w-fit !h-7 px-[3.5px] py-0 !gap-x-1 bg-background border-0 text-sm rounded-md ${
-											sidebarIsExpanded
+											isMobile || sidebarIsExpanded
 												? "px-[6px]"
 												: "px-[3.5px]"
 										}`}
@@ -766,7 +772,7 @@ const ChatSidebar = React.memo(() => {
 										))}
 									</SelectContent>
 								</Select>
-								{sidebarIsExpanded && error && (
+								{(isMobile || sidebarIsExpanded) && error && (
 									<button
 										onClick={handleRefresh}
 										disabled={isRefetching}
@@ -783,18 +789,22 @@ const ChatSidebar = React.memo(() => {
 									</button>
 								)}
 
-								<div
-									onClick={handlePinStateChange}
-									className={`!w-fit !h-7 px-2 flex items-center justify-center rounded-md transition-colors duration-200 ${
-										sidebarIsExpanded ? "block" : "hidden"
-									} ${
-										isPinned
-											? "bg-accent text-accent-foreground"
-											: ""
-									}`}
-								>
-									<PinIcon className="!size-4 rotate-45" />
-								</div>
+								{!isMobile && (
+									<div
+										onClick={handlePinStateChange}
+										className={`!w-fit !h-7 px-2 flex items-center justify-center rounded-md transition-colors duration-200 ${
+											sidebarIsExpanded
+												? "block"
+												: "hidden"
+										} ${
+											isPinned
+												? "bg-accent text-accent-foreground"
+												: ""
+										}`}
+									>
+										<PinIcon className="!size-4 rotate-45" />
+									</div>
+								)}
 							</div>
 						</SidebarMenuItem>
 					</SidebarMenu>
@@ -802,8 +812,10 @@ const ChatSidebar = React.memo(() => {
 
 				<SidebarGroup>
 					<SidebarMenu
-						className={`gap-y-2 flex flex-col transition-all duration-100 px-0 overflow-y-auto scrollbar-hide hover:scrollbar-thin max-h-[calc(100vh-100px)] ${
-							sidebarIsExpanded ? "items-start" : "items-center"
+						className={`-pt-2 -mt-2.5 md:-mt-0 md:-pt-0 gap-y-2 flex flex-col transition-all duration-100 px-0 overflow-y-auto scrollbar-hide hover:scrollbar-thin max-h-[calc(100vh-100px)] ${
+							isMobile || sidebarIsExpanded
+								? "items-start"
+								: "items-center"
 						}`}
 					>
 						{shouldShowLoading ? (
@@ -853,7 +865,9 @@ const ChatSidebar = React.memo(() => {
 												workflow={workflow}
 												index={index}
 												sidebarIsExpanded={
-													sidebarIsExpanded
+													isMobile
+														? true
+														: sidebarIsExpanded
 												}
 												handleMenuSelectOpenChange={
 													handleMenuSelectOpenChange

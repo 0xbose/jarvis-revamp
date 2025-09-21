@@ -10,7 +10,12 @@ import { isConnectedState, Web3Context } from "@/providers/Web3ContextProvider";
 import { web3AuthConfig } from "@/config/web3AuthConfig";
 import { useWallet } from "@/hooks/use-wallet";
 import { Copy, User } from "lucide-react";
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import {
+	TooltipProvider,
+	Tooltip,
+	TooltipTrigger,
+	TooltipContent,
+} from "@/components/ui/tooltip";
 
 export default function page() {
 	// Use the safe hook that handles SSR gracefully
@@ -43,60 +48,67 @@ export default function page() {
 		loadStudioBalance();
 	}, [provider, web3Context]);
 	return (
-		<div className="p-6">
-
-		<div className="flex flex-col gap-4 w-10/12">
-			<div className="px-4 flex flex-col gap-4 w-fit">
-				<h3 className="text-xl font-medium">Credit Balance</h3>
-				<div className="flex flex-col gap-4">
-				{address && (
-					<TooltipProvider delayDuration={150}>
-						<div className="flex items-center gap-2">
-							<Tooltip>
-								<TooltipTrigger asChild>
-									<span
-										className="font-mono text-sm text-muted-foreground bg-muted px-2 py-1 rounded"
-										aria-label="Wallet address"
-										title={address}
-									>
-										{address.slice(0, 6)}...{address.slice(-4)}
-									</span>
-								</TooltipTrigger>
-								<TooltipContent side="top">
-									<span className="font-mono text-xs">{address}</span>
-								</TooltipContent>
-							</Tooltip>
-							<Tooltip>
-								<TooltipTrigger asChild>
-									<button
-										type="button"
-										onClick={() => navigator.clipboard.writeText(address)}
-										className="active:scale-80 transition-transform"
-										aria-label="Copy address"
-										title="Copy address"
-									>
-										<Copy className="w-3.5 h-3.5" />
-									</button>
-								</TooltipTrigger>
-								<TooltipContent side="top">Copy</TooltipContent>
-							</Tooltip>
-						</div>
-					</TooltipProvider>
+		<div className="md:p-6">
+			<div className="flex flex-col gap-4 md:w-10/12">
+				<div className="md:px-4 flex flex-col gap-4 w-fit">
+					<h3 className="text-xl font-medium">Credit Balance</h3>
+					{address && (
+						<TooltipProvider delayDuration={150}>
+							<div className="flex items-center gap-2">
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<span
+											className="font-mono text-sm text-muted-foreground bg-muted px-2 py-1 rounded"
+											aria-label="Wallet address"
+											title={address}
+										>
+											{address.slice(0, 6)}...
+											{address.slice(-4)}
+										</span>
+									</TooltipTrigger>
+									<TooltipContent side="top">
+										<span className="font-mono text-xs">
+											{address}
+										</span>
+									</TooltipContent>
+								</Tooltip>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<button
+											type="button"
+											onClick={() =>
+												navigator.clipboard.writeText(
+													address
+												)
+											}
+											className="active:scale-80 transition-transform"
+											aria-label="Copy address"
+											title="Copy address"
+										>
+											<Copy className="w-3.5 h-3.5" />
+										</button>
+									</TooltipTrigger>
+									<TooltipContent side="top">
+										Copy
+									</TooltipContent>
+								</Tooltip>
+							</div>
+						</TooltipProvider>
 					)}
-					<BalanceCard
-						title="Agent Studio Balance"
-						amount={parseFloat(studioBalance)}
-						patternImgUrl="/images/dot_pattern.png"
-					/>
-					
+					<div className="flex flex-col gap-4">
+						<BalanceCard
+							title="Agent Studio Balance"
+							amount={parseFloat(studioBalance)}
+							patternImgUrl="/images/dot_pattern.png"
+						/>
+					</div>
+					<p className="text-sm text-muted-foreground">
+						Your credit balance will be consumed with agent usage.
+						You can add funds to your crypto wallet and then
+						transfer those funds to Jarvis balance.
+					</p>
 				</div>
-				<p className="text-sm text-muted-foreground">
-					Your credit balance will be consumed with agent usage. You
-					can add funds to your crypto wallet and then transfer those
-					funds to Jarvis balance.
-				</p>
 			</div>
-		</div>
 		</div>
 	);
 }

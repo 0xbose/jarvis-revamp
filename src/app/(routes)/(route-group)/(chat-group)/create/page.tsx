@@ -54,7 +54,7 @@ export default function CreatePage() {
 
 	return (
 		<div className="flex flex-col items-center h-full w-full relative">
-			<div className="w-full relative flex-1 max-h-[50vh] min-h-[180px] sm:min-h-[240px] md:min-h-[320px]">
+			<div className="w-full relative flex-1 max-h-[50vh] min-h-[180px] md:min-h-[320px]">
 				<Spline scene="https://prod.spline.design/XGG3yvqNuvg63wOA/scene.splinecode" />
 				<div className="absolute bottom-5 right-5 h-10 w-36 bg-background"></div>
 			</div>
