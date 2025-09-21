@@ -114,7 +114,7 @@ export function ChatMessagesContainer({
 
 	// Layout options
 	containerClassName = "relative w-full h-full flex flex-col",
-	messagesContainerClassName = "flex-1 pt-8 md:pt-4 md:p-4 pb-20 min-h-0 w-full overflow-y-auto scrollbar-hide h-[calc(100vh-8rem)] md:h-[calc(100vh-11rem)]",
+	messagesContainerClassName = "flex-1 pt-8 md:pt-4 md:p-4 pb-20 min-h-0 w-full overflow-y-auto scrollbar-hide h-[calc(100vh-10.5rem)] md:h-[calc(100vh-8rem)] md:h-[calc(100vh-11rem)]",
 	inputContainerClassName = "absolute bottom-4 left-0 right-0 px-4",
 
 	// Scroll handling

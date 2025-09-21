@@ -1087,15 +1087,14 @@ function ChatPageContent() {
 	}
 
 	return (
-		<div className="flex flex-col h-screen max-h-screen bg-background relative">
+		<div className="flex flex-col h-[calc(100vh-3rem)] md:h-screen max-h-screen bg-background relative">
 			<div className="flex-1 min-h-0">
 				<div
 					ref={messagesContainerRef}
-					className="px-4 pt-6 h-full overflow-y-auto scrollbar-hide"
+					className="px-1 pt-6 h-full overflow-y-auto scrollbar-hide max-h-[calc(100vh-10.5rem)] md:max-h-[calc(100vh-8rem)]"
 					onScroll={handleScroll}
 					style={{
 						scrollBehavior: "smooth",
-						height: "calc(100vh - 8rem)",
 					}}
 				>
 					<div className="pb-4 md:px-6 mx-auto max-w-6xl relative chat-page-messages-root">
@@ -1172,7 +1171,7 @@ function ChatPageContent() {
 						))}
 					</div>
 				)}
-				<div className="absolute bottom-4 left-0 right-0 px-6 mx-auto max-w-6xl">
+				<div className="absolute bottom-4 left-0 right-0 md:px-6 mx-auto max-w-6xl">
 					<ChatInput
 						ref={chatInputRef}
 						onSend={handleSendMessage}
