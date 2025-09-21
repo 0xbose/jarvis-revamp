@@ -103,7 +103,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 		<>
 			<Sidebar
 				variant="floating"
-				className="overflow-hidden *:data-[sidebar=sidebar]:flex-row !w-fit z-[9999] md:z-0"
+				className="overflow-hidden *:data-[sidebar=sidebar]:flex-row !w-fit z-[9999] md:z-10"
 				{...props}
 			>
 				<Sidebar
@@ -112,7 +112,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 						isMobile
 							? "w-auto border-r-none"
 							: "w-[calc(var(--sidebar-width-icon)+1px)]!"
-					} ${isChat ? "rounded-l-lg border-r-none md:border-r" : "md:rounded-lg"}`}
+					} ${
+						isChat
+							? "rounded-l-lg border-r-none md:border-r"
+							: "md:rounded-lg"
+					}`}
 				>
 					<SidebarHeader className="pt-4 pb-3.5 md:pb-6 px-4 md:px-1.5 z-[9999] flex flex-row md:flex-col items-center justify-between">
 						<SidebarMenu>
@@ -139,7 +143,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 							<X className="size-5" />
 						</Button>
 					</SidebarHeader>
-					<SidebarContent className="z-[9999] md:z-0 scrollbar-hide">
+					<SidebarContent className="z-[9999] md:z-10 scrollbar-hide">
 						<SidebarGroup>
 							<SidebarMenu
 								className={`gap-y-3.5 md:gap-y-5 flex flex-col ${
@@ -152,7 +156,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 									<SidebarMenuItem
 										key={item.title}
 										className={
-											isMobile ? "w-full -px-1.5" : "w-fit"
+											isMobile
+												? "w-full -px-1.5"
+												: "w-fit"
 										}
 									>
 										<SidebarMenuButton asChild>
