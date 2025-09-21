@@ -197,7 +197,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 							</SidebarMenu>
 							<SidebarSeparator className="mt-3.5 mb-1.5 md:mt-0 md:mb-0 h-0.5 md:hidden" />
 							<SidebarMenu className="md:hidden">
-								<ChatSidebar isMobile={isMobile} />
+								<Suspense
+									fallback={
+										<Skeleton className="w-full h-32" />
+									}
+								>
+									<ChatSidebar isMobile={isMobile} />
+								</Suspense>
 							</SidebarMenu>
 						</SidebarGroup>
 					</SidebarContent>
