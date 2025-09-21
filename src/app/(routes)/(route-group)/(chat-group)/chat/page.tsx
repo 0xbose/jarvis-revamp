@@ -27,7 +27,7 @@ import SelectionCardComponent from "@/components/common/SelectionCard";
 import { workflowExecutor } from "@/utils/workflow-executor";
 import { getAgentDetailByCollectionAndNftId } from "@/controllers/agents/agents.query";
 import { AgentChatContainer } from "@/components/common/agent-chat-container";
-import { X } from "lucide-react";
+import { X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface StreamResponse {
@@ -109,11 +109,8 @@ function ChatPageContent() {
 	const hasAutoSubmittedRef = useRef<boolean>(false);
 
 	// Scroll management refs
-	const isUserScrollingRef = useRef<boolean>(false);
-	const shouldAutoScrollRef = useRef<boolean>(true);
+	const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 	const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-	const lastMessageCountRef = useRef<number>(0);
-	const isScrollingToBottomRef = useRef<boolean>(false);
 
 	const { skyBrowser, address, isConnected, loading } = useWallet();
 	const {
@@ -145,8 +142,8 @@ function ChatPageContent() {
 		enabled: !!chatIdFromUrl,
 		retry: false,
 		refetchOnWindowFocus: false,
-		staleTime: 1000 * 60 * 5, // 5 minutes - data is fresh for 5 minutes
-		gcTime: 1000 * 60 * 30, // 30 minutes - keep in cache for 30 minutes
+		staleTime: 0, // Always consider data stale to ensure fresh fetches
+		gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes only
 	});
 
 	// Fetch available models for the panel's model selector
@@ -203,19 +200,15 @@ function ChatPageContent() {
 
 			// Always use server data when switching chats to avoid stale data
 			// Only merge local messages if we're in the same chat and have streaming messages
-			if (
-				currentChatId === chatIdFromUrl &&
-				mapped.length >= messages.length
-			) {
-				// Server has same or more messages, use server data
+			if (currentChatId === chatIdFromUrl && !isStreaming) {
+				// Same chat and not streaming - use server data (this ensures fresh data after reload)
 				setMessages(mapped);
 			} else if (
 				currentChatId === chatIdFromUrl &&
+				isStreaming &&
 				messages.length > mapped.length
 			) {
-				// Local has more messages (likely streaming messages), keep local but merge with server
-
-				// Find the last server message timestamp to avoid duplicates
+				// Same chat and streaming - merge server messages with newer local messages
 				const lastServerMessage = mapped[mapped.length - 1];
 				const lastServerTime =
 					lastServerMessage?.timestamp?.getTime() || 0;
@@ -237,26 +230,16 @@ function ChatPageContent() {
 				setCurrentChatId(fetchedMessages.data.chatId);
 			}
 
-			// Mark as initial load and disable auto-scroll
+			// Mark as initial load
 			setIsInitialLoad(true);
-			shouldAutoScrollRef.current = false;
-			isUserScrollingRef.current = true;
 
-			// Set the message count to prevent the "new messages" effect from triggering
-			lastMessageCountRef.current = mapped.length;
-
-			// Instead of scrolling, directly show the bottom-most messages by setting scrollTop
+			// Show bottom-most messages by setting scrollTop
 			setTimeout(() => {
 				const container = messagesContainerRef.current;
 				if (container) {
 					container.scrollTop = container.scrollHeight;
 				}
-				// Re-enable auto-scroll for future new messages
-				setTimeout(() => {
-					shouldAutoScrollRef.current = true;
-					isUserScrollingRef.current = false;
-					setIsInitialLoad(false);
-				}, 100);
+				setIsInitialLoad(false);
 			}, 50);
 		}
 	}, [
@@ -276,36 +259,12 @@ function ChatPageContent() {
 		return scrollHeight - scrollTop - clientHeight < threshold;
 	}, []);
 
-	const scrollToBottom = useCallback((force = false, smooth = true) => {
-		if (
-			!messagesEndRef.current ||
-			(!force && !shouldAutoScrollRef.current)
-		) {
-			return;
-		}
+	const scrollToBottom = useCallback(() => {
+		if (!messagesEndRef.current) return;
 
-		if (isScrollingToBottomRef.current && !force) {
-			return;
-		}
-
-		isScrollingToBottomRef.current = true;
-
-		requestAnimationFrame(() => {
-			try {
-				messagesEndRef.current?.scrollIntoView({
-					behavior: smooth ? "smooth" : "auto",
-					block: "end",
-				});
-			} catch (error) {
-				console.warn("Scroll error:", error);
-			}
-
-			setTimeout(
-				() => {
-					isScrollingToBottomRef.current = false;
-				},
-				smooth ? 300 : 0
-			);
+		messagesEndRef.current.scrollIntoView({
+			behavior: "smooth",
+			block: "end",
 		});
 	}, []);
 
@@ -319,22 +278,9 @@ function ChatPageContent() {
 
 		scrollTimeoutRef.current = setTimeout(() => {
 			const isNearBottomNow = isNearBottom();
-
-			if (isNearBottomNow) {
-				if (isUserScrollingRef.current && !isInitialLoad) {
-					isUserScrollingRef.current = false;
-					shouldAutoScrollRef.current = true;
-				}
-			} else {
-				// User has scrolled away from bottom - disable auto-scroll
-				// This should happen regardless of streaming state
-				if (!isInitialLoad) {
-					isUserScrollingRef.current = true;
-					shouldAutoScrollRef.current = false;
-				}
-			}
+			setShowScrollToBottom(!isNearBottomNow);
 		}, 50);
-	}, [isNearBottom, isInitialLoad]);
+	}, [isNearBottom]);
 
 	const updateUrlWithChatId = useCallback(
 		(chatId: string) => {
@@ -361,63 +307,12 @@ function ChatPageContent() {
 
 			// Reset scroll state
 			setIsInitialLoad(false);
-			shouldAutoScrollRef.current = true;
-			isUserScrollingRef.current = false;
-			lastMessageCountRef.current = 0;
+			setShowScrollToBottom(false);
+
+			// Force refetch messages for the new chat
+			refetchMessages();
 		}
-	}, [chatIdFromUrl, currentChatId]);
-
-	useEffect(() => {
-		if (isStreaming && streamingMessage && shouldAutoScrollRef.current) {
-			const scrollInterval = setInterval(() => {
-				// Only auto-scroll if user hasn't manually scrolled away
-				if (
-					shouldAutoScrollRef.current &&
-					!isUserScrollingRef.current
-				) {
-					scrollToBottom(false, true);
-				}
-			}, 100);
-
-			return () => clearInterval(scrollInterval);
-		}
-	}, [streamingMessage, isStreaming, scrollToBottom]);
-
-	useEffect(() => {
-		const currentMessageCount = messages.length;
-		const hasNewMessages =
-			currentMessageCount > lastMessageCountRef.current;
-
-		if (hasNewMessages && !isInitialLoad) {
-			lastMessageCountRef.current = currentMessageCount;
-
-			// Only auto-scroll if user is near bottom or auto-scroll is enabled
-			if (shouldAutoScrollRef.current || isNearBottom()) {
-				shouldAutoScrollRef.current = true;
-				scrollToBottom(true, true);
-			}
-		}
-	}, [messages.length, scrollToBottom, isNearBottom, isInitialLoad]);
-
-	useEffect(() => {
-		if (
-			!isStreaming &&
-			streamingMessage === "" &&
-			messages.length > 0 &&
-			!isInitialLoad
-		) {
-			// Only auto-scroll when streaming ends if user hasn't manually scrolled away
-			if (shouldAutoScrollRef.current && !isUserScrollingRef.current) {
-				setTimeout(() => scrollToBottom(true, true), 100);
-			}
-		}
-	}, [
-		isStreaming,
-		streamingMessage,
-		messages.length,
-		scrollToBottom,
-		isInitialLoad,
-	]);
+	}, [chatIdFromUrl, currentChatId, refetchMessages]);
 
 	const handleSendMessage = useCallback(
 		async (
@@ -443,10 +338,6 @@ function ChatPageContent() {
 
 			// Only add messages to current chat if this is not a card send
 			if (!cardId) {
-				shouldAutoScrollRef.current = true;
-				isUserScrollingRef.current = false;
-				setIsInitialLoad(false);
-
 				const newMessage: ChatMsg = {
 					id: Date.now().toString(),
 					type: "chat_user",
@@ -545,16 +436,15 @@ function ChatPageContent() {
 						);
 					}
 
-					setTimeout(() => {
-						queryClient.invalidateQueries({
-							queryKey: [
-								"chat-messages",
-								chatIdFromUrl,
-								QUERY_KEYS.HISTORY,
-								address,
-							],
-						});
-					}, 1000);
+					// Invalidate queries immediately for agent workflows
+					queryClient.invalidateQueries({
+						queryKey: [
+							"chat-messages",
+							chatIdFromUrl,
+							QUERY_KEYS.HISTORY,
+							address,
+						],
+					});
 
 					setStreamingMessage("");
 					return;
@@ -685,16 +575,15 @@ function ChatPageContent() {
 						}
 					}
 				} finally {
-					setTimeout(() => {
-						queryClient.invalidateQueries({
-							queryKey: [
-								"chat-messages",
-								chatIdFromUrl,
-								QUERY_KEYS.HISTORY,
-								address,
-							],
-						});
-					}, 1000); // 1 second delay
+					// Invalidate queries immediately for chat requests
+					queryClient.invalidateQueries({
+						queryKey: [
+							"chat-messages",
+							chatIdFromUrl,
+							QUERY_KEYS.HISTORY,
+							address,
+						],
+					});
 					reader.releaseLock();
 				}
 			} catch (error) {
@@ -834,9 +723,7 @@ function ChatPageContent() {
 
 			// Reset scroll state
 			setIsInitialLoad(false);
-			shouldAutoScrollRef.current = true;
-			isUserScrollingRef.current = false;
-			lastMessageCountRef.current = 0;
+			setShowScrollToBottom(false);
 
 			// Check if this is an agent request
 			if (card.agentId && card.workflowId && selectedAgent) {
@@ -865,6 +752,11 @@ function ChatPageContent() {
 			// For regular chat requests, remove any existing cache and navigate to chat
 			queryClient.removeQueries({
 				queryKey: ["chat-messages", chatId],
+			});
+
+			// Also remove the current chat's cache to ensure fresh data
+			queryClient.removeQueries({
+				queryKey: ["chat-messages", currentChatId],
 			});
 
 			// Navigate to the new chat
@@ -916,23 +808,18 @@ function ChatPageContent() {
 		[selectionCards, selectedAgent]
 	);
 
-	// Handler for "Ask Jarvis" - focus input and scroll to bottom
-	const handleAskJarvis = useCallback(
-		(selectedText: string) => {
-			// Set the prompt with the selected text
-			setPrompt(selectedText);
+	// Handler for "Ask Jarvis" - focus input
+	const handleAskJarvis = useCallback((selectedText: string) => {
+		// Set the prompt with the selected text
+		setPrompt(selectedText);
 
-			// Focus the chat input
-			setTimeout(() => {
-				if (chatInputRef.current) {
-					chatInputRef.current.focus();
-					// Scroll to bottom to show the input
-					scrollToBottom(true, true);
-				}
-			}, 100);
-		},
-		[scrollToBottom]
-	);
+		// Focus the chat input
+		setTimeout(() => {
+			if (chatInputRef.current) {
+				chatInputRef.current.focus();
+			}
+		}, 100);
+	}, []);
 
 	// Handler for "Instruct Agent" - create a card with agent selection
 	const handleInstructAgent = useCallback((selectedText: string) => {
@@ -1082,6 +969,17 @@ function ChatPageContent() {
 				>
 					<X className="size-4" />
 				</Button>
+
+				{/* Scroll to bottom button for comparison mode */}
+				{showScrollToBottom && (
+					<Button
+						onClick={scrollToBottom}
+						className="fixed bottom-20 right-6 z-50 p-3 bg-background border border-border rounded-full shadow-lg hover:bg-sidebar transition-all duration-200 hover:scale-105"
+						size="sm"
+					>
+						<ChevronDown className="size-4" />
+					</Button>
+				)}
 			</div>
 		);
 	}
@@ -1185,6 +1083,16 @@ function ChatPageContent() {
 						disableAgentSelection={true}
 					/>
 				</div>
+
+				{/* Scroll to bottom button */}
+				{showScrollToBottom && (
+					<button
+						onClick={scrollToBottom}
+						className="fixed bottom-20 right-6 z-50 p-3 bg-background border border-border rounded-full shadow-lg hover:bg-sidebar transition-all duration-200 hover:scale-105"
+					>
+						<ChevronDown className="size-4" />
+					</button>
+				)}
 			</div>
 		</div>
 	);

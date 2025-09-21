@@ -272,7 +272,7 @@ export function MDXRenderer({ content, className = "" }: MDXRendererProps) {
 				setError(null);
 
 				// Clean up the content by replacing escaped newlines with actual newlines
-				const cleanedContent = replaceAngleBracketAutolinks(content)
+				let cleanedContent = replaceAngleBracketAutolinks(content)
 					.replace(/\\n/g, "\n")
 					.replace(/\\t/g, "\t")
 					.replace(/\\r/g, "\r")
@@ -282,9 +282,21 @@ export function MDXRenderer({ content, className = "" }: MDXRendererProps) {
 					.replace(/(\n\s*-\s+)/g, "\n$1")
 					.trim();
 
+				// Additional sanitization for MDX compatibility
+				cleanedContent = cleanedContent
+					// Escape problematic characters that might cause MDX parsing issues
+					.replace(/[<>]/g, (match) =>
+						match === "<" ? "&lt;" : "&gt;"
+					)
+
+					// Clean up excessive whitespace but preserve markdown structure
+					.replace(/\n\s*\n\s*\n/g, "\n\n")
+					.trim();
+
 				console.log("Original content:", content);
 				console.log("Cleaned content:", cleanedContent);
 
+				// Try to serialize with more lenient options
 				const serialized = await serialize(cleanedContent, {
 					mdxOptions: {
 						remarkPlugins: [remarkGfm],
@@ -301,13 +313,22 @@ export function MDXRenderer({ content, className = "" }: MDXRendererProps) {
 								},
 							],
 						],
+						// Add more lenient parsing options
+						format: "mdx",
+						development: false,
 					},
 				});
 
+				console.log("MDX serialization successful:", !!serialized);
 				setMdxSource(serialized);
 			} catch (err) {
 				console.error("Error serializing MDX:", err);
-				setError("Failed to render markdown content");
+				console.error("Error details:", err);
+				setError(
+					`Failed to render markdown content: ${
+						err instanceof Error ? err.message : "Unknown error"
+					}`
+				);
 			} finally {
 				setIsLoading(false);
 			}
@@ -331,19 +352,84 @@ export function MDXRenderer({ content, className = "" }: MDXRendererProps) {
 	}
 
 	if (error) {
+		// Render as formatted text instead of showing error
+		const cleanedContent = content
+			.replace(/\\n/g, "\n")
+			.replace(/\\t/g, "\t")
+			.replace(/\\r/g, "\r");
+
+		// Apply basic markdown formatting
+		let basicFormattedContent = cleanedContent
+			.replace(
+				/^#{1,6}\s+(.+)$/gm,
+				(match, text) =>
+					`<h1 class="text-xl font-semibold text-white mb-3 mt-4 first:mt-0">${text}</h1>`
+			)
+			.replace(
+				/\*\*(.+?)\*\*/g,
+				'<strong class="font-bold text-white">$1</strong>'
+			)
+			.replace(/\*(.+?)\*/g, '<em class="italic text-gray-200">$1</em>')
+			.replace(/^\- (.+)$/gm, '<li class="text-gray-200 ml-4">• $1</li>')
+			.replace(
+				/^\d+\. (.+)$/gm,
+				'<li class="text-gray-200 ml-4">$1</li>'
+			);
+
+		// Handle tables - convert markdown tables to HTML
+		basicFormattedContent = basicFormattedContent.replace(
+			/\|(.+)\|\n\|[-\s|]+\|\n((?:\|.+\|\n?)*)/g,
+			(match, header, rows) => {
+				const headerCells = header
+					.split("|")
+					.map(
+						(cell: string) =>
+							`<th class="border border-gray-600 px-4 py-2 text-left text-white font-semibold">${cell.trim()}</th>`
+					)
+					.join("");
+
+				const tableRows = rows
+					.trim()
+					.split("\n")
+					.map((row: string) => {
+						const cells = row
+							.split("|")
+							.map(
+								(cell: string) =>
+									`<td class="border border-gray-600 px-4 py-2 text-gray-200">${cell.trim()}</td>`
+							)
+							.join("");
+						return `<tr class="border-b border-gray-600">${cells}</tr>`;
+					})
+					.join("");
+
+				return `
+					<div class="overflow-x-auto mb-4">
+						<table class="min-w-full border-collapse border border-gray-600">
+							<thead class="bg-gray-800">
+								<tr class="border-b border-gray-600">${headerCells}</tr>
+							</thead>
+							<tbody>${tableRows}</tbody>
+						</table>
+					</div>
+				`;
+			}
+		);
+
+		basicFormattedContent = basicFormattedContent.replace(/\n/g, "<br>");
+
+		// Convert URLs to links in the HTML string
+		const htmlWithLinks = basicFormattedContent.replace(
+			/(https?:\/\/[^\s"',}]+)/g,
+			'<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline transition-colors">$1</a>'
+		);
+
 		return (
-			<div
-				className={`text-red-400 p-3 bg-red-900/20 border border-red-800 rounded-lg ${className}`}
-			>
-				<p>{error}</p>
-				<details className="mt-2">
-					<summary className="cursor-pointer text-sm text-red-300">
-						Show raw content
-					</summary>
-					<pre className="mt-2 text-xs bg-red-900/30 p-2 rounded overflow-x-auto">
-						{convertUrlsToLinks(content)}
-					</pre>
-				</details>
+			<div className={`text-gray-200 ${className}`}>
+				<div
+					className="whitespace-pre-wrap break-words overflow-hidden"
+					dangerouslySetInnerHTML={{ __html: htmlWithLinks }}
+				/>
 			</div>
 		);
 	}
@@ -355,11 +441,78 @@ export function MDXRenderer({ content, className = "" }: MDXRendererProps) {
 			.replace(/\\t/g, "\t")
 			.replace(/\\r/g, "\r");
 
+		// Apply basic markdown formatting
+		let basicFormattedContent = cleanedContent
+			.replace(
+				/^#{1,6}\s+(.+)$/gm,
+				(match, text) =>
+					`<h1 class="text-xl font-semibold text-white mb-3 mt-4 first:mt-0">${text}</h1>`
+			)
+			.replace(
+				/\*\*(.+?)\*\*/g,
+				'<strong class="font-bold text-white">$1</strong>'
+			)
+			.replace(/\*(.+?)\*/g, '<em class="italic text-gray-200">$1</em>')
+			.replace(/^\- (.+)$/gm, '<li class="text-gray-200 ml-4">• $1</li>')
+			.replace(
+				/^\d+\. (.+)$/gm,
+				'<li class="text-gray-200 ml-4">$1</li>'
+			);
+
+		// Handle tables - convert markdown tables to HTML
+		basicFormattedContent = basicFormattedContent.replace(
+			/\|(.+)\|\n\|[-\s|]+\|\n((?:\|.+\|\n?)*)/g,
+			(match, header, rows) => {
+				const headerCells = header
+					.split("|")
+					.map(
+						(cell: string) =>
+							`<th class="border border-gray-600 px-4 py-2 text-left text-white font-semibold">${cell.trim()}</th>`
+					)
+					.join("");
+
+				const tableRows = rows
+					.trim()
+					.split("\n")
+					.map((row: string) => {
+						const cells = row
+							.split("|")
+							.map(
+								(cell: string) =>
+									`<td class="border border-gray-600 px-4 py-2 text-gray-200">${cell.trim()}</td>`
+							)
+							.join("");
+						return `<tr class="border-b border-gray-600">${cells}</tr>`;
+					})
+					.join("");
+
+				return `
+					<div class="overflow-x-auto mb-4">
+						<table class="min-w-full border-collapse border border-gray-600">
+							<thead class="bg-gray-800">
+								<tr class="border-b border-gray-600">${headerCells}</tr>
+							</thead>
+							<tbody>${tableRows}</tbody>
+						</table>
+					</div>
+				`;
+			}
+		);
+
+		basicFormattedContent = basicFormattedContent.replace(/\n/g, "<br>");
+
+		// Convert URLs to links in the HTML string
+		const htmlWithLinks = basicFormattedContent.replace(
+			/(https?:\/\/[^\s"',}]+)/g,
+			'<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline transition-colors">$1</a>'
+		);
+
 		return (
 			<div className={`text-gray-200 ${className}`}>
-				<div className="whitespace-pre-wrap break-words overflow-hidden">
-					{convertUrlsToLinks(cleanedContent)}
-				</div>
+				<div
+					className="whitespace-pre-wrap break-words overflow-hidden"
+					dangerouslySetInnerHTML={{ __html: htmlWithLinks }}
+				/>
 			</div>
 		);
 	}
