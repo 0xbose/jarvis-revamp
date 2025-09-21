@@ -158,7 +158,7 @@ export class WorkflowExecutor {
 	 */
 	public isPolling(): boolean {
 		const result = this.currentPollingInterval !== null;
-		
+
 		return result;
 	}
 
@@ -753,18 +753,26 @@ export class WorkflowExecutor {
 			// Use the NFT ID from the API response instead of fetching from blockchain
 			// The agentDetail should contain the NFT ID from the /api/agents/{collectionAddress}/{nftId} endpoint
 			if (agentDetail.id) {
-				console.log("✅ Using NFT ID from API response:", agentDetail.id);
+				console.log(
+					"✅ Using NFT ID from API response:",
+					agentDetail.id
+				);
 				return agentDetail.id;
 			}
 
 			// Fallback to agentNFTId if available
 			if (agentDetail.agentNFTId) {
-				console.log("⚠️ Using fallback agentNFTId:", agentDetail.agentNFTId);
+				console.log(
+					"⚠️ Using fallback agentNFTId:",
+					agentDetail.agentNFTId
+				);
 				return agentDetail.agentNFTId;
 			}
 
 			// Last resort fallback
-			console.warn("⚠️ No NFT ID found in API response, using fallback '0'");
+			console.warn(
+				"⚠️ No NFT ID found in API response, using fallback '0'"
+			);
 			return "69";
 		} catch (error) {
 			console.warn(
@@ -907,9 +915,12 @@ export class WorkflowExecutor {
 					console.log(
 						`🔄 Status changed for workflow ${requestId}: ${previousStatus} -> ${statusData.workflowStatus}`
 					);
-					
+
 					// If status changed from awaiting_response to in_progress, resume polling
-					if (previousStatus === "awaiting_response" && statusData.workflowStatus === "in_progress") {
+					if (
+						previousStatus === "awaiting_response" &&
+						statusData.workflowStatus === "in_progress"
+					) {
 						console.log(
 							`🔄 Workflow ${requestId} status changed from awaiting_response to in_progress, resuming polling...`
 						);
@@ -946,10 +957,12 @@ export class WorkflowExecutor {
 						subnet.question &&
 						subnet.question.type !== "notification" &&
 						// Check if feedback has been submitted for this subnet
-						!subnet.feedbackHistory?.some((feedback: any) => 
-							feedback.feedback_question === subnet.question?.text && 
-							feedback.user_answer && 
-							feedback.user_answer.trim() !== ""
+						!subnet.feedbackHistory?.some(
+							(feedback: any) =>
+								feedback.feedback_question ===
+									subnet.question?.text &&
+								feedback.user_answer &&
+								feedback.user_answer.trim() !== ""
 						)
 				);
 
@@ -963,7 +976,7 @@ export class WorkflowExecutor {
 					console.log(
 						`🔄 Workflow ${requestId} is active (${statusData.workflowStatus}), starting continuous polling...`
 					);
-					
+
 					// Log subnet status details for debugging
 					console.log(`🔍 Subnet status details for ${requestId}:`, {
 						workflowStatus: statusData.workflowStatus,
@@ -976,17 +989,22 @@ export class WorkflowExecutor {
 							hasQuestion: !!s.question,
 							questionType: s.question?.type,
 							hasFeedbackHistory: !!s.feedbackHistory?.length,
-							feedbackWithAnswers: s.feedbackHistory?.filter((f: any) => 
-								f.user_answer && f.user_answer.trim() !== ""
-							).length || 0,
-							feedbackDetails: s.feedbackHistory?.map((f: any) => ({
-								question: f.feedback_question,
-								answer: f.user_answer,
-								continue: f.continue
-							}))
-						}))
+							feedbackWithAnswers:
+								s.feedbackHistory?.filter(
+									(f: any) =>
+										f.user_answer &&
+										f.user_answer.trim() !== ""
+								).length || 0,
+							feedbackDetails: s.feedbackHistory?.map(
+								(f: any) => ({
+									question: f.feedback_question,
+									answer: f.user_answer,
+									continue: f.continue,
+								})
+							),
+						})),
 					});
-					
+
 					shouldContinuePolling = true;
 
 					if (hasUserInputRequired) {
@@ -1080,9 +1098,12 @@ export class WorkflowExecutor {
 						console.log(
 							`🔄 Status changed for workflow ${requestId}: ${previousStatus} -> ${statusData.workflowStatus}`
 						);
-						
+
 						// If status changed from awaiting_response to in_progress, resume polling
-						if (previousStatus === "awaiting_response" && statusData.workflowStatus === "in_progress") {
+						if (
+							previousStatus === "awaiting_response" &&
+							statusData.workflowStatus === "in_progress"
+						) {
 							console.log(
 								`🔄 Workflow ${requestId} status changed from awaiting_response to in_progress, resuming polling...`
 							);
@@ -1118,10 +1139,12 @@ export class WorkflowExecutor {
 							subnet.question &&
 							subnet.question.type !== "notification" &&
 							// Check if feedback has been submitted for this subnet
-							!subnet.feedbackHistory?.some((feedback: any) => 
-								feedback.feedback_question === subnet.question?.text && 
-								feedback.user_answer && 
-								feedback.user_answer.trim() !== ""
+							!subnet.feedbackHistory?.some(
+								(feedback: any) =>
+									feedback.feedback_question ===
+										subnet.question?.text &&
+									feedback.user_answer &&
+									feedback.user_answer.trim() !== ""
 							)
 					);
 
@@ -1135,7 +1158,8 @@ export class WorkflowExecutor {
 						statusData.subnets?.some(
 							(subnet: any) =>
 								subnet.status === "awaiting_response" &&
-								(!subnet.data || subnet.data.length === 0)
+								(!subnet.data || subnet.data.length === 0) &&
+								!subnet.question // Only count as waiting without data if there's no question
 						);
 
 					console.log(`🔍 Subnet status check for ${requestId}:`, {
@@ -1143,25 +1167,30 @@ export class WorkflowExecutor {
 						hasNotificationQuestion,
 						hasWaitingResponseWithoutData,
 						workflowStatus: statusData.workflowStatus,
-													waitingResponseSubnets: statusData.subnets
-								?.filter(
-									(s: any) => s.status === "awaiting_response"
-								)
-								.map((s: any) => ({
+						waitingResponseSubnets: statusData.subnets
+							?.filter(
+								(s: any) => s.status === "awaiting_response"
+							)
+							.map((s: any) => ({
 								itemID: s.itemID,
 								toolName: s.toolName,
 								hasData: !!s.data,
 								dataLength: s.data?.length || 0,
 								questionType: s.question?.type,
 								hasFeedbackHistory: !!s.feedbackHistory?.length,
-								feedbackWithAnswers: s.feedbackHistory?.filter((f: any) => 
-									f.user_answer && f.user_answer.trim() !== ""
-								).length || 0,
-								feedbackDetails: s.feedbackHistory?.map((f: any) => ({
-									question: f.feedback_question,
-									answer: f.user_answer,
-									continue: f.continue
-								}))
+								feedbackWithAnswers:
+									s.feedbackHistory?.filter(
+										(f: any) =>
+											f.user_answer &&
+											f.user_answer.trim() !== ""
+									).length || 0,
+								feedbackDetails: s.feedbackHistory?.map(
+									(f: any) => ({
+										question: f.feedback_question,
+										answer: f.user_answer,
+										continue: f.continue,
+									})
+								),
 							})),
 					});
 
@@ -1200,57 +1229,31 @@ export class WorkflowExecutor {
 						console.log(
 							`🔔 Workflow ${requestId} has notification questions, continuing polling...`
 						);
-					} else if (hasWaitingResponseWithoutData) {
-						console.log(
-							`⏳ Workflow ${requestId} has subnets in waiting_response without data, continuing polling...`
-						);
-					} else if (
-						statusData.workflowStatus === "in_progress" &&
-						!hasUserInputRequired
-					) {
-						console.log(
-							`🔄 Workflow ${requestId} is in progress and no user input required, continuing polling...`
-						);
-					} else if (
-						statusData.workflowStatus === "in_progress" &&
-						statusData.subnets?.some((s: any) => s.status === "awaiting_response")
-					) {
-						// Workflow is in_progress but has subnets in awaiting_response
-						// This might be a temporary state while backend processes feedback
-						console.log(
-							`⏳ Workflow ${requestId} is in_progress but has subnets in awaiting_response, continuing polling to monitor status changes...`
-						);
-						// Continue polling to see when the backend updates the subnet statuses
-						// This is important because the backend might be processing feedback
-					} else if (
-						statusData.workflowStatus === "in_progress" &&
-						statusData.subnets?.some((s: any) => s.status === "awaiting_response")
-					) {
-						// Workflow is in_progress but has subnets in awaiting_response
-						// This might be a temporary state while backend processes feedback
-						console.log(
-							`⏳ Workflow ${requestId} is in_progress but has subnets in awaiting_response, continuing polling to monitor status changes...`
-						);
-						// Continue polling to see when the backend updates the subnet statuses
-						// This is important because the backend might be processing feedback
 					} else if (
 						statusData.workflowStatus === "in_progress" &&
 						hasUserInputRequired
 					) {
 						// This is the key case: workflow is in_progress but has subnets with questions
 						// Check if all questions have been answered via feedback
-						const allQuestionsAnswered = statusData.subnets?.every((subnet: any) => {
-							if (subnet.status === "awaiting_response" && subnet.question) {
-								// Check if this question has been answered
-								return subnet.feedbackHistory?.some((feedback: any) => 
-									feedback.feedback_question === subnet.question?.text && 
-									feedback.user_answer && 
-									feedback.user_answer.trim() !== ""
-								);
+						const allQuestionsAnswered = statusData.subnets?.every(
+							(subnet: any) => {
+								if (
+									subnet.status === "awaiting_response" &&
+									subnet.question
+								) {
+									// Check if this question has been answered
+									return subnet.feedbackHistory?.some(
+										(feedback: any) =>
+											feedback.feedback_question ===
+												subnet.question?.text &&
+											feedback.user_answer &&
+											feedback.user_answer.trim() !== ""
+									);
+								}
+								return true; // No question, so no answer needed
 							}
-							return true; // No question, so no answer needed
-						});
-						
+						);
+
 						if (allQuestionsAnswered) {
 							console.log(
 								`🔄 Workflow ${requestId} is in_progress and all questions answered, continuing polling...`
@@ -1268,6 +1271,30 @@ export class WorkflowExecutor {
 							);
 							this.stopPolling();
 						}
+					} else if (hasWaitingResponseWithoutData) {
+						console.log(
+							`⏳ Workflow ${requestId} has subnets in waiting_response without data, continuing polling...`
+						);
+					} else if (
+						statusData.workflowStatus === "in_progress" &&
+						!hasUserInputRequired
+					) {
+						console.log(
+							`🔄 Workflow ${requestId} is in progress and no user input required, continuing polling...`
+						);
+					} else if (
+						statusData.workflowStatus === "in_progress" &&
+						statusData.subnets?.some(
+							(s: any) => s.status === "awaiting_response"
+						)
+					) {
+						// Workflow is in_progress but has subnets in awaiting_response
+						// This might be a temporary state while backend processes feedback
+						console.log(
+							`⏳ Workflow ${requestId} is in_progress but has subnets in awaiting_response, continuing polling to monitor status changes...`
+						);
+						// Continue polling to see when the backend updates the subnet statuses
+						// This is important because the backend might be processing feedback
 					}
 				} catch (error) {
 					console.error(

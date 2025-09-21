@@ -1035,6 +1035,24 @@ export const useSubnetCache = () => {
 								content = "Prompt enhancement detected";
 							} else if (parsedData.message) {
 								content = parsedData.message;
+							} else if (
+								parsedData.data &&
+								typeof parsedData.data === "string"
+							) {
+								// Handle case where data is a JSON string
+								try {
+									const nestedData = JSON.parse(
+										parsedData.data
+									);
+									if (nestedData.message) {
+										content = nestedData.message;
+									} else if (nestedData.data?.message) {
+										content = nestedData.data.message;
+									}
+								} catch {
+									// If parsing fails, use the data string as content
+									content = parsedData.data;
+								}
 							}
 						} catch (e) {
 							console.log(
@@ -1044,7 +1062,8 @@ export const useSubnetCache = () => {
 						}
 
 						// Only add message if we have meaningful content
-						if (content && content.length > 10) {
+						// Reduced threshold to catch more content, especially for structured data
+						if (content && content.length > 0) {
 							// Use subnet's updatedAt if available, otherwise fall back to current time
 							const baseTimestamp = subnet.updatedAt
 								? new Date(subnet.updatedAt)
@@ -1163,6 +1182,24 @@ export const useSubnetCache = () => {
 								content = "Prompt enhancement detected";
 							} else if (parsedData.message) {
 								content = parsedData.message;
+							} else if (
+								parsedData.data &&
+								typeof parsedData.data === "string"
+							) {
+								// Handle case where data is a JSON string
+								try {
+									const nestedData = JSON.parse(
+										parsedData.data
+									);
+									if (nestedData.message) {
+										content = nestedData.message;
+									} else if (nestedData.data?.message) {
+										content = nestedData.data.message;
+									}
+								} catch {
+									// If parsing fails, use the data string as content
+									content = parsedData.data;
+								}
 							}
 
 							// Check for questions in the data
@@ -1268,6 +1305,24 @@ export const useSubnetCache = () => {
 								content = "Prompt enhancement detected";
 							} else if (parsedData.message) {
 								content = parsedData.message;
+							} else if (
+								parsedData.data &&
+								typeof parsedData.data === "string"
+							) {
+								// Handle case where data is a JSON string
+								try {
+									const nestedData = JSON.parse(
+										parsedData.data
+									);
+									if (nestedData.message) {
+										content = nestedData.message;
+									} else if (nestedData.data?.message) {
+										content = nestedData.data.message;
+									}
+								} catch {
+									// If parsing fails, use the data string as content
+									content = parsedData.data;
+								}
 							}
 
 							if (
@@ -1331,8 +1386,12 @@ export const useSubnetCache = () => {
 						questionData = subnet.question;
 					}
 
-					// Only show question if we have actual data content to show with it
-					if (hasDataContent && questionData) {
+					// Show question if we have data content OR if subnet is awaiting response with a question
+					if (
+						(hasDataContent ||
+							subnet.status === "awaiting_response") &&
+						questionData
+					) {
 						const finalQuestionData = questionData;
 
 						if (finalQuestionData) {
@@ -1359,8 +1418,12 @@ export const useSubnetCache = () => {
 						}
 					}
 
-					// If we have a direct question from subnet.question, only show it if we have data
-					if (hasDirectQuestion && hasDataContent) {
+					// If we have a direct question from subnet.question, show it if we have data OR if awaiting response
+					if (
+						hasDirectQuestion &&
+						(hasDataContent ||
+							subnet.status === "awaiting_response")
+					) {
 						const finalQuestionData = subnet.question;
 
 						if (finalQuestionData) {

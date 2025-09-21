@@ -156,30 +156,162 @@ export function WorkflowPanel({
 						const messages: ChatMsg[] = [];
 
 						// Add initial user message if available
-						if (workflowData.userPrompt) {
+						// Check multiple possible fields for user prompt
+						const userPrompt =
+							workflowData.userPrompt ||
+							workflowData.originalPrompt ||
+							workflowData.prompt ||
+							workflowData.userMessage;
+
+						if (userPrompt) {
 							messages.push({
 								id: `user-${workflowId}`,
 								type: "user",
-								content: workflowData.userPrompt,
-								timestamp: new Date(),
+								content: userPrompt,
+								timestamp: workflowData.createdAt
+									? new Date(workflowData.createdAt)
+									: new Date(),
 							});
+						} else {
+							// If no user prompt found, try to extract from first subnet's prompt
+							const firstSubnet = workflowData.subnets?.[0];
+							if (firstSubnet?.prompt) {
+								// Use the first subnet's prompt as a fallback for user message
+								messages.push({
+									id: `user-${workflowId}`,
+									type: "user",
+									content: firstSubnet.prompt,
+									timestamp: workflowData.createdAt
+										? new Date(workflowData.createdAt)
+										: new Date(),
+								});
+							}
 						}
 
 						// Add subnet messages
 						workflowData.subnets.forEach(
 							(subnet: any, index: number) => {
-								if (subnet.output) {
-									messages.push({
+								// Check for both output and data fields, and also check if subnet has any meaningful content
+								const subnetContent =
+									subnet.output || subnet.data;
+								const hasContent =
+									subnetContent &&
+									(subnet.status === "done" ||
+										subnet.status === "completed" ||
+										subnet.status === "awaiting_response" ||
+										subnet.status === "in_progress");
+
+								console.log(
+									`🔍 Processing subnet ${index} (${subnet.toolName}):`,
+									{
+										status: subnet.status,
+										hasContent: !!subnetContent,
+										contentLength:
+											subnetContent?.length || 0,
+										contentPreview:
+											subnetContent?.slice(0, 100) ||
+											"no content",
+									}
+								);
+
+								// Always add a message for each subnet to show its status and purpose
+								let content = "";
+								let messageType:
+									| "workflow_subnet"
+									| "question" = "workflow_subnet";
+
+								if (hasContent) {
+									// Parse data if it's a JSON string
+									content = subnetContent;
+									if (
+										typeof subnetContent === "string" &&
+										subnetContent.startsWith("{")
+									) {
+										try {
+											const parsedData =
+												JSON.parse(subnetContent);
+											// Extract message from nested data structure - handle multiple possible structures
+											content =
+												parsedData.data?.data
+													?.message ||
+												parsedData.data?.message ||
+												parsedData.message ||
+												subnetContent;
+										} catch (e) {
+											// If parsing fails, use the original content
+											content = subnetContent;
+										}
+									}
+								} else if (subnet.question) {
+									// Show question if subnet has one
+									content = subnet.question.text;
+									messageType = "question";
+								} else {
+									// Show status message for subnets without content
+									const statusMessages = {
+										pending: "⏳ Waiting to start...",
+										in_progress: "🔄 Processing...",
+										done: "✅ Completed",
+										failed: "❌ Failed",
+										awaiting_response:
+											"⏸️ Waiting for response...",
+									};
+									content =
+										statusMessages[
+											subnet.status as keyof typeof statusMessages
+										] || `Status: ${subnet.status}`;
+								}
+
+								// Add message if we have content
+								if (content && content.trim().length > 0) {
+									console.log(
+										`✅ Adding message for subnet ${index}:`,
+										{
+											contentLength: content.length,
+											contentPreview: content.slice(
+												0,
+												100
+											),
+											toolName: subnet.toolName,
+											messageType,
+											status: subnet.status,
+										}
+									);
+
+									const message: ChatMsg = {
 										id: `subnet-${workflowId}-${index}`,
-										type: "workflow_subnet",
-										content: subnet.output,
+										type: messageType,
+										content: content,
 										timestamp: subnet.updatedAt
 											? new Date(subnet.updatedAt)
 											: new Date(),
 										subnetIndex: index,
-										toolName: subnet.name || "Unknown Tool",
+										toolName:
+											subnet.toolName ||
+											subnet.name ||
+											"Unknown Tool",
 										subnetStatus: subnet.status || "done",
-									});
+									};
+
+									// Add question data if it's a question message
+									if (
+										messageType === "question" &&
+										subnet.question
+									) {
+										message.questionData = subnet.question;
+									}
+
+									messages.push(message);
+								} else {
+									console.log(
+										`❌ Skipping subnet ${index} - no content:`,
+										{
+											status: subnet.status,
+											toolName: subnet.toolName,
+											hasData: !!subnet.data,
+											hasQuestion: !!subnet.question,
+										}
+									);
 								}
 							}
 						);

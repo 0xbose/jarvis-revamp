@@ -85,7 +85,7 @@ export const parseAgentResponse = (subnetData: string): AgentResponse => {
 			};
 		}
 
-		// Handle text responses
+		// Handle text responses - check multiple possible structures
 		if (parsed?.data?.data?.choices?.[0]?.message?.content) {
 			return { content: parsed.data.data.choices[0].message.content };
 		}
@@ -101,6 +101,23 @@ export const parseAgentResponse = (subnetData: string): AgentResponse => {
 		if (parsed?.message) {
 			return { content: parsed.message };
 		}
+
+		// Handle case where data is a string that contains the message
+		if (typeof parsed?.data === "string") {
+			try {
+				const nestedData = JSON.parse(parsed.data);
+				if (nestedData?.message) {
+					return { content: nestedData.message };
+				}
+				if (nestedData?.data?.message) {
+					return { content: nestedData.data.message };
+				}
+			} catch {
+				// If parsing fails, treat the string as content
+				return { content: parsed.data };
+			}
+		}
+
 		return { content: null };
 	} catch {
 		return { content: null };

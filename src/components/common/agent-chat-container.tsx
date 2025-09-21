@@ -73,6 +73,8 @@ export function AgentChatContainer({
 	const [isInFeedbackMode, setIsInFeedbackMode] = useState(false);
 	const [isShowingCachedMessages, setIsShowingCachedMessages] =
 		useState(false);
+	const [workflowDataReceivedAt, setWorkflowDataReceivedAt] =
+		useState<Date | null>(null);
 
 	const { skyBrowser, address } = useWallet();
 	const queryClient = useQueryClient();
@@ -853,6 +855,13 @@ export function AgentChatContainer({
 		onError,
 	]);
 
+	// Track when workflow data is received to handle timing issues
+	useEffect(() => {
+		if (currentWorkflowData && currentWorkflowData.subnets?.length > 0) {
+			setWorkflowDataReceivedAt(new Date());
+		}
+	}, [currentWorkflowData]);
+
 	if (isLoading) {
 		return (
 			<div
@@ -899,19 +908,87 @@ export function AgentChatContainer({
 			return false;
 		}
 
+		// Additional check: if there are any workflow subnet messages, don't show skeleton
+		const hasWorkflowSubnetMessages = chatMessages.some(
+			(message) => message.type === "workflow_subnet"
+		);
+		if (hasWorkflowSubnetMessages) {
+			return false;
+		}
+
 		const hasOnlyUserMessage =
 			chatMessages.length === 1 && chatMessages[0].type === "user";
 
-		const hasWorkflowActivity = currentWorkflowData?.subnets?.some(
-			(subnet: any) =>
-				subnet.status === "in_progress" ||
-				subnet.status === "done" ||
-				subnet.status === "completed" ||
-				subnet.status === "awaiting_response" ||
-				subnet.data
-		);
+		// Check for workflow activity more comprehensively
+		const hasWorkflowActivity =
+			// Check if workflow data exists and has subnets
+			currentWorkflowData?.subnets?.length > 0 ||
+			// Check if any subnet has data or is in progress
+			currentWorkflowData?.subnets?.some(
+				(subnet: any) =>
+					subnet.status === "in_progress" ||
+					subnet.status === "done" ||
+					subnet.status === "completed" ||
+					subnet.status === "awaiting_response" ||
+					subnet.status === "waiting" ||
+					subnet.status === "pending" ||
+					subnet.data ||
+					subnet.output
+			) ||
+			// Check if workflow status indicates activity
+			(currentWorkflowData?.workflowStatus &&
+				currentWorkflowData.workflowStatus !== "pending" &&
+				currentWorkflowData.workflowStatus !== "failed") ||
+			// Check if there's any meaningful workflow data at all
+			(currentWorkflowData &&
+				Object.keys(currentWorkflowData).length > 0);
 
-		return hasOnlyUserMessage && !hasWorkflowActivity;
+		console.log("🔍 Skeleton check:", {
+			hasOnlyUserMessage,
+			hasWorkflowActivity,
+			workflowStatus: currentWorkflowData?.workflowStatus,
+			subnetCount: currentWorkflowData?.subnets?.length,
+			subnetStatuses: currentWorkflowData?.subnets?.map((s: any) => ({
+				status: s.status,
+				hasData: !!s.data,
+				hasOutput: !!s.output,
+				dataPreview: s.data ? s.data.slice(0, 100) : null,
+			})),
+			chatMessageCount: chatMessages.length,
+			chatMessageTypes: chatMessages.map((m) => m.type),
+			shouldShow: hasOnlyUserMessage && !hasWorkflowActivity,
+		});
+
+		// Final decision: show skeleton only if we have only user message AND no workflow activity
+		const shouldShowSkeletonResult =
+			hasOnlyUserMessage && !hasWorkflowActivity;
+
+		// Additional safety check: if we have workflow data but no messages yet,
+		// give it a moment before showing skeleton (this handles timing issues)
+		if (
+			shouldShowSkeletonResult &&
+			currentWorkflowData &&
+			hasOnlyUserMessage
+		) {
+			console.log(
+				"⚠️ Potential skeleton timing issue detected - workflow data exists but no messages yet"
+			);
+
+			// If workflow data was received recently (within last 5 seconds), don't show skeleton yet
+			if (workflowDataReceivedAt) {
+				const timeSinceDataReceived =
+					Date.now() - workflowDataReceivedAt.getTime();
+				if (timeSinceDataReceived < 5000) {
+					// 5 seconds
+					console.log(
+						"🕐 Workflow data received recently, hiding skeleton temporarily"
+					);
+					return false;
+				}
+			}
+		}
+
+		return shouldShowSkeletonResult;
 	};
 
 	return (
