@@ -1,300 +1,335 @@
 import { ChatMsg } from "@/types/chat";
 
 export interface FeedbackThread {
-  feedbackIndex: number;
-  threadKey: string; // Unique identifier for the thread
-  question: ChatMsg | null;
-  answer: ChatMsg | null;
-  response: ChatMsg | null;
-  timestamp: Date;
-  isRecent?: boolean; // Flag to indicate if this contains recent polled data
+	feedbackIndex: number;
+	threadKey: string; // Unique identifier for the thread
+	question: ChatMsg | null;
+	answer: ChatMsg | null;
+	response: ChatMsg | null;
+	timestamp: Date;
+	isRecent?: boolean; // Flag to indicate if this contains recent polled data
 }
 
 export interface SubnetGroup {
-  subnetIndex: number;
-  toolName: string;
-  mainMessages: ChatMsg[]; // Non-feedback messages
-  feedbackThreads: FeedbackThread[];
-  timestamp: Date;
-  status: string;
-  isRecent?: boolean; // Flag to indicate if this contains recent polled data
+	subnetIndex: number;
+	toolName: string;
+	mainMessages: ChatMsg[]; // Non-feedback messages
+	feedbackThreads: FeedbackThread[];
+	timestamp: Date;
+	status: string;
+	isRecent?: boolean; // Flag to indicate if this contains recent polled data
 }
 
 export interface MessageGroups {
-  systemMessages: ChatMsg[]; // User messages, general responses
-  subnetGroups: SubnetGroup[];
+	systemMessages: ChatMsg[]; // User messages, general responses
+	subnetGroups: SubnetGroup[];
 }
 
 export const useMessageGrouping = () => {
-  const groupMessagesBySubnet = (messages: ChatMsg[], previousMessages?: ChatMsg[]): MessageGroups => {
-    const systemMessages: ChatMsg[] = [];
-    const subnetGroups: Map<number, SubnetGroup> = new Map();
+	const groupMessagesBySubnet = (
+		messages: ChatMsg[],
+		previousMessages?: ChatMsg[]
+	): MessageGroups => {
+		const systemMessages: ChatMsg[] = [];
+		const subnetGroups: Map<number, SubnetGroup> = new Map();
 
-    // Filter out unwanted status and completion messages
-    const filteredMessages = messages.filter((message) => {
-      // Filter out workflow status messages
-      if (message.content === "Workflow executed successfully" ||
-          message.content === "awaiting response" ||
-          message.content === "completed" ||
-          message.content === "in_progress" ||
-          message.content === "pending") {
-        return false;
-      }
+		// Filter out unwanted status and completion messages
+		const filteredMessages = messages.filter((message) => {
+			// Filter out workflow status messages
+			if (
+				message.content === "Workflow executed successfully" ||
+				message.content === "awaiting response" ||
+				message.content === "completed" ||
+				message.content === "in_progress" ||
+				message.content === "pending"
+			) {
+				return false;
+			}
 
-      // Filter out feedback processing messages
-      if (message.content?.includes("Feedback submitted successfully") ||
-          message.content?.includes("Feedback processed successfully") ||
-          message.content?.includes("Resuming workflow")) {
-        return false;
-      }
+			// Filter out feedback processing messages
+			if (
+				message.content?.includes("Feedback submitted successfully") ||
+				message.content?.includes("Feedback processed successfully") ||
+				message.content?.includes("Resuming workflow")
+			) {
+				return false;
+			}
 
-      // Filter out generic response messages
-      if (message.type === "response" && 
-          (message.content === "Response" || 
-           message.content === "Your answer" ||
-           message.content === "Proceeding with current result")) {
-        return false;
-      }
+			// Filter out generic response messages
+			if (
+				message.type === "response" &&
+				(message.content === "Response" ||
+					message.content === "Your answer" ||
+					message.content === "Proceeding with current result")
+			) {
+				return false;
+			}
 
-      return true;
-    });
+			return true;
+		});
 
-    // Create a set of previous message IDs to identify new messages
-    const previousMessageIds = new Set(previousMessages?.map(m => m.id) || []);
+		// Create a set of previous message IDs to identify new messages
+		const previousMessageIds = new Set(
+			previousMessages?.map((m) => m.id) || []
+		);
 
-    filteredMessages.forEach((message) => {
-      // System-level messages (user messages, general responses)
-      if (message.subnetIndex === undefined || message.type === "user") {
-        systemMessages.push(message);
+		filteredMessages.forEach((message) => {
+			// System-level messages (user messages, general responses)
+			if (message.subnetIndex === undefined || message.type === "user") {
+				systemMessages.push(message);
 
-        return;
-      }
+				return;
+			}
 
-      const subnetIndex = message.subnetIndex;
+			const subnetIndex = message.subnetIndex;
 
-      // Initialize subnet group if it doesn't exist
-      if (!subnetGroups.has(subnetIndex)) {
-        subnetGroups.set(subnetIndex, {
-          subnetIndex,
-          toolName: message.toolName || `Subnet ${subnetIndex}`,
-          mainMessages: [],
-          feedbackThreads: [],
-          timestamp: message.timestamp,
-          status: message.subnetStatus || "unknown",
-          isRecent: false,
-        });
-      }
+			// Initialize subnet group if it doesn't exist
+			if (!subnetGroups.has(subnetIndex)) {
+				subnetGroups.set(subnetIndex, {
+					subnetIndex,
+					toolName: message.toolName || `Subnet ${subnetIndex}`,
+					mainMessages: [],
+					feedbackThreads: [],
+					timestamp: message.timestamp,
+					status: message.subnetStatus || "unknown",
+					isRecent: false,
+				});
+			}
 
-      const group = subnetGroups.get(subnetIndex)!;
+			const group = subnetGroups.get(subnetIndex)!;
 
-      // Check if this message is new (recent polled data)
-      const isNewMessage = !previousMessageIds.has(message.id);
-      if (isNewMessage) {
-        group.isRecent = true;
-        console.log(`🆕 New message detected in subnet ${subnetIndex}:`, {
-          messageId: message.id,
-          content: message.content?.slice(0, 50),
-          timestamp: message.timestamp
-        });
-      }
+			// Check if this message is new (recent polled data)
+			const isNewMessage = !previousMessageIds.has(message.id);
+			if (isNewMessage) {
+				group.isRecent = true;
+				console.log(
+					`🆕 New message detected in subnet ${subnetIndex}:`,
+					{
+						messageId: message.id,
+						content: message.content?.slice(0, 50),
+						timestamp: message.timestamp,
+					}
+				);
+			}
 
-      // Check if this is a feedback message
-      if (message.sourceId?.includes("feedback")) {
-        // Extract feedback index from sourceId
-        // Format: subnet_${index}_feedback_response_${feedbackIndex} or subnet_${index}_feedback_question_${feedbackIndex} or subnet_${index}_feedback_answer_${feedbackIndex}
-        const feedbackMatch = message.sourceId.match(/feedback_(response|question|answer)_(\d+)/);
-        let feedbackIndex = 0;
-        if (feedbackMatch) {
-          feedbackIndex = parseInt(feedbackMatch[2]);
-        }
-        
-        console.log(`🔍 Processing feedback message:`, {
-          sourceId: message.sourceId,
-          feedbackIndex,
-          messageType: message.type,
-          content: message.content?.slice(0, 50),
-          subnetIndex: message.subnetIndex
-        });
+			// Check if this is a feedback message
+			if (message.sourceId?.includes("feedback")) {
+				// Extract feedback index from sourceId
+				// Format: subnet_${index}_feedback_response_${feedbackIndex} or subnet_${index}_feedback_question_${feedbackIndex} or subnet_${index}_feedback_answer_${feedbackIndex}
+				const feedbackMatch = message.sourceId.match(
+					/feedback_(response|question|answer)_(\d+)/
+				);
+				let feedbackIndex = 0;
+				if (feedbackMatch) {
+					feedbackIndex = parseInt(feedbackMatch[2]);
+				}
 
-        // Create a unique key for this feedback thread using subnet + feedback index
-        const threadKey = `${message.subnetIndex}_${feedbackIndex}`;
-        
-        // Find or create feedback thread
-        let thread = group.feedbackThreads.find(
-          (t) => t.threadKey === threadKey
-        );
+				console.log(`🔍 Processing feedback message:`, {
+					sourceId: message.sourceId,
+					feedbackIndex,
+					messageType: message.type,
+					content: message.content?.slice(0, 50),
+					subnetIndex: message.subnetIndex,
+				});
 
-        if (!thread) {
-          thread = {
-            feedbackIndex,
-            threadKey, // Add unique key for identification
-            question: null,
-            answer: null,
-            response: null,
-            timestamp: message.timestamp,
-            isRecent: false,
-          };
-          group.feedbackThreads.push(thread);
-        }
+				// Create a unique key for this feedback thread using subnet + feedback index
+				const threadKey = `${message.subnetIndex}_${feedbackIndex}`;
 
-        // Mark thread as recent if it contains new messages
-        if (isNewMessage) {
-          thread.isRecent = true;
-        }
+				// Find or create feedback thread
+				let thread = group.feedbackThreads.find(
+					(t) => t.threadKey === threadKey
+				);
 
-        // Assign message to appropriate slot in thread based on sourceId
-        if (message.sourceId.includes("question")) {
-          thread.question = message;
-        } else if (message.sourceId.includes("answer")) {
-          thread.answer = message;
-        } else if (message.sourceId.includes("response")) {
-          thread.response = message;
-        }
+				if (!thread) {
+					thread = {
+						feedbackIndex,
+						threadKey, // Add unique key for identification
+						question: null,
+						answer: null,
+						response: null,
+						timestamp: message.timestamp,
+						isRecent: false,
+					};
+					group.feedbackThreads.push(thread);
+				}
 
-        // Update thread timestamp to latest message
-        if (message.timestamp > thread.timestamp) {
-          thread.timestamp = message.timestamp;
-        }
-      } else if (message.type === "answer" && message.isFeedbackAnswer) {
-        // Handle feedback answer messages that don't have sourceId with "feedback"
-        // These should be added to the most recent feedback thread as answers
-        
-        // Find the most recent feedback thread that doesn't have an answer yet
-        let targetThread = group.feedbackThreads
-          .filter(t => !t.answer)
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-        
-        if (targetThread) {
-          targetThread.answer = message;
-          targetThread.isRecent = true;
-          if (message.timestamp > targetThread.timestamp) {
-            targetThread.timestamp = message.timestamp;
-          }
+				// Mark thread as recent if it contains new messages
+				if (isNewMessage) {
+					thread.isRecent = true;
+				}
 
-        } else {
-          // If no suitable thread exists, create a new one with just the answer
-          const newThread = {
-            feedbackIndex: group.feedbackThreads.length,
-            threadKey: `${message.subnetIndex}_${group.feedbackThreads.length}`,
-            question: null,
-            answer: message,
-            response: null,
-            timestamp: message.timestamp,
-            isRecent: true,
-          };
-          group.feedbackThreads.push(newThread);
+				// Assign message to appropriate slot in thread based on sourceId
+				if (message.sourceId.includes("question")) {
+					thread.question = message;
+				} else if (message.sourceId.includes("answer")) {
+					thread.answer = message;
+				} else if (message.sourceId.includes("response")) {
+					thread.response = message;
+				}
 
-        }
-      } else {
-        // Main subnet message (non-feedback)
-        group.mainMessages.push(message);
-      }
+				// Update thread timestamp to latest message
+				if (message.timestamp > thread.timestamp) {
+					thread.timestamp = message.timestamp;
+				}
+			} else if (message.type === "answer" && message.isFeedbackAnswer) {
+				// Handle feedback answer messages that don't have sourceId with "feedback"
+				// These should be added to the most recent feedback thread as answers
 
-      // Update group timestamp to latest message
-      if (message.timestamp > group.timestamp) {
-        group.timestamp = message.timestamp;
-      }
-    });
+				// Find the most recent feedback thread that doesn't have an answer yet
+				let targetThread = group.feedbackThreads
+					.filter((t) => !t.answer)
+					.sort(
+						(a, b) =>
+							new Date(b.timestamp).getTime() -
+							new Date(a.timestamp).getTime()
+					)[0];
 
-    // Sort feedback threads by feedbackIndex within each subnet (newest first for UI consistency)
+				if (targetThread) {
+					targetThread.answer = message;
+					targetThread.isRecent = true;
+					if (message.timestamp > targetThread.timestamp) {
+						targetThread.timestamp = message.timestamp;
+					}
+				} else {
+					// If no suitable thread exists, create a new one with just the answer
+					const newThread = {
+						feedbackIndex: group.feedbackThreads.length,
+						threadKey: `${message.subnetIndex}_${group.feedbackThreads.length}`,
+						question: null,
+						answer: message,
+						response: null,
+						timestamp: message.timestamp,
+						isRecent: true,
+					};
+					group.feedbackThreads.push(newThread);
+				}
+			} else {
+				// Main subnet message (non-feedback)
+				group.mainMessages.push(message);
+			}
 
-    subnetGroups.forEach((group) => {
-      group.feedbackThreads.sort((a, b) => 
-        b.feedbackIndex - a.feedbackIndex
-      );
-      
-      // Debug logging for feedback threads
-      if (group.feedbackThreads.length > 0) {
-        console.log(`🔍 Subnet ${group.subnetIndex} (${group.toolName}) has ${group.feedbackThreads.length} feedback threads:`, 
-          group.feedbackThreads.map(t => ({
-            index: t.feedbackIndex,
-            hasQuestion: !!t.question,
-            hasAnswer: !!t.answer,
-            hasResponse: !!t.response,
-            questionText: t.question?.content?.slice(0, 30),
-            isRecent: t.isRecent
-          }))
-        );
-      }
-    });
+			// Update group timestamp to latest message
+			if (message.timestamp > group.timestamp) {
+				group.timestamp = message.timestamp;
+			}
+		});
 
-    return {
-      systemMessages,
-      subnetGroups: Array.from(subnetGroups.values()).sort((a, b) => 
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      ),
-    };
-  };
+		// Sort feedback threads by feedbackIndex within each subnet (newest first for UI consistency)
 
-  const getFeedbackThreadTitle = (thread: FeedbackThread): string => {
-    if (thread.question) {
-      const questionText = thread.question.content;
-      const truncatedText = questionText.length > 60 
-        ? `${questionText.slice(0, 60)}...` 
-        : questionText;
- 
-      return `${truncatedText}`;
-    }
-    return `Feedback ${thread.feedbackIndex + 1}`;
-  };
+		subnetGroups.forEach((group) => {
+			group.feedbackThreads.sort(
+				(a, b) => b.feedbackIndex - a.feedbackIndex
+			);
 
-  const getSubnetTitle = (group: SubnetGroup, currentWorkflowData?: any, selectedAgent?: any): string => {
-    const subnetName = group.toolName || `Subnet ${group.subnetIndex}`;
-    
-    // Get dynamic status message based on subnet state
-    const getStatusMessage = () => {
-      if (!currentWorkflowData?.subnets) return "contacting agent...";
-      
-      const subnet = currentWorkflowData.subnets[group.subnetIndex];
-      if (!subnet) return "contacting agent...";
-      
-      switch (subnet.status) {
-        case "pending":
-          // Check if we have a prompt to determine if we're sending it
-          if (subnet.prompt && subnet.prompt.trim() !== "") {
-            return "sending prompt...";
-          }
-          return "contacting agent...";
-        case "in_progress":
-          return "processing...";
-        case "awaiting_response":
-          return "waiting for input...";
-        case "completed":
-        case "done":
-          return "";
-        case "failed":
-          return "failed";
-        default:
-          return "";
-      }
-    };
-    
-    const statusMessage = getStatusMessage();
-    return `${subnetName} agent ${statusMessage}`;
+			// Debug logging for feedback threads
+			if (group.feedbackThreads.length > 0) {
+				console.log(
+					`🔍 Subnet ${group.subnetIndex} (${group.toolName}) has ${group.feedbackThreads.length} feedback threads:`,
+					group.feedbackThreads.map((t) => ({
+						index: t.feedbackIndex,
+						hasQuestion: !!t.question,
+						hasAnswer: !!t.answer,
+						hasResponse: !!t.response,
+						questionText: t.question?.content?.slice(0, 30),
+						isRecent: t.isRecent,
+					}))
+				);
+			}
+		});
 
-  };
+		return {
+			systemMessages,
+			subnetGroups: Array.from(subnetGroups.values()).sort(
+				(a, b) =>
+					new Date(a.timestamp).getTime() -
+					new Date(b.timestamp).getTime()
+			),
+		};
+	};
 
-  const getSubnetStatusIcon = (status: string) => {
-    switch (status) {
-      case "done":
-        return "done";
-      case "failed":
-        return "failed";
-      case "in_progress":
-        return "processing";
-      case "awaiting_response":
-        return "waiting";
-      case "pending":
-        return "pending";
-      default:
-        return "unknown";
-    }
-  };
+	const getFeedbackThreadTitle = (thread: FeedbackThread): string => {
+		if (thread.question) {
+			const questionText = thread.question.content;
+			const truncatedText =
+				questionText.length > 60
+					? `${questionText.slice(0, 60)}...`
+					: questionText;
 
-  return {
-    groupMessagesBySubnet,
-    getFeedbackThreadTitle,
-    getSubnetTitle,
-    getSubnetStatusIcon,
-  };
+			return `${truncatedText}`;
+		}
+		return `Feedback ${thread.feedbackIndex + 1}`;
+	};
+
+	const getSubnetTitle = (
+		group: SubnetGroup,
+		currentWorkflowData?: any,
+		selectedAgent?: any
+	): string => {
+		const subnetName = group.toolName || `Subnet ${group.subnetIndex}`;
+
+		// Get dynamic status message based on subnet state
+		const getStatusMessage = () => {
+			if (!currentWorkflowData?.subnets) return "contacting agent...";
+
+			const subnet = currentWorkflowData.subnets[group.subnetIndex];
+			if (!subnet) return "contacting agent...";
+
+			// Check if subnet has successful data even when status is awaiting_response
+			const hasSuccessfulData =
+				subnet.data &&
+				typeof subnet.data === "string" &&
+				subnet.data.includes('"success":true');
+
+			switch (subnet.status) {
+				case "pending":
+					// Check if we have a prompt to determine if we're sending it
+					if (subnet.prompt && subnet.prompt.trim() !== "") {
+						return "sending prompt...";
+					}
+					return "contacting agent...";
+				case "in_progress":
+					return "processing...";
+				case "awaiting_response":
+					// If we have successful data, don't show "waiting for input"
+					if (hasSuccessfulData) {
+						return "";
+					}
+					return "waiting for input...";
+				case "completed":
+				case "done":
+					return "";
+				case "failed":
+					return "failed";
+				default:
+					return "";
+			}
+		};
+
+		const statusMessage = getStatusMessage();
+		return `${subnetName} agent ${statusMessage}`;
+	};
+
+	const getSubnetStatusIcon = (status: string) => {
+		switch (status) {
+			case "done":
+				return "done";
+			case "failed":
+				return "failed";
+			case "in_progress":
+				return "processing";
+			case "awaiting_response":
+				return "waiting";
+			case "pending":
+				return "pending";
+			default:
+				return "unknown";
+		}
+	};
+
+	return {
+		groupMessagesBySubnet,
+		getFeedbackThreadTitle,
+		getSubnetTitle,
+		getSubnetStatusIcon,
+	};
 };
