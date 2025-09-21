@@ -277,7 +277,7 @@ export default function AgentMemory({
 		staleTime: 5 * 60 * 1000,
 		gcTime: 5 * 60 * 1000,
 		retry: 1,
-		refetchOnMount:true
+		refetchOnMount: true,
 	});
 
 	const agentHasAnySubnetSelected = useCallback(
@@ -737,15 +737,15 @@ export default function AgentMemory({
 				</div>
 			</div>
 			<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-				<DialogContent className="min-w-[75%] max-h-[42rem] flex flex-col">
-					<DialogHeader>
+				<DialogContent className="min-w-[75%] max-h-[42rem] flex flex-col p-0 sm:p-6">
+					<DialogHeader className="px-4 pt-4 sm:px-0 sm:pt-0">
 						<DialogTitle>Add Knowledge</DialogTitle>
 						<DialogDescription>
 							Select agents from your collection to share
 							knowledge with this agent.
 						</DialogDescription>
 					</DialogHeader>
-					<div>
+					<div className="px-4 sm:px-0 mt-2">
 						<Input
 							type="text"
 							placeholder="Search minted agents..."
@@ -755,7 +755,7 @@ export default function AgentMemory({
 						/>
 					</div>
 					<div
-						className="flex-1 min-h-0 overflow-y-auto px-1"
+						className="flex-1 min-h-0 overflow-y-auto px-1 sm:px-0"
 						style={{
 							scrollbarWidth: "thin",
 							scrollbarColor: "#888 #222",
@@ -774,7 +774,14 @@ export default function AgentMemory({
 							</div>
 						)}
 						{mintedAgentsData?.user_collections?.length > 0 && (
-							<div className="grid grid-cols-3 gap-3 mt-2">
+							<div
+								className={`
+									grid gap-3 mt-2
+									grid-cols-1
+									[xs]:grid-cols-2
+									[sm]:grid-cols-3
+								`}
+							>
 								{mintedAgentsData.user_collections.map(
 									(agent: any) => {
 										const isSelected = selectedAgents.some(
@@ -832,8 +839,11 @@ export default function AgentMemory({
 							</div>
 						)}
 					</div>
-					<DialogFooter>
-						<Button onClick={() => setDialogOpen(false)}>
+					<DialogFooter className="px-4 pb-4 sm:px-0 sm:pb-0">
+						<Button
+							className="w-full sm:w-auto"
+							onClick={() => setDialogOpen(false)}
+						>
 							Done
 						</Button>
 					</DialogFooter>

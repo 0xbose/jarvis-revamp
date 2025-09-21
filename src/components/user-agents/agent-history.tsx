@@ -107,8 +107,14 @@ function AgentHistory({ agentAddress, agentID }: AgentHistoryProps) {
 	);
 
 	const handleWorkflowClick = useCallback(
-		(workflowId: string, agentAddress: string, agentIDFromCollection: string) => {
-			router.push(`/chat/agent/${agentAddress}?workflowId=${workflowId}&nftId=${agentIDFromCollection}`);
+		(
+			workflowId: string,
+			agentAddress: string,
+			agentIDFromCollection: string
+		) => {
+			router.push(
+				`/chat/agent/${agentAddress}?workflowId=${workflowId}&nftId=${agentIDFromCollection}`
+			);
 		},
 		[router]
 	);
@@ -135,7 +141,7 @@ function AgentHistory({ agentAddress, agentID }: AgentHistoryProps) {
 			{
 				accessorKey: "userPrompt",
 				header: () => (
-					<div className="text-gray-400 font-semibold flex items-center gap-2 w-[350px]">
+					<div className="text-gray-400 font-semibold flex items-center gap-2 w-40 md:w-[350px]">
 						<Clock className="size-4" />
 						<span>Workflow</span>
 					</div>
@@ -149,7 +155,7 @@ function AgentHistory({ agentAddress, agentID }: AgentHistoryProps) {
 								row.original.agentIDFromCollection || ""
 							)
 						}
-						className="text-sm text-gray-300 block hover:text-blue-400 transition-colors cursor-pointer text-left w-full max-w-[350px] overflow-hidden whitespace-nowrap text-ellipsis"
+						className="text-sm text-gray-300 block hover:text-blue-400 transition-colors cursor-pointer text-left w-full max-w-40 md:max-w-[350px] overflow-hidden whitespace-nowrap text-ellipsis"
 						title={row.original.userPrompt || "Untitled workflow"}
 					>
 						{row.original.userPrompt || "Untitled workflow"}
@@ -169,24 +175,25 @@ function AgentHistory({ agentAddress, agentID }: AgentHistoryProps) {
 			{
 				accessorKey: "updatedAt",
 				header: () => (
-					<div className="text-gray-400 font-semibold flex items-center gap-2 min-w-24">
+					<div className="text-gray-400 font-semibold flex items-center gap-2 w-full min-w-24">
 						<TimerIcon className="size-4" />
 						<span>Last Updated</span>
 					</div>
 				),
 				cell: ({ row }) => (
-					<span className="text-sm text-gray-400">
-						{new Date(row.original.updatedAt).toLocaleDateString(
-							"en-US",
-							{
+					<div className="text-sm text-gray-400 w-full flex">
+						<span className="flex-1 truncate">
+							{new Date(
+								row.original.updatedAt
+							).toLocaleDateString("en-US", {
 								month: "short",
 								day: "numeric",
 								hour: "numeric",
 								minute: "2-digit",
 								hour12: true,
-							}
-						)}
-					</span>
+							})}
+						</span>
+					</div>
 				),
 			},
 			{

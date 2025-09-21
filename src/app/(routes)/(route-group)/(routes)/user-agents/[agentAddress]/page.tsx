@@ -520,7 +520,7 @@ export default function Page() {
 		!isErrorSubnetAuthDetails;
 
 	const subnetAuthStatusContent = showSubnetAuthStatus && (
-		<div className="flex flex-col gap-2 mt-4">
+		<div className="flex flex-col gap-2 md:mt-4">
 			<Label className="font-medium text-muted-foreground tracking-wide mb-1">
 				Subnet Auth Status
 			</Label>
@@ -590,7 +590,7 @@ export default function Page() {
 								}
 							>
 								<span className="font-normal">
-									{subnet.subnet_name}
+									Connect {subnet.subnet_name}
 								</span>
 								{authLinkLoading === subnet.unique_id ? (
 									<PendingIcon className="w-4 h-4 animate-spin" />
@@ -605,8 +605,8 @@ export default function Page() {
 	);
 
 	return (
-		<div className="	py-12 flex flex-col gap-8">
-			<div className="p-6 flex flex-col gap-8 h-[calc(100dvh-4rem)] overflow-y-auto scrollbar-hide">
+		<div className="md:py-12 flex flex-col gap-8">
+			<div className="md:p-6 flex flex-col gap-8 h-[calc(100dvh-4rem)] overflow-y-auto scrollbar-hide">
 				<div className="flex flex-col md:flex-row gap-12 items-start justify-between">
 					<div className="flex flex-col md:flex-row gap-8 items-start flex-1">
 						<AgentImage
@@ -616,8 +616,8 @@ export default function Page() {
 						/>
 						<div className="w-full grid grid-cols-1 md:grid-cols-3 gap-8">
 							<div className="flex-1 space-y-6 col-span-2">
-								<div className="space-y-4">
-									<div className="flex flex-col gap-3">
+								<div className="space-y-5 md:space-y-4">
+									<div className="flex flex-col gap-5">
 										<EditableInput
 											value={nameField.value}
 											draft={nameField.draft}
@@ -639,7 +639,7 @@ export default function Page() {
 											<ExternalLink className="w-4 h-4 mb-0.5" />
 										</Link>
 									</div>
-									<div className="flex items-center gap-6 text-sm text-muted-foreground">
+									<div className="flex flex-wrap items-center gap-x-8 gap-y-4 text-sm text-muted-foreground">
 										{statusInfo.map((info, i) => (
 											<StatusInfo
 												key={i}

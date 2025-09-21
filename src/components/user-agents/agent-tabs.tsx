@@ -51,7 +51,7 @@ export default function AgentTabs({
 	}, []);
 
 	return (
-		<div>
+		<div className="pb-6 md:pb-2">
 			<Tabs
 				value={activeTab}
 				onValueChange={handleTabChange}
