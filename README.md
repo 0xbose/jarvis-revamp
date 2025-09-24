@@ -1,4 +1,4 @@
-# Skynet Agent Workflow Boilerplate 
+# Skynet Agent Workflow 
 
 A complete Next.js 15 boilerplate for building agent workflow applications with Web3 integration, HTTP-based workflow execution, and Skynet blockchain integration.
 
